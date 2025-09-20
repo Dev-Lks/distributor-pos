@@ -1,9 +1,19 @@
+'use client'
+
 import { Instagram, Facebook, Phone, MapPin, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
+import { useState, useEffect } from "react"
+import QRCode from "react-qr-code"
 
 export default function NitroBeerLinktree() {
+  const [currentUrl, setCurrentUrl] = useState('')
+
+  useEffect(() => {
+    setCurrentUrl(window.location.href)
+  }, [])
+
   const socialLinks = [
     {
       name: "Instagram",
@@ -101,6 +111,10 @@ export default function NitroBeerLinktree() {
             </a>
           </Button>
 
+          <p className="text-sm text-muted-foreground mb-3 sm:mb-4">
+            Avenida Minas Gerais, Natal, 3034, ITUIUTABA-MG
+          </p>
+
           <div className="w-full h-48 sm:h-64 lg:h-72 rounded-lg overflow-hidden border border-border/50">
             <iframe
               src="https://maps.google.com/maps?q=Av%20Minas%20Gerais%2C%203034%20-%20Centro%2C%20Ituiutaba%20-%20MG%2C%2038300&t=&z=15&ie=UTF8&iwloc=&output=embed"
@@ -112,6 +126,24 @@ export default function NitroBeerLinktree() {
               referrerPolicy="no-referrer-when-downgrade"
               title="Localização NitroBeer"
             />
+          </div>
+        </Card>
+
+        {/* Share Section */}
+        <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 mb-3 sm:mb-4">
+            <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
+            <h2 className="text-base sm:text-lg font-semibold">Compartilhar</h2>
+          </div>
+
+          <p className="text-sm text-muted-foreground mb-3 sm:mb-4">
+            Escaneie o QR Code para compartilhar esta página
+          </p>
+
+          <div className="flex justify-center">
+            {currentUrl && (
+              <QRCode value={currentUrl} size={128} />
+            )}
           </div>
         </Card>
 
