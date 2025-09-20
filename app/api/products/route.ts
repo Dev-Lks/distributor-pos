@@ -41,17 +41,30 @@ export async function POST() {
 
 export async function GET() {
   try {
+    console.log('GET /api/products - Starting request');
+
+    // Check database connection
+    if (!process.env.DATABASE_URL) {
+      console.error('DATABASE_URL environment variable is not set');
+      return NextResponse.json(
+        { error: 'Database configuration error' },
+        { status: 500 }
+      );
+    }
+
+    console.log('Fetching products from database...');
     const products = await prisma.product.findMany({
       orderBy: {
         name: 'asc'
       }
     });
 
+    console.log(`Found ${products.length} products`);
     return NextResponse.json(products);
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch products' },
+      { error: 'Failed to fetch products', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

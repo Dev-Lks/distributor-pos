@@ -1,40 +1,100 @@
-// Prisma client setup with fallback for generation issues
+// Prisma client setup with robust error handling
 const globalForPrisma = globalThis as unknown as {
   prisma: any // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
-// Try to import PrismaClient, fallback if not available
-let PrismaClient: any; // eslint-disable-line @typescript-eslint/no-explicit-any
-let prismaClientAvailable = false;
+let prismaClient: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 
-try {
-  const prismaModule = require('@prisma/client'); // eslint-disable-line @typescript-eslint/no-require-imports
-  PrismaClient = prismaModule.PrismaClient;
-  prismaClientAvailable = true;
-} catch (error) { // eslint-disable-line @typescript-eslint/no-unused-vars
-  console.warn('Prisma client not generated, using fallback implementation');
-  PrismaClient = class FallbackPrismaClient {
-    constructor(options?: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      console.log('Fallback Prisma client initialized with options:', options);
-    }
-    $connect() { return Promise.resolve(); }
-    $disconnect() { return Promise.resolve(); }
-    $transaction(fn: (tx: any) => Promise<any>) { // eslint-disable-line @typescript-eslint/no-explicit-any
-      return fn(this);
-    }
-    product: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
-    sale: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
-    saleItem: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
-    stockLevel: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
-    stockMovement: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
-    inventoryAlert: any = {}; // eslint-disable-line @typescript-eslint/no-explicit-any
-  };
+// Initialize Prisma client with proper error handling
+function initializePrisma() {
+  try {
+    console.log('Initializing Prisma client...');
+
+    // Try to import the real PrismaClient
+    const { PrismaClient } = require('@prisma/client'); // eslint-disable-line @typescript-eslint/no-require-imports
+
+    prismaClient = new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      },
+    });
+
+    console.log('Prisma client initialized successfully');
+    return prismaClient;
+  } catch (error) {
+    console.error('Failed to initialize Prisma client:', error);
+
+    // Create a minimal fallback that throws meaningful errors
+    const createErrorMethod = (methodName: string) => {
+      return () => {
+        throw new Error(`Prisma client not available. Method: ${methodName}. Please ensure DATABASE_URL is set and Prisma client is generated.`);
+      };
+    };
+
+    prismaClient = {
+      $connect: () => Promise.resolve(),
+      $disconnect: () => Promise.resolve(),
+      $transaction: (fn: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+        console.warn('Using fallback transaction - this may not work correctly');
+        return fn(prismaClient);
+      },
+      product: {
+        findMany: createErrorMethod('product.findMany'),
+        findUnique: createErrorMethod('product.findUnique'),
+        create: createErrorMethod('product.create'),
+        createMany: createErrorMethod('product.createMany'),
+        update: createErrorMethod('product.update'),
+        delete: createErrorMethod('product.delete'),
+      },
+      sale: {
+        findMany: createErrorMethod('sale.findMany'),
+        findUnique: createErrorMethod('sale.findUnique'),
+        create: createErrorMethod('sale.create'),
+        update: createErrorMethod('sale.update'),
+        delete: createErrorMethod('sale.delete'),
+      },
+      saleItem: {
+        findMany: createErrorMethod('saleItem.findMany'),
+        create: createErrorMethod('saleItem.create'),
+        deleteMany: createErrorMethod('saleItem.deleteMany'),
+      },
+      stockLevel: {
+        findMany: createErrorMethod('stockLevel.findMany'),
+        findUnique: createErrorMethod('stockLevel.findUnique'),
+        create: createErrorMethod('stockLevel.create'),
+        update: createErrorMethod('stockLevel.update'),
+        upsert: createErrorMethod('stockLevel.upsert'),
+      },
+      stockMovement: {
+        findMany: createErrorMethod('stockMovement.findMany'),
+        create: createErrorMethod('stockMovement.create'),
+      },
+      inventoryAlert: {
+        findMany: createErrorMethod('inventoryAlert.findMany'),
+        findFirst: createErrorMethod('inventoryAlert.findFirst'),
+        create: createErrorMethod('inventoryAlert.create'),
+        updateMany: createErrorMethod('inventoryAlert.updateMany'),
+      },
+    };
+
+    console.log('Using fallback Prisma client');
+    return prismaClient;
+  }
 }
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: prismaClientAvailable ? ['query'] : [],
-  })
+// Initialize the client
+if (!globalForPrisma.prisma) {
+  globalForPrisma.prisma = initializePrisma();
+}
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+export const prisma = globalForPrisma.prisma;
+
+// Test the connection
+if (typeof window === 'undefined') { // Only run on server
+  prisma.$connect()
+    .then(() => console.log('Database connected successfully'))
+    .catch((error: any) => console.error('Database connection failed:', error)); // eslint-disable-line @typescript-eslint/no-explicit-any
+}
