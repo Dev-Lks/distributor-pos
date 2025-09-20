@@ -1,7 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { Sale } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
+
+// Define types manually since Prisma client generation has issues
+interface Sale {
+  id: string;
+  date: Date;
+  total: Decimal;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface SaleItem {
+  id: string;
+  saleId: string;
+  productId: string;
+  quantity: number;
+  price: Decimal;
+  product: {
+    id: string;
+    name: string;
+    size: string;
+    price: Decimal;
+  };
+}
 
 interface SaleItemInput {
   product: {
@@ -14,16 +36,7 @@ interface SaleItemInput {
 }
 
 type SaleWithItems = Sale & {
-  items: {
-    product: {
-      id: string;
-      name: string;
-      size: string;
-      price: Decimal;
-    };
-    quantity: number;
-    price: Decimal;
-  }[];
+  items: SaleItem[];
 };
 
 export async function GET() {
