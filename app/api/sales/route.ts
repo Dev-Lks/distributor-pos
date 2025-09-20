@@ -92,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Create sale and items in a transaction
-    const sale = await prisma.$transaction(async (tx) => {
+    const sale = await prisma.$transaction(async (tx: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       const newSale = await tx.sale.create({
         data: {
           total: total || items.reduce((sum: number, item: SaleItemInput) => sum + (item.product.price * item.qty), 0),
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     const formattedSale = {
       id: parseInt(sale.id),
       date: sale.date.toISOString(),
-      items: sale.items.map(item => ({
+      items: sale.items.map((item: SaleItem) => ({
         product: {
           id: item.product.id,
           name: item.product.name,
