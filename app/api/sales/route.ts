@@ -58,7 +58,7 @@ export async function GET() {
     const formattedSales = sales.map((sale: SaleWithItems) => ({
       id: parseInt(sale.id),
       date: sale.date.toISOString(),
-      items: sale.items.map(item => ({
+      items: sale.items.map((item: SaleItem) => ({
         product: {
           id: item.product.id,
           name: item.product.name,
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE() {
   try {
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       await tx.saleItem.deleteMany();
       await tx.sale.deleteMany();
     });

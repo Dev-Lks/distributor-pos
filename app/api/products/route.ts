@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { products } from '@/lib/products';
+import { products, Product } from '@/lib/products';
 
 export async function POST() {
   try {
@@ -12,7 +12,7 @@ export async function POST() {
 
     // Seed products
     const createdProducts = await prisma.product.createMany({
-      data: products.map(product => ({
+      data: products.map((product: Product) => ({
         id: product.id,
         name: product.name,
         size: product.size,
