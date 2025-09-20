@@ -65,6 +65,7 @@ export default function NitroBeerLinktree() {
             {"✨ Chopp premium, vibes únicas, para quem não aceita a mesmice! 🍻"}
           </p>
         </div>
+        {/* Quick Sales Panel (removed from public view) */}
 
         {/* Social Links */}
         <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
