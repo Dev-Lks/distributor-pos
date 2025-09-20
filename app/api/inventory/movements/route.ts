@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     });
 
     // Update stock levels
-    await prisma.$transaction(async (tx) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    await prisma.$transaction(async (tx: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
       // Decrease from location if specified
       if (fromLocation) {
         const stockLevel = await tx.stockLevel.findUnique({
