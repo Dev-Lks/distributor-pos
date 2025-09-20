@@ -17,6 +17,7 @@ export default function SalesPanel() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quickQty, setQuickQty] = useState<number>(1);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [addingProduct, setAddingProduct] = useState<string | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem("sales_cart");
@@ -53,7 +54,10 @@ export default function SalesPanel() {
   }
 
   function quickAdd(product: Product) {
+    setAddingProduct(product.id);
     add(product, quickQty);
+    // Reset feedback after animation
+    setTimeout(() => setAddingProduct(null), 200);
   }
 
   function setQty(productId: string, qty: number) {
@@ -96,33 +100,70 @@ export default function SalesPanel() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Products area (span 2 on desktop) */}
         <div className="md:col-span-2">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="hidden sm:block text-xs text-muted-foreground">Atalhos: 1-9 fav/pos | +/- qty | S salvar | C limpar | F favoritar</div>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 mb-3">
+            <div className="hidden sm:block text-xs text-muted-foreground flex-shrink-0">Atalhos: 1-9 fav/pos | +/- qty | S salvar | C limpar | F favoritar</div>
             
-            <Input placeholder="Buscar produto" value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} />
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setQuickQty(Math.max(1, quickQty - 1))}>-</Button>
-              <Input value={String(quickQty)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickQty(Math.max(1, Number(e.target.value || 1)))} className="w-20 text-center" />
-              <Button onClick={() => setQuickQty(quickQty + 1)}>+</Button>
+            <div className="flex flex-col xs:flex-row gap-2 w-full sm:w-auto">
+              <Input 
+                placeholder="Buscar produto" 
+                value={query} 
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} 
+                className="flex-1 sm:w-48"
+              />
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <Button 
+                  onClick={() => setQuickQty(Math.max(1, quickQty - 1))} 
+                  size="sm"
+                  className="px-3"
+                >
+                  -
+                </Button>
+                <Input 
+                  value={String(quickQty)} 
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickQty(Math.max(1, Number(e.target.value || 1)))} 
+                  className="w-16 sm:w-20 text-center" 
+                />
+                <Button 
+                  onClick={() => setQuickQty(quickQty + 1)} 
+                  size="sm"
+                  className="px-3"
+                >
+                  +
+                </Button>
+              </div>
             </div>
-            <div className="ml-auto text-sm">Total: <strong>{formatBRL(total)}</strong></div>
+            <div className="text-sm font-semibold self-center sm:ml-auto">Total: <strong>{formatBRL(total)}</strong></div>
           </div>
 
           {favProducts.length > 0 && (
             <div className="mb-2">
               <div className="text-sm font-medium mb-1">Favoritos</div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+              <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                 {favProducts.map((p) => (
-                  <button key={p.id} onClick={() => quickAdd(p)} className="p-4 bg-card border rounded text-left shadow-sm hover:scale-[1.01] transition">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-semibold">{p.name}</div>
+                  <button 
+                    key={p.id} 
+                    onClick={() => quickAdd(p)} 
+                    className={`p-3 sm:p-4 bg-card border rounded text-left shadow-sm hover:scale-[1.01] transition-all duration-200 ${
+                      addingProduct === p.id ? 'bg-green-50 border-green-300 scale-95' : ''
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-sm sm:text-base truncate">{p.name}</div>
                         <div className="text-xs text-muted-foreground">{p.size}</div>
                       </div>
-                      <div className="text-sm font-semibold">{formatBRL(p.price)}</div>
+                      <div className="text-sm font-semibold ml-2 flex-shrink-0">{formatBRL(p.price)}</div>
                     </div>
-                    <div className="mt-2 text-right">
-                      <button onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} className="text-yellow-500">★</button>
+                    <div className="flex justify-between items-center">
+                      <div className="text-xs text-green-600 font-medium">
+                        {addingProduct === p.id ? '✓ Adicionado!' : ''}
+                      </div>
+                      <button 
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} 
+                        className="text-yellow-500 hover:text-yellow-600 transition-colors"
+                      >
+                        ★
+                      </button>
                     </div>
                   </button>
                 ))}
@@ -132,18 +173,32 @@ export default function SalesPanel() {
 
           <div>
             <div className="text-sm font-medium mb-1">Produtos</div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+            <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                 {otherProducts.map((p) => (
-                <button key={p.id} onClick={() => quickAdd(p)} className="p-4 bg-card border rounded text-left shadow-sm hover:scale-[1.01] transition">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="font-semibold">{p.name}</div>
+                <button 
+                  key={p.id} 
+                  onClick={() => quickAdd(p)} 
+                  className={`p-3 sm:p-4 bg-card border rounded text-left shadow-sm hover:scale-[1.01] transition-all duration-200 ${
+                    addingProduct === p.id ? 'bg-green-50 border-green-300 scale-95' : ''
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-sm sm:text-base truncate">{p.name}</div>
                       <div className="text-xs text-muted-foreground">{p.size}</div>
                     </div>
-                    <div className="text-sm font-semibold">{formatBRL(p.price)}</div>
+                    <div className="text-sm font-semibold ml-2 flex-shrink-0">{formatBRL(p.price)}</div>
                   </div>
-                  <div className="mt-2 text-right">
-                    <button onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} className="text-gray-400">☆</button>
+                  <div className="flex justify-between items-center">
+                    <div className="text-xs text-green-600 font-medium">
+                      {addingProduct === p.id ? '✓ Adicionado!' : ''}
+                    </div>
+                    <button 
+                      onClick={(e) => { e.stopPropagation(); toggleFavorite(p.id); }} 
+                      className="text-gray-400 hover:text-yellow-500 transition-colors"
+                    >
+                      ☆
+                    </button>
                   </div>
                 </button>
               ))}
@@ -163,20 +218,26 @@ export default function SalesPanel() {
               <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                 {cart.length === 0 && <div className="text-sm text-muted-foreground">Carrinho vazio</div>}
                 {cart.map((c) => (
-                  <div key={c.product.id} className="flex items-center justify-between p-2 border rounded">
-                    <div className="min-w-0">
-                      <div className="font-medium truncate">{c.product.name}</div>
+                  <div key={c.product.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-2 border rounded gap-2">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium truncate text-sm sm:text-base">{c.product.name}</div>
                       <div className="text-xs text-muted-foreground">{c.product.size}</div>
                       <div className="text-xs">{formatBRL(c.product.price)} x {c.qty} = <strong>{formatBRL(c.product.price * c.qty)}</strong></div>
                     </div>
-                    <div className="flex flex-col items-end gap-1 ml-2">
-                      <div className="flex gap-1">
-                        <Button size="sm" onClick={() => setQty(c.product.id, c.qty - 1)}>-</Button>
-                        <div className="px-2 py-1 border rounded">{c.qty}</div>
-                        <Button size="sm" onClick={() => setQty(c.product.id, c.qty + 1)}>+</Button>
+                    <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-1 ml-0 sm:ml-2">
+                      <div className="flex gap-1 items-center">
+                        <Button size="sm" onClick={() => setQty(c.product.id, c.qty - 1)} className="px-2 h-8">-</Button>
+                        <div className="px-3 py-1 border rounded text-sm min-w-[2.5rem] text-center">{c.qty}</div>
+                        <Button size="sm" onClick={() => setQty(c.product.id, c.qty + 1)} className="px-2 h-8">+</Button>
                       </div>
                       <div>
-                        <Button variant="ghost" onClick={() => remove(c.product.id)} className="text-xs">Rem</Button>
+                        <Button 
+                          variant="ghost" 
+                          onClick={() => remove(c.product.id)} 
+                          className="text-xs h-8 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          Remover
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -185,7 +246,7 @@ export default function SalesPanel() {
 
               <Separator />
 
-              <div className="flex gap-2 mt-2">
+              <div className="flex flex-col sm:flex-row gap-2 mt-2">
                 <Button variant="outline" onClick={clearCart} className="flex-1">Limpar</Button>
                 <Button onClick={saveSale} className="flex-1">Salvar Venda</Button>
               </div>
