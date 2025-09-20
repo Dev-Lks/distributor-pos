@@ -6,9 +6,12 @@ import { Card } from "@/components/ui/card"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import QRCode from "react-qr-code"
+import { ExternalLink as LinkIcon, Maximize2, Minimize2 } from 'lucide-react'
 
 export default function NitroBeerLinktree() {
   const [currentUrl, setCurrentUrl] = useState('')
+  const [mapLoaded, setMapLoaded] = useState(false)
+  const [fullscreen, setFullscreen] = useState(false)
 
   useEffect(() => {
     setCurrentUrl(window.location.href)
@@ -89,10 +92,6 @@ export default function NitroBeerLinktree() {
 
         {/* Location Section */}
         <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8">
-          <div className="flex items-center gap-3 mb-3 sm:mb-4">
-            <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-            <h2 className="text-base sm:text-lg font-semibold">Nossa Localização</h2>
-          </div>
 
           <Button
             asChild
@@ -111,12 +110,37 @@ export default function NitroBeerLinktree() {
             </a>
           </Button>
 
-          <p className="text-sm text-muted-foreground mb-3 sm:mb-4">
-            Avenida Minas Gerais, Natal, 3034, ITUIUTABA-MG
-          </p>
+          <div className={`w-full h-48 sm:h-64 lg:h-72 rounded-lg overflow-hidden border border-border/50 map-container ${mapLoaded ? 'map-loaded' : 'map-loading'}`}>
+            <div className="map-skeleton" aria-hidden={!mapLoaded}>
+              <span className="text-sm text-muted-foreground">Carregando mapa…</span>
+            </div>
 
-          <div className="w-full h-48 sm:h-64 lg:h-72 rounded-lg overflow-hidden border border-border/50">
+            <div className="map-overlay" aria-hidden={mapLoaded}>
+              <a
+                className="map-control"
+                href="https://maps.app.goo.gl/pse9bgKadtv9QSCbA"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Abrir em Google Maps"
+              >
+                <LinkIcon className="w-4 h-4 inline-block mr-1" />
+                Abrir
+                
+              </a>
+              <button
+                type="button"
+                className="map-control"
+                onClick={() => setFullscreen(!fullscreen)}
+                aria-pressed={fullscreen}
+                aria-label={fullscreen ? 'Sair do modo tela cheia' : 'Entrar em modo tela cheia'}
+              >
+                {fullscreen ? <Minimize2 className="w-4 h-4 inline-block mr-1" /> : <Maximize2 className="w-4 h-4 inline-block mr-1" />}
+                {fullscreen ? 'Fechar' : 'Tela cheia'}
+              </button>
+            </div>
+
             <iframe
+              className="map-frame"
               src="https://maps.google.com/maps?q=Av%20Minas%20Gerais%2C%203034%20-%20Centro%2C%20Ituiutaba%20-%20MG%2C%2038300&t=&z=15&ie=UTF8&iwloc=&output=embed"
               width="100%"
               height="100%"
@@ -125,7 +149,10 @@ export default function NitroBeerLinktree() {
               loading="lazy"
               referrerPolicy="no-referrer-when-downgrade"
               title="Localização NitroBeer"
+              onLoad={() => setMapLoaded(true)}
             />
+
+            <div className="map-caption">Avenida Minas Gerais, Natal, 3034 — Ituiutaba - MG</div>
           </div>
         </Card>
 
