@@ -8,6 +8,7 @@ import { AlertTriangle, Package, ArrowRight, Plus, Minus } from 'lucide-react';
 import { useInventory } from '@/lib/useInventory';
 import { products } from '@/lib/products';
 import { Location, LOCATION_LABELS } from '@/lib/inventory';
+import { toast } from 'sonner';
 import {
   Select,
   SelectTrigger,
@@ -15,6 +16,59 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+
+// Schemas de validação
+const transferSchema = z.object({
+  productId: z.string().min(1, 'Selecione um produto'),
+  fromLocation: z.string().min(1, 'Selecione a origem'),
+  toLocation: z.string().min(1, 'Selecione o destino'),
+  quantity: z.number().min(1, 'Quantidade deve ser maior que 0'),
+});
+
+const entrySchema = z.object({
+  productId: z.string().min(1, 'Selecione um produto'),
+  location: z.string().min(1, 'Selecione o local'),
+  quantity: z.number().min(1, 'Quantidade deve ser maior que 0'),
+});
+
+const adjustmentSchema = z.object({
+  productId: z.string().min(1, 'Selecione um produto'),
+  location: z.string().min(1, 'Selecione o local'),
+  quantity: z.number().min(0, 'Quantidade deve ser maior ou igual a 0'),
+});
+
+type TransferForm = z.infer<typeof transferSchema>;
+type EntryForm = z.infer<typeof entrySchema>;
+type AdjustmentForm = z.infer<typeof adjustmentSchema>;
 
 export default function InventoryDashboard() {
   const {
@@ -39,70 +93,103 @@ export default function InventoryDashboard() {
   const [adjustmentQuantity, setAdjustmentQuantity] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'transfer' | 'entry' | 'adjustment'>('overview');
 
-  const handleTransfer = () => {
-    if (!selectedProduct || !transferFrom || !transferTo || transferQuantity <= 0) {
-      alert('Preencha todos os campos corretamente');
-      return;
-    }
+  // Estados para dialogs de confirmação
+  const [showTransferDialog, setShowTransferDialog] = useState(false);
+  const [showEntryDialog, setShowEntryDialog] = useState(false);
+  const [showAdjustmentDialog, setShowAdjustmentDialog] = useState(false);
 
+  // Estados de loading
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [isEntering, setIsEntering] = useState(false);
+  const [isAdjusting, setIsAdjusting] = useState(false);
+
+  // Forms com validação
+  const transferForm = useForm<TransferForm>({
+    resolver: zodResolver(transferSchema),
+    defaultValues: {
+      productId: '',
+      fromLocation: '',
+      toLocation: '',
+      quantity: 1,
+    },
+  });
+
+  const entryForm = useForm<EntryForm>({
+    resolver: zodResolver(entrySchema),
+    defaultValues: {
+      productId: '',
+      location: '',
+      quantity: 1,
+    },
+  });
+
+  const adjustmentForm = useForm<AdjustmentForm>({
+    resolver: zodResolver(adjustmentSchema),
+    defaultValues: {
+      productId: '',
+      location: '',
+      quantity: 0,
+    },
+  });
+
+  const confirmTransfer = async (data: TransferForm) => {
+    setIsTransferring(true);
     try {
-      transferStock(selectedProduct, transferFrom, transferTo, transferQuantity, 'Transferência via dashboard');
-      alert('Transferência realizada com sucesso!');
-      setTransferFrom('');
-      setTransferTo('');
-      setTransferQuantity(1);
+      transferStock(data.productId, data.fromLocation as Location, data.toLocation as Location, data.quantity, 'Transferência via dashboard');
+      toast.success('Transferência realizada com sucesso!');
+      transferForm.reset();
       setActiveTab('overview');
+      setShowTransferDialog(false);
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro na transferência');
+      toast.error(error instanceof Error ? error.message : 'Erro na transferência');
+    } finally {
+      setIsTransferring(false);
     }
   };
 
   const handleDirectSale = () => {
     if (!selectedProduct || transferQuantity <= 0) {
-      alert('Selecione um produto e quantidade');
+      toast.error('Selecione um produto e quantidade');
       return;
     }
 
     try {
       directSale(selectedProduct, transferQuantity, 'Venda direta da câmara fria');
-      alert('Venda direta realizada com sucesso!');
+      toast.success('Venda direta realizada com sucesso!');
       setTransferQuantity(1);
       setActiveTab('overview');
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Erro na venda direta');
+      toast.error(error instanceof Error ? error.message : 'Erro na venda direta');
     }
   };
 
-  const handleStockEntry = () => {
-    if (!selectedProduct || !entryLocation || entryQuantity <= 0) {
-      alert('Preencha todos os campos');
-      return;
-    }
-
+  const confirmStockEntry = async (data: EntryForm) => {
+    setIsEntering(true);
     try {
-      stockEntry(selectedProduct, entryLocation, entryQuantity, 'Entrada via dashboard');
-      alert('Entrada de mercadoria registrada!');
-      setEntryLocation('');
-      setEntryQuantity(1);
+      stockEntry(data.productId, data.location as Location, data.quantity, 'Entrada via dashboard');
+      toast.success('Entrada de mercadoria registrada!');
+      entryForm.reset();
       setActiveTab('overview');
+      setShowEntryDialog(false);
     } catch {
-      alert('Erro na entrada de mercadoria');
+      toast.error('Erro na entrada de mercadoria');
+    } finally {
+      setIsEntering(false);
     }
   };
 
-  const handleAdjustment = () => {
-    if (!selectedProduct || !adjustmentLocation) {
-      alert('Selecione produto e local');
-      return;
-    }
-
+  const confirmAdjustment = async (data: AdjustmentForm) => {
+    setIsAdjusting(true);
     try {
-      adjustStock(selectedProduct, adjustmentLocation, adjustmentQuantity, 'Ajuste via dashboard');
-      alert('Ajuste realizado com sucesso!');
-      setAdjustmentQuantity(0);
+      adjustStock(data.productId, data.location as Location, data.quantity, 'Ajuste via dashboard');
+      toast.success('Ajuste realizado com sucesso!');
+      adjustmentForm.reset();
       setActiveTab('overview');
+      setShowAdjustmentDialog(false);
     } catch {
-      alert('Erro no ajuste de estoque');
+      toast.error('Erro no ajuste de estoque');
+    } finally {
+      setIsAdjusting(false);
     }
   };
 
@@ -115,12 +202,12 @@ export default function InventoryDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold">Controle de Estoque</h2>
-          <p className="text-muted-foreground">Gerencie seu inventário em todos os locais</p>
+          <h2 className="text-xl sm:text-2xl font-bold">Controle de Estoque</h2>
+          <p className="text-muted-foreground text-sm sm:text-base">Gerencie seu inventário em todos os locais</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 self-start sm:self-auto">
           {activeAlerts.length > 0 && (
             <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm flex items-center gap-1">
               <AlertTriangle className="w-3 h-3" />
@@ -131,7 +218,7 @@ export default function InventoryDashboard() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b">
+      <div className="flex flex-wrap gap-1 sm:gap-2 border-b overflow-x-auto">
         {[
           { id: 'overview' as const, label: 'Visão Geral' },
           { id: 'transfer' as const, label: 'Transferir' },
@@ -141,7 +228,7 @@ export default function InventoryDashboard() {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 border-b-2 font-medium text-sm ${
+            className={`px-2 sm:px-4 py-2 border-b-2 font-medium text-xs sm:text-sm whitespace-nowrap ${
               activeTab === tab.id
                 ? 'border-primary text-primary'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
@@ -175,37 +262,50 @@ export default function InventoryDashboard() {
       {activeTab === 'overview' && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Visão Geral do Estoque</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {products.map(product => (
-              <div key={product.id} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium">{product.name}</h4>
-                  <span className="text-xs bg-gray-100 px-2 py-1 rounded">{product.size}</span>
-                </div>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Produto</TableHead>
+                  <TableHead>Tamanho</TableHead>
+                  {(Object.keys(LOCATION_LABELS) as Location[]).map(location => (
+                    <TableHead key={location} className="text-center">
+                      {LOCATION_LABELS[location]}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {products.map(product => (
+                  <TableRow key={product.id}>
+                    <TableCell className="font-medium">{product.name}</TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{product.size}</Badge>
+                    </TableCell>
+                    {(Object.keys(LOCATION_LABELS) as Location[]).map(location => {
+                      const stock = getStockLevel(product.id, location);
+                      const stockLevel = stockLevels.find(s => s.productId === product.id && s.location === location);
+                      const isLow = stockLevel && stock <= stockLevel.minStock;
+                      const isOut = stock <= 0;
 
-                <div className="space-y-2">
-                  {(Object.keys(LOCATION_LABELS) as Location[]).map(location => {
-                    const stock = getStockLevel(product.id, location);
-                    const stockLevel = stockLevels.find(s => s.productId === product.id && s.location === location);
-                    const isLow = stockLevel && stock <= stockLevel.minStock;
-                    const isOut = stock <= 0;
-
-                    return (
-                      <div key={location} className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">{LOCATION_LABELS[location]}:</span>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          isOut ? 'bg-red-100 text-red-800' :
-                          isLow ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {stock}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+                      return (
+                        <TableCell key={location} className="text-center">
+                          <Badge
+                            variant={
+                              isOut ? 'destructive' :
+                              isLow ? 'secondary' :
+                              'default'
+                            }
+                          >
+                            {stock}
+                          </Badge>
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
         </Card>
       )}
@@ -277,10 +377,126 @@ export default function InventoryDashboard() {
             </div>
 
             <div className="flex gap-2">
-              <Button onClick={handleTransfer} className="flex-1">
-                <ArrowRight className="w-4 h-4 mr-2" />
-                Transferir
-              </Button>
+              <Dialog open={showTransferDialog} onOpenChange={setShowTransferDialog}>
+                <DialogTrigger asChild>
+                  <Button onClick={() => setShowTransferDialog(true)} className="flex-1">
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                    Transferir
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Confirmar Transferência</DialogTitle>
+                    <DialogDescription>
+                      Preencha os dados da transferência abaixo.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <Form {...transferForm}>
+                    <form onSubmit={transferForm.handleSubmit(confirmTransfer)} className="space-y-4">
+                      <FormField
+                        control={transferForm.control}
+                        name="productId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Produto</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione um produto" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {products.map(product => (
+                                  <SelectItem key={product.id} value={product.id}>
+                                    {product.name} - {product.size}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={transferForm.control}
+                          name="fromLocation"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>De</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Origem" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {Object.entries(LOCATION_LABELS).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={transferForm.control}
+                          name="toLocation"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Para</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Destino" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {Object.entries(LOCATION_LABELS).map(([key, label]) => (
+                                    <SelectItem key={key} value={key}>
+                                      {label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={transferForm.control}
+                        name="quantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Quantidade</FormLabel>
+                            <FormControl>
+                              <Input
+                                type="number"
+                                {...field}
+                                onChange={(e) => field.onChange(Number(e.target.value))}
+                                min="1"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                        <Button type="button" variant="outline" onClick={() => setShowTransferDialog(false)} disabled={isTransferring} className="w-full sm:w-auto">
+                          Cancelar
+                        </Button>
+                        <Button type="submit" disabled={isTransferring} className="w-full sm:w-auto">
+                          {isTransferring ? 'Transferindo...' : 'Confirmar'}
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </Form>
+                </DialogContent>
+              </Dialog>
               <Button onClick={handleDirectSale} variant="outline" className="flex-1">
                 <Package className="w-4 h-4 mr-2" />
                 Venda Direta
@@ -338,10 +554,100 @@ export default function InventoryDashboard() {
               />
             </div>
 
-            <Button onClick={handleStockEntry} className="w-full">
-              <Plus className="w-4 h-4 mr-2" />
-              Registrar Entrada
-            </Button>
+            <Dialog open={showEntryDialog} onOpenChange={setShowEntryDialog}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setShowEntryDialog(true)} className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Registrar Entrada
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Registrar Entrada</DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados da entrada de mercadoria.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...entryForm}>
+                  <form onSubmit={entryForm.handleSubmit(confirmStockEntry)} className="space-y-4">
+                    <FormField
+                      control={entryForm.control}
+                      name="productId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Produto</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione um produto" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {products.map(product => (
+                                <SelectItem key={product.id} value={product.id}>
+                                  {product.name} - {product.size}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={entryForm.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Local</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o local" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Object.entries(LOCATION_LABELS).map(([key, label]) => (
+                                <SelectItem key={key} value={key}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={entryForm.control}
+                      name="quantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantidade</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              min="1"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                      <Button type="button" variant="outline" onClick={() => setShowEntryDialog(false)} disabled={isEntering} className="w-full sm:w-auto">
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={isEntering} className="w-full sm:w-auto">
+                        {isEntering ? 'Registrando...' : 'Confirmar'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
         </Card>
       )}
@@ -394,10 +700,100 @@ export default function InventoryDashboard() {
               />
             </div>
 
-            <Button onClick={handleAdjustment} className="w-full">
-              <Minus className="w-4 h-4 mr-2" />
-              Ajustar Estoque
-            </Button>
+            <Dialog open={showAdjustmentDialog} onOpenChange={setShowAdjustmentDialog}>
+              <DialogTrigger asChild>
+                <Button onClick={() => setShowAdjustmentDialog(true)} className="w-full">
+                  <Minus className="w-4 h-4 mr-2" />
+                  Ajustar Estoque
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Ajustar Estoque</DialogTitle>
+                  <DialogDescription>
+                    Preencha os dados do ajuste de estoque.
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...adjustmentForm}>
+                  <form onSubmit={adjustmentForm.handleSubmit(confirmAdjustment)} className="space-y-4">
+                    <FormField
+                      control={adjustmentForm.control}
+                      name="productId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Produto</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione um produto" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {products.map(product => (
+                                <SelectItem key={product.id} value={product.id}>
+                                  {product.name} - {product.size}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={adjustmentForm.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Local</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione o local" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {Object.entries(LOCATION_LABELS).map(([key, label]) => (
+                                <SelectItem key={key} value={key}>
+                                  {label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={adjustmentForm.control}
+                      name="quantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Novo Estoque</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              onChange={(e) => field.onChange(Number(e.target.value))}
+                              min="0"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
+                      <Button type="button" variant="outline" onClick={() => setShowAdjustmentDialog(false)} disabled={isAdjusting} className="w-full sm:w-auto">
+                        Cancelar
+                      </Button>
+                      <Button type="submit" disabled={isAdjusting} className="w-full sm:w-auto">
+                        {isAdjusting ? 'Ajustando...' : 'Confirmar'}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
           </div>
         </Card>
       )}
@@ -405,27 +801,54 @@ export default function InventoryDashboard() {
       {/* Movimentações Recentes */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold mb-4">Movimentações Recentes</h3>
-        <div className="space-y-3">
-          {movements.slice(0, 10).map(movement => {
-            const product = products.find(p => p.id === movement.productId);
-            return (
-              <div key={movement.id} className="flex items-center justify-between p-3 border rounded">
-                <div>
-                  <div className="font-medium">{product?.name} - {product?.size}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {movement.fromLocation && `${LOCATION_LABELS[movement.fromLocation]} → `}
-                    {movement.toLocation ? LOCATION_LABELS[movement.toLocation] : 'Saída'}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium">Qtd: {movement.quantity}</div>
-                  <div className="text-sm text-muted-foreground">
-                    {new Date(movement.timestamp).toLocaleString()}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Produto</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Origem</TableHead>
+                <TableHead>Destino</TableHead>
+                <TableHead className="text-center">Quantidade</TableHead>
+                <TableHead>Data/Hora</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {movements.slice(0, 10).map(movement => {
+                const product = products.find(p => p.id === movement.productId);
+                return (
+                  <TableRow key={movement.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{product?.name}</div>
+                        <div className="text-sm text-muted-foreground">{product?.size}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {movement.type === 'transfer' ? 'Transferência' :
+                         movement.type === 'sale' ? 'Venda' :
+                         movement.type === 'entry' ? 'Entrada' :
+                         'Ajuste'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {movement.fromLocation ? LOCATION_LABELS[movement.fromLocation] : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {movement.toLocation ? LOCATION_LABELS[movement.toLocation] : 'Saída'}
+                    </TableCell>
+                    <TableCell className="text-center font-medium">
+                      {movement.quantity}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(movement.timestamp).toLocaleString('pt-BR')}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       </Card>
     </div>
