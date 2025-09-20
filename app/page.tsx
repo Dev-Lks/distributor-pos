@@ -62,7 +62,7 @@ export default function NitroBeerLinktree() {
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 text-balance">NitroBeer</h1>
           <p className="text-base sm:text-lg text-muted-foreground mb-3 sm:mb-4">Cerveja Artesanal Premium</p>
           <p className="text-sm sm:text-base text-muted-foreground leading-relaxed px-2">
-            {"Descubra o sabor único da nossa cerveja artesanal. Qualidade, tradição e inovação em cada gole."}
+            {"✨ Chopp premium, vibes únicas, para quem não aceita a mesmice! 🍻"}
           </p>
         </div>
 
@@ -125,7 +125,7 @@ export default function NitroBeerLinktree() {
               >
                 <LinkIcon className="w-4 h-4 inline-block mr-1" />
                 Abrir
-                
+
               </a>
               <button
                 type="button"
