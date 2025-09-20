@@ -14,10 +14,18 @@ export default function SalesPrivatePage() {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+
+    if (!pin.trim()) {
+      alert("Digite o PIN de acesso.");
+      return;
+    }
+
     if (pin === PIN) {
       setAuthed(true);
+      setPin('');
     } else {
-      alert("PIN incorreto");
+      alert("PIN incorreto. Tente novamente.");
+      setPin('');
     }
   }
 
@@ -33,8 +41,16 @@ export default function SalesPrivatePage() {
                 <input
                   type="password"
                   value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  className="w-full p-3 border rounded text-lg"
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/\D/g, ''); // Só números
+                    if (value.length <= 6) { // Limita a 6 dígitos
+                      setPin(value);
+                    }
+                  }}
+                  className="w-full p-3 border rounded text-lg text-center font-mono tracking-wider"
+                  placeholder="Digite o PIN"
+                  maxLength={6}
+                  autoFocus
                 />
                 <div className="flex gap-2">
                   <button type="submit" className="btn">
@@ -51,7 +67,13 @@ export default function SalesPrivatePage() {
                   <button onClick={() => setView('history')} className={`px-3 py-1 rounded ${view === 'history' ? 'bg-primary text-white' : ''}`}>Histórico</button>
                 </div>
                 <div>
-                  <button onClick={() => { setAuthed(false); setPin(''); setView('sales') }} className="btn btn-ghost">Logout</button>
+                  <button onClick={() => {
+                    if (confirm("Tem certeza que deseja fazer logout?")) {
+                      setAuthed(false);
+                      setPin('');
+                      setView('sales');
+                    }
+                  }} className="btn btn-ghost">Logout</button>
                 </div>
               </div>
 

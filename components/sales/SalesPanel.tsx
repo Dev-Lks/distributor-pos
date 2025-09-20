@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState, useCallback } from "react";
 import productsData, { Product } from "../../lib/products";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,20 +18,52 @@ export default function SalesPanel() {
   const [quickQty, setQuickQty] = useState<number>(1);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [addingProduct, setAddingProduct] = useState<string | null>(null);
+  const [savingSale, setSavingSale] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("sales_cart");
-    if (saved) setCart(JSON.parse(saved));
-    const fav = localStorage.getItem("favorites");
-    if (fav) setFavorites(JSON.parse(fav));
+    try {
+      const saved = localStorage.getItem("sales_cart");
+      if (saved) {
+        const parsedCart = JSON.parse(saved);
+        if (Array.isArray(parsedCart)) {
+          setCart(parsedCart);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao carregar carrinho do localStorage:", error);
+      // Limpa dados corrompidos
+      localStorage.removeItem("sales_cart");
+    }
+
+    try {
+      const fav = localStorage.getItem("favorites");
+      if (fav) {
+        const parsedFav = JSON.parse(fav);
+        if (Array.isArray(parsedFav)) {
+          setFavorites(parsedFav);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao carregar favoritos do localStorage:", error);
+      localStorage.removeItem("favorites");
+    }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem("sales_cart", JSON.stringify(cart));
+    try {
+      localStorage.setItem("sales_cart", JSON.stringify(cart));
+    } catch (error) {
+      console.error("Erro ao salvar carrinho no localStorage:", error);
+      // Poderia mostrar uma notificação para o usuário aqui
+    }
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem("favorites", JSON.stringify(favorites));
+    try {
+      localStorage.setItem("favorites", JSON.stringify(favorites));
+    } catch (error) {
+      console.error("Erro ao salvar favoritos no localStorage:", error);
+    }
   }, [favorites]);
 
   const filtered = useMemo(() => {
@@ -41,59 +73,131 @@ export default function SalesPanel() {
     });
   }, [products, query]);
 
-  // no global keyboard shortcuts - intentionally removed for usability
-
-  
-
-  function add(product: Product, qty = 1) {
+  const add = useCallback((product: Product, qty = 1) => {
     setCart((c) => {
       const found = c.find((x) => x.product.id === product.id);
       if (found) return c.map((x) => (x.product.id === product.id ? { ...x, qty: x.qty + qty } : x));
       return [...c, { product, qty }];
     });
-  }
+  }, []);
 
-  function quickAdd(product: Product) {
+  const quickAdd = useCallback((product: Product) => {
     setAddingProduct(product.id);
     add(product, quickQty);
     // Reset feedback after animation
     setTimeout(() => setAddingProduct(null), 200);
-  }
+  }, [add, quickQty]);
 
-  function setQty(productId: string, qty: number) {
+  const setQty = useCallback((productId: string, qty: number) => {
     if (qty <= 0) return setCart((c) => c.filter((x) => x.product.id !== productId));
     setCart((c) => c.map((x) => (x.product.id === productId ? { ...x, qty } : x)));
-  }
+  }, []);
 
-  function remove(productId: string) {
+  const remove = useCallback((productId: string) => {
     setCart((c) => c.filter((x) => x.product.id !== productId));
-  }
+  }, []);
 
-  function clearCart() {
+  const clearCart = useCallback(() => {
     setCart([]);
-  }
+  }, []);
 
-  function saveSale() {
-    if (cart.length === 0) return;
-    const vendas = JSON.parse(localStorage.getItem("vendas") || "[]");
-    const total = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
-    vendas.push({ id: Date.now(), date: new Date().toISOString(), items: cart, total });
-    localStorage.setItem("vendas", JSON.stringify(vendas));
-    clearCart();
-  }
+  const saveSale = useCallback(() => {
+    if (cart.length === 0) {
+      alert("Carrinho vazio! Adicione produtos antes de salvar.");
+      return;
+    }
 
-  function toggleFavorite(id: string) {
+    if (savingSale) return; // Previne múltiplas chamadas
+
+    setSavingSale(true);
+
+    try {
+      const vendas = JSON.parse(localStorage.getItem("vendas") || "[]");
+      const total = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
+
+      if (total <= 0) {
+        alert("Erro: Total da venda deve ser maior que zero.");
+        setSavingSale(false);
+        return;
+      }
+
+      vendas.push({
+        id: Date.now(),
+        date: new Date().toISOString(),
+        items: cart,
+        total
+      });
+
+      localStorage.setItem("vendas", JSON.stringify(vendas));
+      clearCart();
+      alert("Venda salva com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar venda:", error);
+      alert("Erro ao salvar venda. Tente novamente.");
+    } finally {
+      setSavingSale(false);
+    }
+  }, [cart, savingSale, clearCart]);
+
+  const toggleFavorite = useCallback((id: string) => {
     setFavorites((cur) => {
       if (cur.includes(id)) return cur.filter((x) => x !== id);
       return [id, ...cur];
     });
-  }
+  }, []);
 
   const total = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
 
   // split favorites and others
   const favProducts = filtered.filter((p) => favorites.includes(p.id));
   const otherProducts = filtered.filter((p) => !favorites.includes(p.id));
+
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      // Só funciona se não estiver focado em um input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key.toLowerCase()) {
+        case 's':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            saveSale();
+          }
+          break;
+        case 'c':
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            clearCart();
+          }
+          break;
+        case 'escape':
+          // Limpa busca quando ESC é pressionado
+          setQuery('');
+          break;
+        case '+':
+        case '=':
+          e.preventDefault();
+          setQuickQty(prev => Math.min(99, prev + 1));
+          break;
+        case '-':
+          e.preventDefault();
+          setQuickQty(prev => Math.max(1, prev - 1));
+          break;
+      }
+
+      // Atalhos numéricos para produtos favoritos (1-9)
+      const num = parseInt(e.key);
+      if (num >= 1 && num <= 9 && favProducts.length >= num) {
+        e.preventDefault();
+        quickAdd(favProducts[num - 1]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [favProducts, saveSale, clearCart, quickAdd]);
 
   return (
     <div className="w-full">
@@ -248,7 +352,9 @@ export default function SalesPanel() {
 
               <div className="flex flex-col sm:flex-row gap-2 mt-2">
                 <Button variant="outline" onClick={clearCart} className="flex-1">Limpar</Button>
-                <Button onClick={saveSale} className="flex-1">Salvar Venda</Button>
+                <Button onClick={saveSale} disabled={savingSale} className="flex-1">
+                  {savingSale ? "Salvando..." : "Salvar Venda"}
+                </Button>
               </div>
             </Card>
           </div>
