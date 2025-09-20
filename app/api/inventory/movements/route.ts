@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('POST /api/inventory/movements - Starting request');
+
     const {
       productId,
       fromLocation,
@@ -12,25 +14,31 @@ export async function POST(request: NextRequest) {
       notes
     } = await request.json();
 
+    console.log('Request body:', { productId, fromLocation, toLocation, quantity, type, notes });
+
     if (!productId || !type || quantity === undefined) {
+      console.log('Missing required fields');
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
+    console.log('Checking if product exists...');
     // Check if product exists
     const product = await prisma.product.findUnique({
       where: { id: productId }
     });
 
     if (!product) {
+      console.log(`Product not found: ${productId}`);
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
       );
     }
 
+    console.log('Creating movement record...');
     // Create the movement record
     const movement = await prisma.stockMovement.create({
       data: {
@@ -44,6 +52,8 @@ export async function POST(request: NextRequest) {
         user: 'Sistema' // TODO: implement logged user
       }
     });
+
+    console.log('Movement created with ID:', movement.id);
 
     // Update stock levels
     await prisma.$transaction(async (tx: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -121,11 +131,12 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('Movement created successfully, returning response');
     return NextResponse.json(movement);
   } catch (error) {
     console.error('Error recording movement:', error);
     return NextResponse.json(
-      { error: 'Failed to record movement' },
+      { error: 'Failed to record movement', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

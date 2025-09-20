@@ -3,27 +3,34 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('POST /api/inventory/stock - Starting request');
+
     const { productId, location, quantity, minStock = 0 } = await request.json();
+    console.log('Request body:', { productId, location, quantity, minStock });
 
     if (!productId || !location || quantity === undefined) {
+      console.log('Missing required fields');
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
+    console.log('Checking if product exists...');
     // Check if product exists
     const product = await prisma.product.findUnique({
       where: { id: productId }
     });
 
     if (!product) {
+      console.log(`Product not found: ${productId}`);
       return NextResponse.json(
         { error: 'Product not found' },
         { status: 404 }
       );
     }
 
+    console.log('Updating stock level...');
     const stockLevel = await prisma.stockLevel.upsert({
       where: {
         productId_location: {
@@ -44,14 +51,16 @@ export async function POST(request: NextRequest) {
       }
     });
 
+    console.log('Checking for alerts...');
     // Check for alerts
     await checkAlerts(prisma, productId, location);
 
+    console.log('Stock level updated successfully');
     return NextResponse.json(stockLevel);
   } catch (error) {
     console.error('Error updating stock level:', error);
     return NextResponse.json(
-      { error: 'Failed to update stock level' },
+      { error: 'Failed to update stock level', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
