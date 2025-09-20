@@ -1,11 +1,10 @@
-"use client"
-
 import React, { useEffect, useMemo, useState, useCallback } from "react";
 import productsData, { Product } from "../../lib/products";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { useInventory } from '@/lib/useInventory';
 
 type CartItem = { product: Product; qty: number };
 
@@ -19,6 +18,9 @@ export default function SalesPanel() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [addingProduct, setAddingProduct] = useState<string | null>(null);
   const [savingSale, setSavingSale] = useState(false);
+
+  // Hook de inventário
+  const { getStockLevel, recordMovement } = useInventory();
 
   useEffect(() => {
     try {
@@ -82,11 +84,18 @@ export default function SalesPanel() {
   }, []);
 
   const quickAdd = useCallback((product: Product) => {
+    // Verificar estoque disponível no ponto de venda
+    const availableStock = getStockLevel(product.id, 'ponto_venda');
+    if (availableStock < quickQty) {
+      alert(`Estoque insuficiente! Disponível: ${availableStock} unidades`);
+      return;
+    }
+
     setAddingProduct(product.id);
     add(product, quickQty);
     // Reset feedback after animation
     setTimeout(() => setAddingProduct(null), 200);
-  }, [add, quickQty]);
+  }, [add, quickQty, getStockLevel]);
 
   const setQty = useCallback((productId: string, qty: number) => {
     if (qty <= 0) return setCart((c) => c.filter((x) => x.product.id !== productId));
@@ -112,6 +121,16 @@ export default function SalesPanel() {
     setSavingSale(true);
 
     try {
+      // Verificar estoque antes de salvar
+      for (const item of cart) {
+        const availableStock = getStockLevel(item.product.id, 'ponto_venda');
+        if (availableStock < item.qty) {
+          alert(`Estoque insuficiente para ${item.product.name}! Disponível: ${availableStock}`);
+          setSavingSale(false);
+          return;
+        }
+      }
+
       const vendas = JSON.parse(localStorage.getItem("vendas") || "[]");
       const total = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
 
@@ -129,6 +148,12 @@ export default function SalesPanel() {
       });
 
       localStorage.setItem("vendas", JSON.stringify(vendas));
+
+      // Registrar movimentações de saída para cada item vendido
+      cart.forEach(item => {
+        recordMovement(item.product.id, 'ponto_venda', null, item.qty, 'sale', 'Venda registrada via painel');
+      });
+
       clearCart();
       alert("Venda salva com sucesso!");
     } catch (error) {
@@ -137,7 +162,7 @@ export default function SalesPanel() {
     } finally {
       setSavingSale(false);
     }
-  }, [cart, savingSale, clearCart]);
+  }, [cart, savingSale, clearCart, getStockLevel, recordMovement]);
 
   const toggleFavorite = useCallback((id: string) => {
     setFavorites((cur) => {

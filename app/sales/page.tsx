@@ -3,12 +3,13 @@
 import { useState } from "react";
 import SalesPanel from "../../components/sales/SalesPanel";
 import SalesHistory from "../../components/sales/SalesHistory";
+import InventoryDashboard from "../../components/inventory/InventoryDashboard";
 import { Card } from "@/components/ui/card";
 
 export default function SalesPrivatePage() {
   const [pin, setPin] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [view, setView] = useState<'sales'|'history'>('sales');
+  const [view, setView] = useState<'sales'|'history'|'inventory'>('sales');
 
   const PIN = process.env.NEXT_PUBLIC_SALES_PIN || "1234"; // change via env or code
 
@@ -64,6 +65,7 @@ export default function SalesPrivatePage() {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex gap-2">
                   <button onClick={() => setView('sales')} className={`px-3 py-1 rounded ${view === 'sales' ? 'bg-primary text-white' : ''}`}>Vendas</button>
+                  <button onClick={() => setView('inventory')} className={`px-3 py-1 rounded ${view === 'inventory' ? 'bg-primary text-white' : ''}`}>Inventário</button>
                   <button onClick={() => setView('history')} className={`px-3 py-1 rounded ${view === 'history' ? 'bg-primary text-white' : ''}`}>Histórico</button>
                 </div>
                 <div>
@@ -77,7 +79,7 @@ export default function SalesPrivatePage() {
                 </div>
               </div>
 
-              {view === 'sales' ? <SalesPanel /> : <SalesHistory />}
+              {view === 'sales' ? <SalesPanel /> : view === 'inventory' ? <InventoryDashboard /> : <SalesHistory />}
             </div>
           )}
         </Card>
