@@ -176,7 +176,7 @@ export default function NitroBeerLinktree() {
 
         {/* Footer */}
         <div className="text-center">
-          <p className="text-xs sm:text-sm text-muted-foreground">© 2024 NitroBeer. Todos os direitos reservados.</p>
+          <p className="text-xs sm:text-sm text-muted-foreground">© 2025 NitroBeer. Todos os direitos reservados.</p>
           <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             {"Beba com moderação. Venda proibida para menores de 18 anos."}
           </p>
