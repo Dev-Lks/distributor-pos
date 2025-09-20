@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Sale } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 
 interface SaleItemInput {
   product: {
@@ -10,6 +12,19 @@ interface SaleItemInput {
   };
   qty: number;
 }
+
+type SaleWithItems = Sale & {
+  items: {
+    product: {
+      id: string;
+      name: string;
+      size: string;
+      price: Decimal;
+    };
+    quantity: number;
+    price: Decimal;
+  }[];
+};
 
 export async function GET() {
   try {
@@ -27,7 +42,7 @@ export async function GET() {
     });
 
     // Transform to match the expected format
-    const formattedSales = sales.map(sale => ({
+    const formattedSales = sales.map((sale: SaleWithItems) => ({
       id: parseInt(sale.id),
       date: sale.date.toISOString(),
       items: sale.items.map(item => ({
