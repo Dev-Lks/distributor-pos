@@ -12,7 +12,6 @@ const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", 
 
 export default function SalesPanel() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(true);
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quickQty, setQuickQty] = useState<number>(1);
@@ -33,8 +32,6 @@ export default function SalesPanel() {
         }
       } catch (error) {
         console.error('Error loading products:', error);
-      } finally {
-        setLoadingProducts(false);
       }
     };
 
