@@ -1,11 +1,14 @@
 "use client"
 
 import React, { useEffect, useState } from 'react'
+import { Product } from '../../lib/products'
+
+type CartItem = { product: Product; qty: number };
 
 type SavedSale = {
   id: number;
   date: string;
-  items: any[];
+  items: CartItem[];
   total: number;
 }
 
@@ -52,7 +55,7 @@ export default function SalesHistory() {
             <details>
               <summary className="text-xs">Itens ({s.items.length})</summary>
               <ul className="text-xs list-disc pl-4">
-                {s.items.map((it: any, idx: number) => (
+                {s.items.map((it: CartItem, idx: number) => (
                   <li key={`${it.product.id}-${idx}`}>{it.product.name} x {it.qty} — R$ {Number(it.product.price).toFixed(2)}</li>
                 ))}
               </ul>

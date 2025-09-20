@@ -99,10 +99,10 @@ export default function SalesPanel() {
           <div className="flex items-center gap-2 mb-3">
             <div className="hidden sm:block text-xs text-muted-foreground">Atalhos: 1-9 fav/pos | +/- qty | S salvar | C limpar | F favoritar</div>
             
-            <Input placeholder="Buscar produto" value={query} onChange={(e: any) => setQuery(e.target.value)} />
+            <Input placeholder="Buscar produto" value={query} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} />
             <div className="flex items-center gap-2">
               <Button onClick={() => setQuickQty(Math.max(1, quickQty - 1))}>-</Button>
-              <Input value={String(quickQty)} onChange={(e: any) => setQuickQty(Math.max(1, Number(e.target.value || 1)))} className="w-20 text-center" />
+              <Input value={String(quickQty)} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickQty(Math.max(1, Number(e.target.value || 1)))} className="w-20 text-center" />
               <Button onClick={() => setQuickQty(quickQty + 1)}>+</Button>
             </div>
             <div className="ml-auto text-sm">Total: <strong>{formatBRL(total)}</strong></div>
