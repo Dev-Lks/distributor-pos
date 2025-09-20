@@ -17,17 +17,24 @@ export default function SalesHistory() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    try {
-      const vendas = JSON.parse(localStorage.getItem('vendas') || '[]');
-      if (Array.isArray(vendas)) {
-        setItems(vendas);
+    const loadSales = async () => {
+      try {
+        const response = await fetch('/api/sales');
+        if (response.ok) {
+          const sales = await response.json();
+          setItems(sales);
+        } else {
+          console.error('Failed to load sales');
+        }
+      } catch (error) {
+        console.error("Erro ao carregar histórico de vendas:", error);
+        alert("Erro ao carregar histórico de vendas. Tente novamente.");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Erro ao carregar histórico de vendas:", error);
-      alert("Erro ao carregar histórico de vendas. Os dados podem estar corrompidos.");
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    loadSales();
   }, [])
 
   function exportCSV() {
@@ -63,12 +70,16 @@ export default function SalesHistory() {
           <button onClick={exportCSV} disabled={loading || items.length === 0} className="btn disabled:opacity-50">
             {loading ? "Carregando..." : "Exportar CSV"}
           </button>
-          <button onClick={() => {
+          <button onClick={async () => {
             if (confirm("Tem certeza que deseja limpar todo o histórico de vendas? Esta ação não pode ser desfeita.")) {
               try {
-                localStorage.removeItem('vendas');
-                setItems([]);
-                alert("Histórico limpo com sucesso!");
+                const response = await fetch('/api/sales', { method: 'DELETE' });
+                if (response.ok) {
+                  setItems([]);
+                  alert("Histórico limpo com sucesso!");
+                } else {
+                  alert("Erro ao limpar histórico. Tente novamente.");
+                }
               } catch (error) {
                 console.error("Erro ao limpar histórico:", error);
                 alert("Erro ao limpar histórico. Tente novamente.");

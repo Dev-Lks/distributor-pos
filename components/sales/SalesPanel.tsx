@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from "react";
-import productsData, { Product } from "../../lib/products";
+import { Product } from "../../lib/products";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,8 @@ type CartItem = { product: Product; qty: number };
 const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 export default function SalesPanel() {
-  const [products] = useState<Product[]>(productsData);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quickQty, setQuickQty] = useState<number>(1);
@@ -20,9 +21,24 @@ export default function SalesPanel() {
   const [savingSale, setSavingSale] = useState(false);
 
   // Hook de inventário
-  const { getStockLevel, recordMovement } = useInventory();
+  const { getStockLevel } = useInventory();
 
   useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await fetch('/api/products');
+        if (response.ok) {
+          const productsData = await response.json();
+          setProducts(productsData);
+        }
+      } catch (error) {
+        console.error('Error loading products:', error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    };
+
+    loadProducts();
     try {
       const saved = localStorage.getItem("sales_cart");
       if (saved) {
@@ -110,7 +126,7 @@ export default function SalesPanel() {
     setCart([]);
   }, []);
 
-  const saveSale = useCallback(() => {
+  const saveSale = useCallback(async () => {
     if (cart.length === 0) {
       alert("Carrinho vazio! Adicione produtos antes de salvar.");
       return;
@@ -131,7 +147,6 @@ export default function SalesPanel() {
         }
       }
 
-      const vendas = JSON.parse(localStorage.getItem("vendas") || "[]");
       const total = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
 
       if (total <= 0) {
@@ -140,19 +155,21 @@ export default function SalesPanel() {
         return;
       }
 
-      vendas.push({
-        id: Date.now(),
-        date: new Date().toISOString(),
-        items: cart,
-        total
+      // Save sale via API
+      const response = await fetch('/api/sales', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          items: cart,
+          total
+        }),
       });
 
-      localStorage.setItem("vendas", JSON.stringify(vendas));
-
-      // Registrar movimentações de saída para cada item vendido
-      cart.forEach(item => {
-        recordMovement(item.product.id, 'ponto_venda', null, item.qty, 'sale', 'Venda registrada via painel');
-      });
+      if (!response.ok) {
+        throw new Error('Failed to save sale');
+      }
 
       clearCart();
       alert("Venda salva com sucesso!");
@@ -162,7 +179,7 @@ export default function SalesPanel() {
     } finally {
       setSavingSale(false);
     }
-  }, [cart, savingSale, clearCart, getStockLevel, recordMovement]);
+  }, [cart, savingSale, clearCart, getStockLevel]);
 
   const toggleFavorite = useCallback((id: string) => {
     setFavorites((cur) => {
