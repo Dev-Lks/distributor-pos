@@ -9,8 +9,7 @@ import "./globals.css"
 export const metadata: Metadata = {
   title: "NitroBeer - Cerveja Artesanal Premium",
   description: "Descubra o sabor único da nossa cerveja artesanal. Qualidade, tradição e inovação em cada gole.",
-  generator: "v0.app",
-  keywords: ["cerveja artesanal", "nitrobeer", "cerveja premium", "chopp"],
+  keywords: ["cerveja artesanal", "nitrobeer", "cerveja premium", "chopp", "ituiutaba", "cerveja gelada", "cerveja de qualidade"],
   authors: [{ name: "NitroBeer" }],
   openGraph: {
     title: "NitroBeer - Cerveja Artesanal Premium",
