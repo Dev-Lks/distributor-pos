@@ -19,6 +19,7 @@ import SalesPanel from "../../components/sales/SalesPanel";
 import SalesHistory from "../../components/sales/SalesHistory";
 import InventoryDashboard from "../../components/inventory/InventoryDashboard";
 import Reports from "../../components/reports/Reports";
+import { AppShell } from "@/components/layout/AppShell";
 import { useInventory } from '@/lib/useInventory';
 
 type View = 'overview' | 'sales' | 'inventory' | 'history' | 'reports';
@@ -81,100 +82,59 @@ export default function DashboardPage() {
   const activeAlerts = alerts.filter(a => !a.resolved);
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-card">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-bold">Dashboard NitroBeer</h1>
-            {activeAlerts.length > 0 && (
-              <Badge variant="destructive" className="flex items-center gap-1">
-                <AlertTriangle className="w-3 h-3" />
-                {activeAlerts.length} alerta{activeAlerts.length > 1 ? 's' : ''}
-              </Badge>
-            )}
+    <AppShell
+      title="Dashboard NitroBeer"
+      subtitle="Operação e Vendas"
+      alertsCount={activeAlerts.length}
+      navItems={sidebarItems.map((it) => ({
+        id: it.id,
+        label: it.label,
+        icon: it.icon,
+        active: currentView === it.id,
+        onClick: () => setCurrentView(it.id),
+      }))}
+      rightActions={
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            if (confirm("Fazer logout?")) {
+              setAuthed(false);
+              setCurrentView('overview');
+            }
+          }}
+        >
+          <LogOut className="w-4 h-4" />
+        </Button>
+      }
+    >
+      {currentView === 'overview' && (
+        <div>
+          <h2 className="text-xl font-semibold mb-4">Visão Geral</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+            <Card className="text-center p-4">
+              <div className="text-2xl font-bold text-primary">R$ 0,00</div>
+              <div className="text-sm text-muted-foreground">Vendas Hoje</div>
+            </Card>
+            <Card className="text-center p-4">
+              <div className="text-2xl font-bold text-primary">0</div>
+              <div className="text-sm text-muted-foreground">Produtos em Estoque</div>
+            </Card>
+            <Card className="text-center p-4">
+              <div className="text-2xl font-bold text-primary">{activeAlerts.length}</div>
+              <div className="text-sm text-muted-foreground">Alertas Ativos</div>
+            </Card>
           </div>
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm">
-              <Bell className="w-4 h-4" />
-            </Button>
-            <Button variant="ghost" size="sm">
-              <Settings className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                if (confirm("Fazer logout?")) {
-                  setAuthed(false);
-                  setCurrentView('overview');
-                }
-              }}
-            >
-              <LogOut className="w-4 h-4" />
-            </Button>
+          <div className="text-center text-muted-foreground">
+            Selecione uma seção no menu lateral para começar.
           </div>
         </div>
-      </header>
+      )}
 
-      <div className="container mx-auto px-4 py-6">
-        <div className="grid grid-cols-12 gap-6">
-          {/* Sidebar */}
-          <aside className="col-span-3">
-            <Card className="p-4">
-              <nav className="space-y-2">
-                {sidebarItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Button
-                      key={item.id}
-                      variant={currentView === item.id ? "default" : "ghost"}
-                      className="w-full justify-start"
-                      onClick={() => setCurrentView(item.id)}
-                    >
-                      <Icon className="w-4 h-4 mr-2" />
-                      {item.label}
-                    </Button>
-                  );
-                })}
-              </nav>
-            </Card>
-          </aside>
-
-          {/* Main Content */}
-          <main className="col-span-9">
-            <Card className="p-6">
-              {currentView === 'overview' && (
-                <div>
-                  <h2 className="text-xl font-semibold mb-4">Visão Geral</h2>
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-primary">R$ 0,00</div>
-                      <div className="text-sm text-muted-foreground">Vendas Hoje</div>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-primary">0</div>
-                      <div className="text-sm text-muted-foreground">Produtos em Estoque</div>
-                    </div>
-                    <div className="text-center p-4 border rounded-lg">
-                      <div className="text-2xl font-bold text-primary">{activeAlerts.length}</div>
-                      <div className="text-sm text-muted-foreground">Alertas Ativos</div>
-                    </div>
-                  </div>
-                  <div className="text-center text-muted-foreground">
-                    Selecione uma seção no menu lateral para começar.
-                  </div>
-                </div>
-              )}
-
-              {currentView === 'sales' && <SalesPanel />}
-              {currentView === 'inventory' && <InventoryDashboard />}
-              {currentView === 'history' && <SalesHistory />}
-              {currentView === 'reports' && <Reports />}
-            </Card>
-          </main>
-        </div>
-      </div>
-    </div>
+      {currentView === 'sales' && <SalesPanel />}
+      {currentView === 'inventory' && <InventoryDashboard />}
+      {currentView === 'history' && <SalesHistory />}
+      {currentView === 'reports' && <Reports />}
+    </AppShell>
   );
 }
