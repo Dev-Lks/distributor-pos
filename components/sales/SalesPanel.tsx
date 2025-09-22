@@ -284,19 +284,19 @@ export default function SalesPanel() {
                 <Button 
                   onClick={() => setQuickQty(Math.max(1, quickQty - 1))} 
                   size="sm"
-                  className="px-3"
+                  className="px-4 h-10 text-lg"
                 >
-                  -
+                  −
                 </Button>
                 <Input 
                   value={String(quickQty)} 
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuickQty(Math.max(1, Number(e.target.value || 1)))} 
-                  className="w-16 sm:w-20 text-center" 
+                  className="w-20 text-center text-base h-10" 
                 />
                 <Button 
                   onClick={() => setQuickQty(quickQty + 1)} 
                   size="sm"
-                  className="px-3"
+                  className="px-4 h-10 text-lg"
                 >
                   +
                 </Button>
@@ -313,16 +313,19 @@ export default function SalesPanel() {
                   <button 
                     key={p.id} 
                     onClick={() => quickAdd(p)} 
-                    className={`p-3 sm:p-4 bg-card border rounded text-left shadow-sm hover:scale-[1.01] transition-all duration-200 ${
-                      addingProduct === p.id ? 'bg-green-50 border-green-300 scale-95' : ''
+                    className={`p-3 sm:p-4 bg-card border rounded text-left shadow-sm hover:scale-[1.01] active:scale-95 transition-all duration-150 touch-manipulation ${
+                      addingProduct === p.id ? 'bg-green-50 border-green-300' : ''
                     }`}
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-sm sm:text-base truncate">{p.name}</div>
+                        <div className="font-semibold text-base truncate">{p.name}</div>
                         <div className="text-xs text-muted-foreground">{p.size}</div>
                       </div>
-                      <div className="text-sm font-semibold ml-2 flex-shrink-0">{formatBRL(p.price)}</div>
+                      <div className="text-right ml-2 flex-shrink-0">
+                        <div className="text-sm font-semibold">{formatBRL(p.price)}</div>
+                        <div className="text-[10px] text-muted-foreground">Estoque: {getStockLevel(p.id, 'ponto_venda')}</div>
+                      </div>
                     </div>
                     <div className="flex justify-between items-center">
                       <div className="text-xs text-green-600 font-medium">
@@ -348,16 +351,20 @@ export default function SalesPanel() {
                 <button 
                   key={p.id} 
                   onClick={() => quickAdd(p)} 
-                  className={`p-3 sm:p-4 bg-card border rounded text-left shadow-sm hover:scale-[1.01] transition-all duration-200 ${
-                    addingProduct === p.id ? 'bg-green-50 border-green-300 scale-95' : ''
-                  }`}
+                  disabled={getStockLevel(p.id, 'ponto_venda') <= 0}
+                  className={`p-3 sm:p-4 bg-card border rounded text-left shadow-sm hover:scale-[1.01] active:scale-95 transition-all duration-150 touch-manipulation ${
+                    addingProduct === p.id ? 'bg-green-50 border-green-300' : ''
+                  } ${getStockLevel(p.id, 'ponto_venda') <= 0 ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   <div className="flex justify-between items-start mb-2">
                     <div className="min-w-0 flex-1">
-                      <div className="font-semibold text-sm sm:text-base truncate">{p.name}</div>
+                      <div className="font-semibold text-base truncate">{p.name}</div>
                       <div className="text-xs text-muted-foreground">{p.size}</div>
                     </div>
-                    <div className="text-sm font-semibold ml-2 flex-shrink-0">{formatBRL(p.price)}</div>
+                    <div className="text-right ml-2 flex-shrink-0">
+                      <div className="text-sm font-semibold">{formatBRL(p.price)}</div>
+                      <div className="text-[10px] text-muted-foreground">Estoque: {getStockLevel(p.id, 'ponto_venda')}</div>
+                    </div>
                   </div>
                   <div className="flex justify-between items-center">
                     <div className="text-xs text-green-600 font-medium">
@@ -395,10 +402,10 @@ export default function SalesPanel() {
                       <div className="text-xs">{formatBRL(c.product.price)} x {c.qty} = <strong>{formatBRL(c.product.price * c.qty)}</strong></div>
                     </div>
                     <div className="flex flex-row sm:flex-col items-center sm:items-end gap-2 sm:gap-1 ml-0 sm:ml-2">
-                      <div className="flex gap-1 items-center">
-                        <Button size="sm" onClick={() => setQty(c.product.id, c.qty - 1)} className="px-2 h-8">-</Button>
-                        <div className="px-3 py-1 border rounded text-sm min-w-[2.5rem] text-center">{c.qty}</div>
-                        <Button size="sm" onClick={() => setQty(c.product.id, c.qty + 1)} className="px-2 h-8">+</Button>
+                      <div className="flex gap-2 items-center">
+                        <Button size="sm" onClick={() => setQty(c.product.id, c.qty - 1)} className="px-3 h-10 text-lg">−</Button>
+                        <div className="px-3 py-2 border rounded text-base min-w-[3rem] text-center select-none">{c.qty}</div>
+                        <Button size="sm" onClick={() => setQty(c.product.id, c.qty + 1)} className="px-3 h-10 text-lg">+</Button>
                       </div>
                       <div>
                         <Button 

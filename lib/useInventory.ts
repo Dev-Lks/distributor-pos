@@ -219,6 +219,7 @@ export function useInventory() {
     movements,
     alerts,
     loading,
+    loadInventory,
     getStockLevel,
     updateStockLevel,
     recordMovement,
