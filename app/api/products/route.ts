@@ -6,30 +6,20 @@ export async function POST() {
   try {
     console.log('POST /api/products - Starting product seeding');
 
-    // Check if products already exist
-    const existingProducts = await prisma.product.findMany();
-    if (existingProducts.length > 0) {
-      console.log(`Products already exist: ${existingProducts.length} products found`);
-      return NextResponse.json({ message: 'Products already seeded' });
+    console.log(`Upserting ${products.length} products...`);
+
+    let count = 0;
+    for (const p of products) {
+      await prisma.product.upsert({
+        where: { id: p.id },
+        update: { name: p.name, size: p.size, price: p.price },
+        create: { id: p.id, name: p.name, size: p.size, price: p.price }
+      });
+      count += 1;
     }
 
-    console.log(`Seeding ${products.length} products...`);
-
-    // Seed products
-    const createdProducts = await prisma.product.createMany({
-      data: products.map((product: Product) => ({
-        id: product.id,
-        name: product.name,
-        size: product.size,
-        price: product.price
-      }))
-    });
-
-    console.log(`Successfully seeded ${createdProducts.count} products`);
-    return NextResponse.json({
-      message: 'Products seeded successfully',
-      count: createdProducts.count
-    });
+    console.log(`Successfully upserted ${count} products`);
+    return NextResponse.json({ message: 'Products upserted successfully', count });
   } catch (error) {
     console.error('Error seeding products:', error);
     return NextResponse.json(

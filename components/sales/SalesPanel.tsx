@@ -20,6 +20,9 @@ export default function SalesPanel() {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [addingProduct, setAddingProduct] = useState<string | null>(null);
   const [savingSale, setSavingSale] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
+  const [orderNotes, setOrderNotes] = useState<string>("");
+  const [savedKits, setSavedKits] = useState<Array<{ name: string; items: CartItem[] }>>([]);
 
   // Hook de inventário
   const { getStockLevel } = useInventory();
@@ -64,6 +67,32 @@ export default function SalesPanel() {
       console.error("Erro ao carregar favoritos do localStorage:", error);
       localStorage.removeItem("favorites");
     }
+
+    try {
+      const kits = localStorage.getItem("saved_kits");
+      if (kits) {
+        const parsed = JSON.parse(kits);
+        if (Array.isArray(parsed)) setSavedKits(parsed);
+      }
+    } catch (error) {
+      console.error("Erro ao carregar kits salvos:", error);
+      localStorage.removeItem("saved_kits");
+    }
+
+    // Permite que outras partes do app substituam o carrinho (ex: Histórico)
+    const onReplaceCart = (e: Event) => {
+      try {
+        const detail = (e as CustomEvent).detail as CartItem[];
+        if (Array.isArray(detail)) {
+          setCart(detail);
+          toast.success("Carrinho carregado do histórico");
+        }
+      } catch {}
+    };
+    window.addEventListener("replace_cart", onReplaceCart as EventListener);
+    return () => {
+      window.removeEventListener("replace_cart", onReplaceCart as EventListener);
+    };
   }, []);
 
   useEffect(() => {
@@ -129,6 +158,8 @@ export default function SalesPanel() {
 
   const clearCart = useCallback(() => {
     setCart([]);
+    setOrderNotes("");
+    setPaymentMethod("");
   }, []);
 
   const saveSale = useCallback(async () => {
@@ -168,13 +199,21 @@ export default function SalesPanel() {
         },
         body: JSON.stringify({
           items: cart,
-          total
+          total,
+          paymentMethod: paymentMethod || null,
+          notes: orderNotes || null,
+          status: 'paid'
         }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to save sale');
       }
+
+      // Persistir último pedido para "Repetir"
+      try {
+        localStorage.setItem('last_sale', JSON.stringify(cart));
+      } catch {}
 
       clearCart();
       toast.success("Venda salva com sucesso!");
@@ -245,6 +284,46 @@ export default function SalesPanel() {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [favProducts, saveSale, clearCart, quickAdd]);
+
+  const repeatLastOrder = useCallback(() => {
+    try {
+      const last = localStorage.getItem('last_sale');
+      if (!last) {
+        toast.info('Nenhum pedido anterior encontrado.');
+        return;
+      }
+      const parsed: CartItem[] = JSON.parse(last);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        toast.info('Nenhum pedido anterior válido.');
+        return;
+      }
+      setCart(parsed);
+      toast.success('Pedido anterior carregado.');
+    } catch {
+      toast.error('Falha ao carregar o último pedido.');
+    }
+  }, []);
+
+  const saveAsKit = useCallback(() => {
+    if (cart.length === 0) {
+      toast.info('Carrinho vazio para salvar como kit.');
+      return;
+    }
+    const name = prompt('Nome do kit (ex: Rodada amigos, Promo Sexta):');
+    if (!name) return;
+    const kit = { name, items: cart };
+    const next = [kit, ...savedKits.filter(k => k.name !== name)].slice(0, 20);
+    setSavedKits(next);
+    try { localStorage.setItem('saved_kits', JSON.stringify(next)); } catch {}
+    toast.success('Kit salvo!');
+  }, [cart, savedKits]);
+
+  const loadKit = useCallback((name: string) => {
+    const kit = savedKits.find(k => k.name === name);
+    if (!kit) return;
+    setCart(kit.items);
+    toast.success(`Kit "${name}" carregado.`);
+  }, [savedKits]);
 
   return (
     <div className="w-full">
@@ -421,13 +500,57 @@ export default function SalesPanel() {
                 ))}
               </div>
 
+              {/* Pagamento e observações */}
+              <div className="mt-3 space-y-2">
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Método de pagamento</label>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 border rounded bg-background text-sm"
+                  >
+                    <option value="">Selecionar...</option>
+                    <option value="dinheiro">Dinheiro</option>
+                    <option value="pix">Pix</option>
+                    <option value="debito">Cartão Débito</option>
+                    <option value="credito">Cartão Crédito</option>
+                    <option value="fiado">Fiado</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-muted-foreground mb-1">Observações</label>
+                  <Input
+                    placeholder="Ex.: Copos extras, sem espuma, nome do cliente..."
+                    value={orderNotes}
+                    onChange={(e) => setOrderNotes(e.target.value)}
+                  />
+                </div>
+              </div>
+
               <Separator />
 
-              <div className="flex flex-col sm:flex-row gap-2 mt-2">
-                <Button variant="outline" onClick={clearCart} className="flex-1">Limpar</Button>
-                <Button onClick={saveSale} disabled={savingSale} className="flex-1">
-                  {savingSale ? "Salvando..." : "Salvar Venda"}
-                </Button>
+              {/* Ações rápidas */}
+              <div className="flex flex-col gap-2 mt-2">
+                {savedKits.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    <span className="text-xs text-muted-foreground">Kits:</span>
+                    {savedKits.slice(0, 3).map(k => (
+                      <Button key={k.name} variant="outline" size="sm" onClick={() => loadKit(k.name)}>
+                        {k.name}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button variant="outline" onClick={repeatLastOrder} className="flex-1">Repetir Último</Button>
+                  <Button variant="outline" onClick={saveAsKit} className="flex-1">Salvar como Kit</Button>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button variant="outline" onClick={clearCart} className="flex-1">Limpar</Button>
+                  <Button onClick={saveSale} disabled={savingSale} className="flex-1">
+                    {savingSale ? "Salvando..." : "Salvar Venda"}
+                  </Button>
+                </div>
               </div>
             </Card>
           </div>

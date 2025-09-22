@@ -10,11 +10,15 @@ type SavedSale = {
   date: string;
   items: CartItem[];
   total: number;
+  status?: string;
+  paymentMethod?: string | null;
+  notes?: string | null;
 }
 
 export default function SalesHistory() {
   const [items, setItems] = useState<SavedSale[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadSales = async () => {
@@ -25,10 +29,11 @@ export default function SalesHistory() {
           setItems(sales);
         } else {
           console.error('Failed to load sales');
+          setError('Falha ao carregar histórico.');
         }
       } catch (error) {
         console.error("Erro ao carregar histórico de vendas:", error);
-        alert("Erro ao carregar histórico de vendas. Tente novamente.");
+        setError('Erro ao carregar histórico.');
       } finally {
         setLoading(false);
       }
@@ -62,6 +67,15 @@ export default function SalesHistory() {
     }
   }
 
+  function sendToCart(items: CartItem[]) {
+    try {
+      const event = new CustomEvent('replace_cart', { detail: items });
+      window.dispatchEvent(event);
+    } catch (e) {
+      console.error('Falha ao enviar para o carrinho', e);
+    }
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
@@ -76,7 +90,7 @@ export default function SalesHistory() {
                 const response = await fetch('/api/sales', { method: 'DELETE' });
                 if (response.ok) {
                   setItems([]);
-                  alert("Histórico limpo com sucesso!");
+                  // noop UI feedback — could use toast if available
                 } else {
                   alert("Erro ao limpar histórico. Tente novamente.");
                 }
@@ -95,6 +109,8 @@ export default function SalesHistory() {
         <div className="text-center py-8">
           <div className="text-sm text-muted-foreground">Carregando histórico...</div>
         </div>
+      ) : error ? (
+        <div className="text-sm text-red-600">{error}</div>
       ) : items.length === 0 ? (
         <div className="text-sm text-muted-foreground">Nenhuma venda registrada.</div>
       ) : (
@@ -103,6 +119,19 @@ export default function SalesHistory() {
             <div key={s.id} className="p-2 border rounded">
               <div className="text-sm font-medium">{new Date(s.date).toLocaleString()}</div>
               <div className="text-xs text-muted-foreground">Total: R$ {s.total.toFixed(2)}</div>
+              {(s.status || s.paymentMethod || s.notes) && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  {s.status && <span>Status: {s.status} </span>}
+                  {s.paymentMethod && <span>• Pagamento: {s.paymentMethod} </span>}
+                  {s.notes && <span>• Obs: {s.notes}</span>}
+                </div>
+              )}
+              <div className="flex gap-2 mt-2">
+                <button className="btn btn-ghost" onClick={() => sendToCart(s.items)}>Enviar para carrinho</button>
+                <button className="btn btn-ghost" onClick={() => {
+                  try { localStorage.setItem('last_sale', JSON.stringify(s.items)); } catch {}
+                }}>Definir como Último</button>
+              </div>
               <details>
                 <summary className="text-xs">Itens ({s.items.length})</summary>
                 <ul className="text-xs list-disc pl-4">

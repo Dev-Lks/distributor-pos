@@ -9,6 +9,9 @@ interface Sale {
   total: Decimal;
   createdAt: Date;
   updatedAt: Date;
+  status: string;
+  paymentMethod: string | null;
+  notes: string | null;
 }
 
 interface SaleItem {
@@ -82,7 +85,10 @@ export async function GET() {
         },
         qty: item.quantity
       })),
-      total: Number(sale.total)
+      total: Number(sale.total),
+      status: (sale as any).status || 'paid',
+      paymentMethod: (sale as any).paymentMethod || null,
+      notes: (sale as any).notes || null
     }));
 
     console.log('Sales formatted successfully');
@@ -100,7 +106,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('POST /api/sales - Starting request');
 
-    const { items, total } = await request.json();
+  const { items, total, paymentMethod, notes, status } = await request.json();
     console.log('Request body parsed:', { itemsCount: items?.length, total });
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -120,6 +126,9 @@ export async function POST(request: NextRequest) {
       const newSale = await tx.sale.create({
         data: {
           total: total || items.reduce((sum: number, item: SaleItemInput) => sum + (item.product.price * item.qty), 0),
+          status: status || 'paid',
+          paymentMethod: paymentMethod || null,
+          notes: notes || null,
           items: {
             create: items.map((item: SaleItemInput) => ({
               productId: item.product.id,
@@ -203,7 +212,10 @@ export async function POST(request: NextRequest) {
         },
         qty: item.quantity
       })),
-      total: Number(sale.total)
+      total: Number(sale.total),
+      status: (sale as any).status || 'paid',
+      paymentMethod: (sale as any).paymentMethod || null,
+      notes: (sale as any).notes || null
     };
 
     console.log('Sale formatted and ready to return');

@@ -20,11 +20,15 @@ export const products: Product[] = [
   { id: 'pilsen-premium-600', name: 'Pilsen Premium', size: '600ml', price: 11.0 },
   { id: 'vinho-600', name: 'Vinho', size: '600ml', price: 15.0 },
   { id: 'weiss-600', name: 'Weiss', size: '600ml', price: 15.0 },
-  // Chopp (L)
-  { id: 'american-chopp', name: 'American lager', size: 'Chopp (L)', price: 17.5 },
-  { id: 'pilsen-lager-chopp', name: 'Pilsen Lager', size: 'Chopp (L)', price: 12.6 },
-  { id: 'pilsen-premium-chopp', name: 'Pilsen Premium', size: 'Chopp (L)', price: 12.6 },
-  { id: 'pilsen-trad-chopp', name: 'Pilsen Tradicional', size: 'Chopp (L)', price: 11.5 },
+  // Barris de Chopp
+  { id: 'american-chopp-30', name: 'American lager', size: 'Barril 30L', price: 525.0 },
+  { id: 'american-chopp-50', name: 'American lager', size: 'Barril 50L', price: 875.0 },
+  { id: 'pilsen-lager-chopp-30', name: 'Pilsen Lager', size: 'Barril 30L', price: 378.0 },
+  { id: 'pilsen-lager-chopp-50', name: 'Pilsen Lager', size: 'Barril 50L', price: 630.0 },
+  { id: 'pilsen-premium-chopp-30', name: 'Pilsen Premium', size: 'Barril 30L', price: 378.0 },
+  { id: 'pilsen-premium-chopp-50', name: 'Pilsen Premium', size: 'Barril 50L', price: 630.0 },
+  { id: 'pilsen-trad-chopp-30', name: 'Pilsen Tradicional', size: 'Barril 30L', price: 345.0 },
+  { id: 'pilsen-trad-chopp-50', name: 'Pilsen Tradicional', size: 'Barril 50L', price: 575.0 },
 ];
 
 export default products;

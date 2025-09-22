@@ -77,6 +77,9 @@ model Sale {
   id    String   @id @default(cuid())
   date  DateTime @default(now())
   total Decimal  @db.Decimal(10, 2)
+  status SaleStatus @default(paid)
+  paymentMethod PaymentMethod?
+  notes String?
 
   // Relations
   items SaleItem[]
@@ -116,4 +119,20 @@ enum AlertType {
   low_stock
   out_of_stock
   over_stock
+}
+
+enum PaymentMethod {
+  cash
+  pix
+  debit
+  credit
+  tab
+}
+
+enum SaleStatus {
+  pending
+  paid
+  preparing
+  delivered
+  cancelled
 }
