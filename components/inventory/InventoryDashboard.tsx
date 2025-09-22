@@ -882,6 +882,10 @@ export default function InventoryDashboard() {
                     if (!res.ok) throw new Error('Falha ao importar');
                     const result = await res.json();
                     toast.success(`${result.imported} itens importados com sucesso!`);
+                    if (result.failures && result.failures.length > 0) {
+                      toast.warning(`${result.failures.length} linha(s) foram ignoradas por erro.`);
+                      console.warn('Falhas na importação:', result.failures);
+                    }
                     await loadInventory();
                   } catch (err) {
                     console.error(err);
@@ -926,6 +930,9 @@ export default function InventoryDashboard() {
                       const cells = (s: string) => s.split(delim).map((c) => c.trim());
                       const header = cells(lines[0]).map((h) => h.toLowerCase());
 
+                      const headerKeywords = ['quantidade', 'qtd', 'item', 'produto', 'tamanho', 'volume', 'venda', 'preço', 'preco', 'local', 'estoque', 'mínimo', 'minimo'];
+                      const hasHeader = header.some((h) => headerKeywords.some((k) => h.includes(k)));
+
                       const idx = (names: string[]) => {
                         for (let i = 0; i < header.length; i++) {
                           if (names.some((n) => header[i].includes(n))) return i;
@@ -940,7 +947,7 @@ export default function InventoryDashboard() {
                       const iLocal = idx(['local']);
                       const iMin = idx(['minstock', 'estoque mínimo', 'estoque minimo']);
 
-                      const start = header.length > 1 ? 1 : 0; // se não tiver header, assume ordem
+                      const start = hasHeader ? 1 : 0; // se não tiver header, começa na primeira linha
                       const rows: UIRow[] = [];
 
                       for (let r = start; r < lines.length; r++) {
@@ -1020,6 +1027,10 @@ export default function InventoryDashboard() {
                           if (!res.ok) throw new Error('Falha ao importar');
                           const result = await res.json();
                           toast.success(`${result.imported} itens importados com sucesso!`);
+                          if (result.failures && result.failures.length > 0) {
+                            toast.warning(`${result.failures.length} linha(s) foram ignoradas por erro.`);
+                            console.warn('Falhas na importação:', result.failures);
+                          }
                           setParsedRows([]);
                           setPasteText('');
                           await loadInventory();
