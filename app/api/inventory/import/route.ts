@@ -26,9 +26,9 @@ export async function POST(req: NextRequest) {
 
     // Processar em transação: cria produto se não existir, ajusta preço, cria/atualiza stockLevel
   const results: Array<{ productId: string; name: string; size: string; quantity: number; location: string }> = [];
-  const failures: Array<{ row: any; reason: string }> = [];
+  const failures: Array<{ row: ExcelRow; reason: string }> = [];
 
-  await prisma.$transaction(async (tx: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       for (const r of rows) {
         const name = (r.Item || '').trim();
         const size = (r.Tamanho || '').trim();
@@ -88,8 +88,9 @@ export async function POST(req: NextRequest) {
           });
 
           results.push({ productId: product.id, name: product.name, size: product.size, quantity: qty, location });
-        } catch (rowErr: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
-          failures.push({ row: r, reason: rowErr?.message || 'Unknown error' });
+        } catch (rowErr: unknown) {
+          const reason = rowErr instanceof Error ? rowErr.message : String(rowErr);
+          failures.push({ row: r, reason });
         }
       }
     });
