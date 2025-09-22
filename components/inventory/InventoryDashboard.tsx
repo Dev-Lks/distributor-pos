@@ -96,6 +96,11 @@ export default function InventoryDashboard() {
   const [activeTab, setActiveTab] = useState<'overview' | 'transfer' | 'entry' | 'adjustment' | 'import'>('overview');
   const [importing, setImporting] = useState(false);
   const [defaultImportLocation, setDefaultImportLocation] = useState<Location>('camara_fria');
+  const [importMode, setImportMode] = useState<'file' | 'paste'>('file');
+  const [pasteText, setPasteText] = useState('');
+  type UIRow = { Quantidade: number; Item: string; Tamanho: string; Custo?: number; ValorTotal?: number; Peso?: string; VendaConsumidor?: number; TotalVenda?: number; Local?: Location; MinStock: number };
+  const [parsedRows, setParsedRows] = useState<UIRow[]>([]);
+  const [parsing, setParsing] = useState(false);
 
   // Estados para dialogs de confirmação
   const [showTransferDialog, setShowTransferDialog] = useState(false);
@@ -803,84 +808,237 @@ export default function InventoryDashboard() {
         </Card>
       )}
 
-      {/* Importação Excel */}
+      {/* Importação Excel/Paste */}
       {activeTab === 'import' && (
-        <div className="mt-6">
-          <h3 className="text-lg font-semibold mb-4">Importar Estoque via Excel</h3>
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-              <label className="text-sm font-medium">Local padrão:</label>
-              <select
-                value={defaultImportLocation}
-                onChange={(e) => setDefaultImportLocation(e.target.value as Location)}
-                className="px-3 py-2 border rounded bg-background"
-              >
-                <option value="camara_fria">Câmara Fria</option>
-                <option value="casa">Casa</option>
-                <option value="ponto_venda">Ponto de Venda</option>
-              </select>
-              <div className="text-xs text-muted-foreground">Pode ser sobrescrito pela coluna &quot;Local&quot; da planilha.</div>
+        <div className="mt-6 space-y-4">
+          <h3 className="text-lg font-semibold">Importar Estoque</h3>
+          <div className="text-sm text-muted-foreground">
+            Cole direto do Excel/Google Sheets ou envie um arquivo .xlsx. Reconhecemos colunas: &quot;Quantidade de compra&quot;, &quot;Item&quot;, &quot;Tamanho&quot;, &quot;Venda Consumidor R$&quot; (as demais são opcionais).
+          </div>
+
+          {/* Modo de importação */}
+          <div className="flex gap-2">
+            <Button variant={importMode === 'file' ? 'default' : 'outline'} size="sm" onClick={() => setImportMode('file')}>Arquivo Excel</Button>
+            <Button variant={importMode === 'paste' ? 'default' : 'outline'} size="sm" onClick={() => setImportMode('paste')}>Colar Dados</Button>
+          </div>
+
+          {/* Local padrão */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+            <label className="text-sm font-medium">Local padrão:</label>
+            <select
+              value={defaultImportLocation}
+              onChange={(e) => setDefaultImportLocation(e.target.value as Location)}
+              className="px-3 py-2 border rounded bg-background"
+            >
+              <option value="camara_fria">Câmara Fria</option>
+              <option value="casa">Casa</option>
+              <option value="ponto_venda">Ponto de Venda</option>
+            </select>
+            <div className="text-xs text-muted-foreground">Pode ser sobrescrito pela coluna &quot;Local&quot;.</div>
+          </div>
+
+          {/* Conteúdo principal: arquivo ou colar */}
+          {importMode === 'file' ? (
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setImporting(true);
+                  try {
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data);
+                    const sheetName = workbook.SheetNames[0];
+                    const sheet = workbook.Sheets[sheetName];
+                    const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+
+                    const rows = json.map((row) => {
+                      const get = (k: string) => (row as Record<string, unknown>)[k];
+                      const parseMoney = (v: unknown) => Number(String(v ?? '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+                      const locRaw = String(get('Local') ?? '').trim();
+                      const loc = locRaw === 'camara_fria' || locRaw === 'casa' || locRaw === 'ponto_venda' ? (locRaw as Location) : undefined;
+                      return {
+                        Quantidade: Number(get('Quantidade de compra') ?? get('Quantidade') ?? get('Qtd') ?? 0),
+                        Item: String(get('Item') ?? get('Produto') ?? get('Nome') ?? ''),
+                        Tamanho: String(get('Tamanho') ?? get('Volume') ?? get('Tamanho (L)') ?? ''),
+                        Custo: parseMoney(get('Custo')) || undefined,
+                        ValorTotal: parseMoney(get('Valor total')) || undefined,
+                        Peso: String(get('Peso') ?? ''),
+                        VendaConsumidor: parseMoney(get('Venda Consumidor R$') ?? get('Preço Venda')) || undefined,
+                        TotalVenda: parseMoney(get('Total Venda')) || undefined,
+                        Local: loc,
+                        MinStock: Number(get('MinStock') ?? get('Estoque Mínimo') ?? 0) || 0
+                      } as UIRow;
+                    }).filter((r) => r.Item && r.Tamanho && r.Quantidade > 0);
+
+                    const res = await fetch('/api/inventory/import', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ rows, defaultLocation: defaultImportLocation })
+                    });
+
+                    if (!res.ok) throw new Error('Falha ao importar');
+                    const result = await res.json();
+                    toast.success(`${result.imported} itens importados com sucesso!`);
+                    await loadInventory();
+                  } catch (err) {
+                    console.error(err);
+                    toast.error('Erro ao importar planilha. Verifique o formato.');
+                  } finally {
+                    setImporting(false);
+                    e.currentTarget.value = '';
+                  }
+                }}
+                className="block"
+                disabled={importing}
+              />
             </div>
+          ) : (
+            <div className="space-y-3">
+              <textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                placeholder={`Cole aqui os dados da sua planilha (incluindo cabeçalhos).\nExemplo de colunas: Quantidade de compra\tItem\tTamanho\tVenda Consumidor R$`}
+                className="w-full min-h-[160px] p-3 border rounded font-mono text-sm"
+              />
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="default"
+                  disabled={!pasteText.trim() || parsing}
+                  onClick={() => {
+                    setParsing(true);
+                    try {
+                      const lines = pasteText
+                        .split(/\r?\n/)
+                        .map((l) => l.trim())
+                        .filter((l) => l.length > 0);
+                      if (lines.length === 0) {
+                        setParsedRows([]);
+                        setParsing(false);
+                        return;
+                      }
+                      // Detect delimiter: tab, semicolon, comma
+                      const detectDelim = (s: string) => (s.includes('\t') ? '\t' : s.includes(';') ? ';' : ',');
+                      const delim = detectDelim(lines[0]);
+                      const cells = (s: string) => s.split(delim).map((c) => c.trim());
+                      const header = cells(lines[0]).map((h) => h.toLowerCase());
 
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-                setImporting(true);
-                try {
-                  const data = await file.arrayBuffer();
-                  const workbook = XLSX.read(data);
-                  const sheetName = workbook.SheetNames[0];
-                  const sheet = workbook.Sheets[sheetName];
-                  const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+                      const idx = (names: string[]) => {
+                        for (let i = 0; i < header.length; i++) {
+                          if (names.some((n) => header[i].includes(n))) return i;
+                        }
+                        return -1;
+                      };
 
-                  // Mapear possíveis nomes de colunas
-                  const rows = json.map((row) => {
-                    const get = (k: string) => (row as Record<string, unknown>)[k];
-                    const parseMoney = (v: unknown) => Number(String(v ?? '').replace(/[^0-9.,]/g, '').replace(',', '.'));
-                    const locRaw = String(get('Local') ?? '').trim();
-                    const loc = locRaw === 'camara_fria' || locRaw === 'casa' || locRaw === 'ponto_venda' ? (locRaw as Location) : undefined;
-                    return {
-                      Quantidade: Number(get('Quantidade de compra') ?? get('Quantidade') ?? get('Qtd') ?? 0),
-                      Item: String(get('Item') ?? get('Produto') ?? get('Nome') ?? ''),
-                      Tamanho: String(get('Tamanho') ?? get('Volume') ?? get('Tamanho (L)') ?? ''),
-                      Custo: parseMoney(get('Custo')) || undefined,
-                      ValorTotal: parseMoney(get('Valor total')) || undefined,
-                      Peso: String(get('Peso') ?? ''),
-                      VendaConsumidor: parseMoney(get('Venda Consumidor R$') ?? get('Preço Venda')) || undefined,
-                      TotalVenda: parseMoney(get('Total Venda')) || undefined,
-                      Local: loc,
-                      MinStock: Number(get('MinStock') ?? get('Estoque Mínimo') ?? 0) || 0
-                    };
-                  }).filter((r) => r.Item && r.Tamanho && r.Quantidade > 0);
+                      const iQtd = idx(['quantidade de compra', 'quantidade', 'qtd']);
+                      const iItem = idx(['item', 'produto', 'nome']);
+                      const iTam = idx(['tamanho', 'volume', 'tamanho (l)']);
+                      const iVenda = idx(['venda consumidor', 'preço venda', 'preco venda']);
+                      const iLocal = idx(['local']);
+                      const iMin = idx(['minstock', 'estoque mínimo', 'estoque minimo']);
 
-                  const res = await fetch('/api/inventory/import', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ rows, defaultLocation: defaultImportLocation })
-                  });
+                      const start = header.length > 1 ? 1 : 0; // se não tiver header, assume ordem
+                      const rows: UIRow[] = [];
 
-                  if (!res.ok) throw new Error('Falha ao importar');
-                  const result = await res.json();
-                  toast.success(`${result.imported} itens importados com sucesso!`);
-                  // Recarregar inventário
-                  await loadInventory();
-                } catch (err) {
-                  console.error(err);
-                  toast.error('Erro ao importar planilha. Verifique o formato.');
-                } finally {
-                  setImporting(false);
-                  e.currentTarget.value = '';
-                }
-              }}
-              className="block"
-              disabled={importing}
-            />
-            <div className="text-sm text-muted-foreground">
-              Modelo esperado: colunas &quot;Quantidade de compra&quot;, &quot;Item&quot;, &quot;Tamanho&quot;, &quot;Venda Consumidor R$&quot;. Outras colunas são opcionais.
+                      for (let r = start; r < lines.length; r++) {
+                        const cols = cells(lines[r]);
+                        const getBy = (i: number, fallbackIndex?: number) => (i >= 0 ? cols[i] : (fallbackIndex !== undefined && fallbackIndex < cols.length ? cols[fallbackIndex] : ''));
+                        const parseMoney = (v: string) => Number(String(v ?? '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+
+                        // Se não há header, tenta posição padrão: 0=Qtd,1=Item,2=Tamanho,6=Venda
+                        const qtdStr = getBy(iQtd, 0);
+                        const itemStr = getBy(iItem, 1);
+                        const tamStr = getBy(iTam, 2);
+                        const vendaStr = getBy(iVenda, 6);
+                        const locStr = getBy(iLocal);
+                        const minStr = getBy(iMin);
+
+                        const locVal = ['camara_fria', 'casa', 'ponto_venda'].includes(locStr) ? (locStr as Location) : undefined;
+
+                        const row: UIRow = {
+                          Quantidade: Number(qtdStr || 0),
+                          Item: String(itemStr || ''),
+                          Tamanho: String(tamStr || ''),
+                          VendaConsumidor: vendaStr ? parseMoney(vendaStr) : undefined,
+                          Local: locVal,
+                          MinStock: Number(minStr || 0) || 0
+                        };
+                        if (row.Item && row.Tamanho && row.Quantidade > 0) rows.push(row);
+                      }
+                      setParsedRows(rows);
+                    } finally {
+                      setParsing(false);
+                    }
+                  }}
+                >Analisar</Button>
+                <Button type="button" variant="ghost" onClick={() => { setPasteText(''); setParsedRows([]); }}>Limpar</Button>
+              </div>
+
+              {parsedRows.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-sm text-muted-foreground">Foram detectadas {parsedRows.length} linhas válidas.</div>
+                  <div className="overflow-x-auto border rounded">
+                    <table className="w-full text-sm">
+                      <thead className="bg-muted/50">
+                        <tr>
+                          <th className="p-2 text-left">Item</th>
+                          <th className="p-2 text-left">Tamanho</th>
+                          <th className="p-2 text-left">Quantidade</th>
+                          <th className="p-2 text-left">Local</th>
+                          <th className="p-2 text-left">Venda Consumidor</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {parsedRows.slice(0, 10).map((r, i) => (
+                          <tr key={i} className="border-t">
+                            <td className="p-2">{r.Item}</td>
+                            <td className="p-2">{r.Tamanho}</td>
+                            <td className="p-2">{r.Quantidade}</td>
+                            <td className="p-2">{r.Local ?? '-'}</td>
+                            <td className="p-2">{r.VendaConsumidor ? `R$ ${r.VendaConsumidor.toFixed(2)}` : '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="text-xs text-muted-foreground">Mostrando as 10 primeiras linhas.</div>
+                  <div>
+                    <Button
+                      type="button"
+                      disabled={parsedRows.length === 0 || importing}
+                      onClick={async () => {
+                        setImporting(true);
+                        try {
+                          const res = await fetch('/api/inventory/import', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ rows: parsedRows, defaultLocation: defaultImportLocation })
+                          });
+                          if (!res.ok) throw new Error('Falha ao importar');
+                          const result = await res.json();
+                          toast.success(`${result.imported} itens importados com sucesso!`);
+                          setParsedRows([]);
+                          setPasteText('');
+                          await loadInventory();
+                        } catch (err) {
+                          console.error(err);
+                          toast.error('Erro ao importar dados colados.');
+                        } finally {
+                          setImporting(false);
+                        }
+                      }}
+                    >Importar {parsedRows.length} itens</Button>
+                  </div>
+                </div>
+              )}
             </div>
+          )}
+
+          <div className="text-sm text-muted-foreground">
+            Dica: se a coluna &quot;Local&quot; não existir, usaremos o local padrão selecionado.
           </div>
         </div>
       )}
