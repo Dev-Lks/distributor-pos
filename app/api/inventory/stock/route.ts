@@ -5,7 +5,7 @@ export async function POST(request: NextRequest) {
   try {
     console.log('POST /api/inventory/stock - Starting request');
 
-    const { productId, location, quantity, minStock = 0 } = await request.json();
+  const { productId, location, quantity, minStock } = await request.json();
     console.log('Request body:', { productId, location, quantity, minStock });
 
     if (!productId || !location || quantity === undefined) {
@@ -40,13 +40,14 @@ export async function POST(request: NextRequest) {
       },
       update: {
         quantity,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
+        ...(typeof minStock === 'number' ? { minStock } : {})
       },
       create: {
         productId,
         location,
         quantity,
-        minStock,
+        minStock: typeof minStock === 'number' ? minStock : 0,
         lastUpdated: new Date()
       }
     });
