@@ -109,7 +109,6 @@ export default function InventoryDashboard() {
 
   // Estados para dialogs de confirmação
   const [showTransferDialog, setShowTransferDialog] = useState(false);
-  const [showEntryDialog, setShowEntryDialog] = useState(false);
   const [showAdjustmentDialog, setShowAdjustmentDialog] = useState(false);
 
   // Estados de loading
@@ -128,14 +127,7 @@ export default function InventoryDashboard() {
     },
   });
 
-  const entryForm = useForm<EntryForm>({
-    resolver: zodResolver(entrySchema),
-    defaultValues: {
-      productId: '',
-      location: '',
-      quantity: 1,
-    },
-  });
+  // Entrada simplificada: usaremos estados locais e submissão direta
 
   const adjustmentForm = useForm<AdjustmentForm>({
     resolver: zodResolver(adjustmentSchema),
@@ -177,16 +169,31 @@ export default function InventoryDashboard() {
     }
   };
 
-  const confirmStockEntry = async (data: EntryForm) => {
+  const handleEntry = async () => {
+    if (!selectedProduct || !entryLocation || entryQuantity <= 0) {
+      toast.error('Selecione produto, local e quantidade');
+      return;
+    }
     setIsEntering(true);
     try {
-      stockEntry(data.productId, data.location as Location, data.quantity, 'Entrada via dashboard');
-      toast.success('Entrada de mercadoria registrada!');
-      entryForm.reset();
+      await stockEntry(selectedProduct, entryLocation as Location, entryQuantity, 'Entrada rápida');
+      toast.success('Entrada registrada!');
+      setEntryQuantity(1);
       setActiveTab('overview');
-      setShowEntryDialog(false);
-    } catch {
+    } catch (e) {
       toast.error('Erro na entrada de mercadoria');
+    } finally {
+      setIsEntering(false);
+    }
+  };
+
+  const handleQuickEntry = async (productId: string, loc: Location, qty: number) => {
+    setIsEntering(true);
+    try {
+      await stockEntry(productId, loc, qty, 'Entrada rápida');
+      toast.success(`+${qty} em ${LOCATION_LABELS[loc]}`);
+    } catch {
+      toast.error('Erro ao registrar entrada');
     } finally {
       setIsEntering(false);
     }
@@ -379,15 +386,27 @@ export default function InventoryDashboard() {
 
                       return (
                         <TableCell key={location} className="text-center">
-                          <Badge
-                            variant={
-                              isOut ? 'destructive' :
-                              isLow ? 'secondary' :
-                              'default'
-                            }
-                          >
-                            {stock}
-                          </Badge>
+                          <div className="flex flex-col items-center gap-1">
+                            <Badge
+                              variant={
+                                isOut ? 'destructive' :
+                                isLow ? 'secondary' :
+                                'default'
+                              }
+                            >
+                              {stock}
+                            </Badge>
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="outline" className="h-7 px-2 text-xs" disabled={isEntering}
+                                onClick={() => handleQuickEntry(product.id, location, 1)}>
+                                +1
+                              </Button>
+                              <Button size="sm" variant="ghost" className="h-7 px-2 text-xs" disabled={isEntering}
+                                onClick={() => handleQuickEntry(product.id, location, 5)}>
+                                +5
+                              </Button>
+                            </div>
+                          </div>
                         </TableCell>
                       );
                     })}
@@ -608,151 +627,87 @@ export default function InventoryDashboard() {
         </Card>
       )}
 
-      {/* Entrada */}
+      {/* Entrada - fluxo simples, sem modal */}
       {activeTab === 'entry' && (
         <Card className="p-6">
           <h3 className="text-lg font-semibold mb-4">Entrada de Mercadoria</h3>
-          <div className="space-y-4 max-w-md">
-            <div>
-              <label className="block text-sm font-medium mb-2">Produto</label>
-              <Select value={selectedProduct} onValueChange={(val: string) => setSelectedProduct(val)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione um produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map(product => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - {product.size}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">Local</label>
-              <Select value={entryLocation} onValueChange={(val: string) => setEntryLocation(val as Location)}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Selecione o local" />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(LOCATION_LABELS).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {selectedProduct && entryLocation && (
-                <div className="text-xs text-muted-foreground mt-1">Atual: {getStockLevel(selectedProduct, entryLocation as Location)}</div>
-              )}
+          <div className="space-y-4 max-w-lg">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium mb-2">Produto</label>
+                <Select value={selectedProduct} onValueChange={(val: string) => setSelectedProduct(val)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {products.map(product => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name} - {product.size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Local</label>
+                <Select value={entryLocation} onValueChange={(val: string) => setEntryLocation(val as Location)}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione o local" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(LOCATION_LABELS).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {selectedProduct && entryLocation && (
+                  <div className="text-xs text-muted-foreground mt-1">
+                    Atual: {getStockLevel(selectedProduct, entryLocation as Location)}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Quantidade</label>
-              <Input
-                type="number"
-                value={entryQuantity}
-                onChange={(e) => setEntryQuantity(Number(e.target.value))}
-                min="1"
-                className="w-full"
-              />
+              <div className="flex items-center gap-2">
+                <Button size="sm" variant="outline" onClick={() => setEntryQuantity(Math.max(1, entryQuantity - 1))}>
+                  <Minus className="w-4 h-4" />
+                </Button>
+                <Input
+                  type="number"
+                  value={entryQuantity}
+                  onChange={(e) => setEntryQuantity(Number(e.target.value))}
+                  min="1"
+                  className="w-24 text-center"
+                />
+                <Button size="sm" variant="outline" onClick={() => setEntryQuantity(entryQuantity + 1)}>
+                  <Plus className="w-4 h-4" />
+                </Button>
+                <div className="flex gap-1 ml-2">
+                  <Button size="sm" variant="ghost" onClick={() => setEntryQuantity(1)}>+1</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEntryQuantity(5)}>+5</Button>
+                  <Button size="sm" variant="ghost" onClick={() => setEntryQuantity(10)}>+10</Button>
+                </div>
+              </div>
             </div>
 
-            <Dialog open={showEntryDialog} onOpenChange={setShowEntryDialog}>
-              <DialogTrigger asChild>
-                <Button onClick={() => setShowEntryDialog(true)} className="w-full">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Registrar Entrada
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Registrar Entrada</DialogTitle>
-                  <DialogDescription>
-                    Preencha os dados da entrada de mercadoria.
-                  </DialogDescription>
-                </DialogHeader>
-                <Form {...entryForm}>
-                  <form onSubmit={entryForm.handleSubmit(confirmStockEntry)} className="space-y-4">
-                    <FormField
-                      control={entryForm.control}
-                      name="productId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Produto</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione um produto" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {products.map(product => (
-                                <SelectItem key={product.id} value={product.id}>
-                                  {product.name} - {product.size}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={entryForm.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Local</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Selecione o local" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {Object.entries(LOCATION_LABELS).map(([key, label]) => (
-                                <SelectItem key={key} value={key}>
-                                  {label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={entryForm.control}
-                      name="quantity"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Quantidade</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              onChange={(e) => field.onChange(Number(e.target.value))}
-                              min="1"
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                      <Button type="button" variant="outline" onClick={() => setShowEntryDialog(false)} disabled={isEntering} className="w-full sm:w-auto">
-                        Cancelar
-                      </Button>
-                      <Button type="submit" disabled={isEntering} className="w-full sm:w-auto">
-                        {isEntering ? 'Registrando...' : 'Confirmar'}
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </Form>
-              </DialogContent>
-            </Dialog>
+            {selectedProduct && entryLocation && (
+              <div className="text-xs text-muted-foreground">
+                Vai adicionar {entryQuantity} em {LOCATION_LABELS[entryLocation as Location]}.
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button onClick={handleEntry} disabled={isEntering || !selectedProduct || !entryLocation || entryQuantity <= 0}>
+                {isEntering ? 'Registrando...' : 'Registrar Entrada'}
+              </Button>
+              <Button variant="outline" onClick={() => { setSelectedProduct(''); setEntryLocation(''); setEntryQuantity(1); }}>
+                Limpar
+              </Button>
+            </div>
           </div>
         </Card>
       )}
