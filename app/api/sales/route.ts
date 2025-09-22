@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Decimal } from '@prisma/client/runtime/library';
+import type { Prisma } from '@prisma/client';
 
 // Define types manually since Prisma client generation has issues
 interface Sale {
@@ -68,7 +69,7 @@ export async function GET() {
       orderBy: {
         date: 'desc'
       }
-    });
+    }) as unknown as SaleWithItems[];
 
     console.log(`Found ${sales.length} sales`);
 
@@ -85,10 +86,7 @@ export async function GET() {
         },
         qty: item.quantity
       })),
-      total: Number(sale.total),
-      status: (sale as any).status || 'paid',
-      paymentMethod: (sale as any).paymentMethod || null,
-      notes: (sale as any).notes || null
+      total: Number(sale.total)
     }));
 
     console.log('Sales formatted successfully');
@@ -120,22 +118,19 @@ export async function POST(request: NextRequest) {
     console.log('Creating sale with transaction...');
 
     // Create sale and items in a transaction
-    const sale = await prisma.$transaction(async (tx: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const sale = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       console.log('Transaction started');
 
       const newSale = await tx.sale.create({
         data: {
-          total: total || items.reduce((sum: number, item: SaleItemInput) => sum + (item.product.price * item.qty), 0),
-          status: status || 'paid',
-          paymentMethod: paymentMethod || null,
-          notes: notes || null,
+          total: (total ?? items.reduce((sum: number, item: SaleItemInput) => sum + (item.product.price * item.qty), 0)) as unknown as Decimal,
           items: {
             create: items.map((item: SaleItemInput) => ({
               productId: item.product.id,
               quantity: item.qty,
-              price: item.product.price
-            }))
-          }
+              price: item.product.price,
+            })),
+          },
         },
         include: {
           items: {
@@ -200,10 +195,11 @@ export async function POST(request: NextRequest) {
     });
 
     // Transform response to match expected format
+    const saleWithItems = sale as unknown as SaleWithItems;
     const formattedSale = {
-      id: parseInt(sale.id),
-      date: sale.date.toISOString(),
-      items: sale.items.map((item: SaleItem) => ({
+      id: parseInt(saleWithItems.id),
+      date: saleWithItems.date.toISOString(),
+      items: saleWithItems.items.map((item: SaleItem) => ({
         product: {
           id: item.product.id,
           name: item.product.name,
@@ -212,10 +208,7 @@ export async function POST(request: NextRequest) {
         },
         qty: item.quantity
       })),
-      total: Number(sale.total),
-      status: (sale as any).status || 'paid',
-      paymentMethod: (sale as any).paymentMethod || null,
-      notes: (sale as any).notes || null
+      total: Number(saleWithItems.total)
     };
 
     console.log('Sale formatted and ready to return');
@@ -233,7 +226,7 @@ export async function DELETE() {
   try {
     console.log('DELETE /api/sales - Starting request');
 
-    await prisma.$transaction(async (tx: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       console.log('Starting transaction to clear sales history');
 
       await tx.saleItem.deleteMany();

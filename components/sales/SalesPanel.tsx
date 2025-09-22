@@ -199,10 +199,7 @@ export default function SalesPanel() {
         },
         body: JSON.stringify({
           items: cart,
-          total,
-          paymentMethod: paymentMethod || null,
-          notes: orderNotes || null,
-          status: 'paid'
+          total
         }),
       });
 
@@ -223,7 +220,7 @@ export default function SalesPanel() {
     } finally {
       setSavingSale(false);
     }
-  }, [cart, savingSale, clearCart, getStockLevel]);
+  }, [cart, savingSale, clearCart, getStockLevel, paymentMethod, orderNotes]);
 
   const toggleFavorite = useCallback((id: string) => {
     setFavorites((cur) => {

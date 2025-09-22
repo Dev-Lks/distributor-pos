@@ -10,9 +10,6 @@ type SavedSale = {
   date: string;
   items: CartItem[];
   total: number;
-  status?: string;
-  paymentMethod?: string | null;
-  notes?: string | null;
 }
 
 export default function SalesHistory() {
@@ -119,13 +116,6 @@ export default function SalesHistory() {
             <div key={s.id} className="p-2 border rounded">
               <div className="text-sm font-medium">{new Date(s.date).toLocaleString()}</div>
               <div className="text-xs text-muted-foreground">Total: R$ {s.total.toFixed(2)}</div>
-              {(s.status || s.paymentMethod || s.notes) && (
-                <div className="text-xs text-muted-foreground mt-1">
-                  {s.status && <span>Status: {s.status} </span>}
-                  {s.paymentMethod && <span>• Pagamento: {s.paymentMethod} </span>}
-                  {s.notes && <span>• Obs: {s.notes}</span>}
-                </div>
-              )}
               <div className="flex gap-2 mt-2">
                 <button className="btn btn-ghost" onClick={() => sendToCart(s.items)}>Enviar para carrinho</button>
                 <button className="btn btn-ghost" onClick={() => {
