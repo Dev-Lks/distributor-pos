@@ -85,6 +85,11 @@ export default function InventoryDashboard() {
     loadInventory
   } = useInventory();
 
+  // Filtros e busca
+  const [search, setSearch] = useState('');
+  const [onlyLow, setOnlyLow] = useState(false);
+  const [locationFilter, setLocationFilter] = useState<Location | ''>('');
+
   const [selectedProduct, setSelectedProduct] = useState<string>('');
   const [transferFrom, setTransferFrom] = useState<Location | ''>('');
   const [transferTo, setTransferTo] = useState<Location | ''>('');
@@ -202,6 +207,51 @@ export default function InventoryDashboard() {
     }
   };
 
+  // Produtos filtrados para a visão geral
+  const filteredProducts = React.useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return products.filter(p => {
+      const matchesQuery = !q || `${p.name} ${p.size}`.toLowerCase().includes(q);
+      const matchesLocation = !locationFilter || getStockLevel(p.id, locationFilter) > 0;
+      const stockLowOrOut = (() => {
+        if (!onlyLow) return true;
+        // considera baixo quando em algum local está <= minStock ou zerado
+        const levels = stockLevels.filter(s => s.productId === p.id);
+        if (levels.length === 0) return false;
+        return levels.some(s => s.quantity <= 0 || s.quantity <= s.minStock);
+      })();
+      return matchesQuery && matchesLocation && stockLowOrOut;
+    });
+  }, [search, locationFilter, onlyLow, stockLevels]);
+
+  // Ações rápidas: preenche e vai para a aba correta
+  const quickTransfer = (productId: string) => {
+    setSelectedProduct(productId);
+    // origem sugerida: local com maior estoque
+    const byProduct = stockLevels.filter(s => s.productId === productId);
+    const bestFrom = byProduct.sort((a,b) => b.quantity - a.quantity)[0]?.location as Location | undefined;
+    setTransferFrom(bestFrom ?? 'camara_fria');
+    setTransferTo('ponto_venda');
+    setTransferQuantity(1);
+    setActiveTab('transfer');
+  };
+
+  const quickEntry = (productId: string) => {
+    setSelectedProduct(productId);
+    setEntryLocation('camara_fria');
+    setEntryQuantity(1);
+    setActiveTab('entry');
+  };
+
+  const quickAdjust = (productId: string) => {
+    setSelectedProduct(productId);
+    // se há filtro de local, usar; senão, usar ponto de venda
+    const loc = (locationFilter || 'ponto_venda') as Location;
+    setAdjustmentLocation(loc);
+    setAdjustmentQuantity(getStockLevel(productId, loc));
+    setActiveTab('adjustment');
+  };
+
   if (loading) {
     return <div className="text-center py-8">Carregando inventário...</div>;
   }
@@ -226,7 +276,7 @@ export default function InventoryDashboard() {
         </div>
       </div>
 
-      {/* Tabs */}
+  {/* Tabs */}
       <div className="flex flex-wrap gap-1 sm:gap-2 border-b overflow-x-auto">
         {[
           { id: 'overview' as const, label: 'Visão Geral' },
@@ -271,7 +321,35 @@ export default function InventoryDashboard() {
       {/* Visão Geral */}
       {activeTab === 'overview' && (
         <Card className="p-6">
-          <h3 className="text-lg font-semibold mb-4">Visão Geral do Estoque</h3>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <h3 className="text-lg font-semibold">Visão Geral do Estoque</h3>
+              <p className="text-xs text-muted-foreground">Busque, filtre e use as ações rápidas para movimentar.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+              <Input
+                placeholder="Buscar por nome ou tamanho"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="sm:w-64"
+              />
+              <select
+                value={locationFilter}
+                onChange={e => setLocationFilter((e.target.value || '') as Location | '')}
+                className="px-3 py-2 border rounded bg-background text-sm"
+                aria-label="Filtrar por local com estoque"
+              >
+                <option value="">Todos os locais</option>
+                {Object.entries(LOCATION_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+              <label className="inline-flex items-center gap-2 text-sm">
+                <input type="checkbox" checked={onlyLow} onChange={e => setOnlyLow(e.target.checked)} />
+                Só baixo/zerado
+              </label>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
@@ -283,10 +361,11 @@ export default function InventoryDashboard() {
                       {LOCATION_LABELS[location]}
                     </TableHead>
                   ))}
+                  <TableHead className="text-center">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map(product => (
+                {filteredProducts.map(product => (
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
                     <TableCell>
@@ -312,6 +391,13 @@ export default function InventoryDashboard() {
                         </TableCell>
                       );
                     })}
+                    <TableCell className="text-center">
+                      <div className="flex flex-wrap gap-1 justify-center">
+                        <Button size="sm" variant="outline" onClick={() => quickEntry(product.id)}>Entrada</Button>
+                        <Button size="sm" onClick={() => quickTransfer(product.id)}>Transferir</Button>
+                        <Button size="sm" variant="ghost" onClick={() => quickAdjust(product.id)}>Ajustar</Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -356,6 +442,9 @@ export default function InventoryDashboard() {
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedProduct && transferFrom && (
+                  <div className="text-xs text-muted-foreground mt-1">Disponível: {getStockLevel(selectedProduct, transferFrom as Location)}</div>
+                )}
               </div>
 
               <div>
@@ -372,6 +461,9 @@ export default function InventoryDashboard() {
                     ))}
                   </SelectContent>
                 </Select>
+                {selectedProduct && transferTo && (
+                  <div className="text-xs text-muted-foreground mt-1">No destino: {getStockLevel(selectedProduct, transferTo as Location)}</div>
+                )}
               </div>
             </div>
 
@@ -551,6 +643,9 @@ export default function InventoryDashboard() {
                   ))}
                 </SelectContent>
               </Select>
+              {selectedProduct && entryLocation && (
+                <div className="text-xs text-muted-foreground mt-1">Atual: {getStockLevel(selectedProduct, entryLocation as Location)}</div>
+              )}
             </div>
 
             <div>
@@ -697,6 +792,9 @@ export default function InventoryDashboard() {
                   ))}
                 </SelectContent>
               </Select>
+              {selectedProduct && adjustmentLocation && (
+                <div className="text-xs text-muted-foreground mt-1">Atual: {getStockLevel(selectedProduct, adjustmentLocation as Location)}</div>
+              )}
             </div>
 
             <div>
