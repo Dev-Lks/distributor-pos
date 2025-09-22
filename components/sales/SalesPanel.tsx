@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { useInventory } from '@/lib/useInventory';
+import { toast } from 'sonner';
 
 type CartItem = { product: Product; qty: number };
 
@@ -13,6 +14,7 @@ const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", 
 export default function SalesPanel() {
   const [products, setProducts] = useState<Product[]>([]);
   const [query, setQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [quickQty, setQuickQty] = useState<number>(1);
   const [favorites, setFavorites] = useState<string[]>([]);
@@ -84,9 +86,15 @@ export default function SalesPanel() {
   const filtered = useMemo(() => {
     return products.filter((p) => {
       if (query && !(`${p.name} ${p.size}`).toLowerCase().includes(query.toLowerCase())) return false;
+      if (categoryFilter && p.size !== categoryFilter) return false;
       return true;
     });
-  }, [products, query]);
+  }, [products, query, categoryFilter]);
+
+  const categories = useMemo(() => {
+    const uniqueSizes = [...new Set(products.map(p => p.size))];
+    return uniqueSizes.sort();
+  }, [products]);
 
   const add = useCallback((product: Product, qty = 1) => {
     setCart((c) => {
@@ -100,7 +108,7 @@ export default function SalesPanel() {
     // Verificar estoque disponível no ponto de venda
     const availableStock = getStockLevel(product.id, 'ponto_venda');
     if (availableStock < quickQty) {
-      alert(`Estoque insuficiente! Disponível: ${availableStock} unidades`);
+      toast.error(`Estoque insuficiente! Disponível: ${availableStock} unidades`);
       return;
     }
 
@@ -138,7 +146,7 @@ export default function SalesPanel() {
       for (const item of cart) {
         const availableStock = getStockLevel(item.product.id, 'ponto_venda');
         if (availableStock < item.qty) {
-          alert(`Estoque insuficiente para ${item.product.name}! Disponível: ${availableStock}`);
+          toast.error(`Estoque insuficiente para ${item.product.name}! Disponível: ${availableStock}`);
           setSavingSale(false);
           return;
         }
@@ -147,7 +155,7 @@ export default function SalesPanel() {
       const total = cart.reduce((s, c) => s + c.product.price * c.qty, 0);
 
       if (total <= 0) {
-        alert("Erro: Total da venda deve ser maior que zero.");
+        toast.error("Erro: Total da venda deve ser maior que zero.");
         setSavingSale(false);
         return;
       }
@@ -169,10 +177,10 @@ export default function SalesPanel() {
       }
 
       clearCart();
-      alert("Venda salva com sucesso!");
+      toast.success("Venda salva com sucesso!");
     } catch (error) {
       console.error("Erro ao salvar venda:", error);
-      alert("Erro ao salvar venda. Tente novamente.");
+      toast.error("Erro ao salvar venda. Tente novamente.");
     } finally {
       setSavingSale(false);
     }
@@ -253,6 +261,25 @@ export default function SalesPanel() {
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)} 
                 className="flex-1 sm:w-48"
               />
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="px-3 py-2 border rounded text-sm bg-background"
+              >
+                <option value="">Todas as categorias</option>
+                {categories.map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              {(query || categoryFilter) && (
+                <Button
+                  onClick={() => { setQuery(''); setCategoryFilter(''); }}
+                  variant="outline"
+                  size="sm"
+                >
+                  Limpar
+                </Button>
+              )}
               <div className="flex items-center gap-2 justify-center sm:justify-start">
                 <Button 
                   onClick={() => setQuickQty(Math.max(1, quickQty - 1))} 
