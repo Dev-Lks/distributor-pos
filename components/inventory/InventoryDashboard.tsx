@@ -47,6 +47,98 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 
+type BatchEntryItem = { productId: string; location: Location | ''; quantity: number; note?: string };
+type BatchEntryProps = { products: { id: string; name: string; size: string }[]; onSubmit: (items: BatchEntryItem[]) => Promise<void> };
+
+function BatchEntrySection({ products, onSubmit }: BatchEntryProps) {
+  const [rows, setRows] = React.useState<BatchEntryItem[]>([{ productId: '', location: '', quantity: 1, note: '' }]);
+  const [submitting, setSubmitting] = React.useState(false);
+
+  const updateRow = (idx: number, patch: Partial<BatchEntryItem>) => {
+    setRows(prev => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  };
+  const addRow = () => setRows(prev => [...prev, { productId: '', location: '', quantity: 1, note: '' }]);
+  const removeRow = (idx: number) => setRows(prev => prev.filter((_, i) => i !== idx));
+
+  const validRows = rows.filter(r => r.productId && r.location && r.quantity > 0);
+
+  const handleSubmit = async () => {
+    if (validRows.length === 0) return;
+    setSubmitting(true);
+    try {
+      await onSubmit(validRows);
+      setRows([{ productId: '', location: '', quantity: 1, note: '' }]);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="p-2 text-left">Produto</th>
+              <th className="p-2 text-left">Local</th>
+              <th className="p-2 text-left">Quantidade</th>
+              <th className="p-2 text-left">Nota</th>
+              <th className="p-2 text-left">Ação</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r, idx) => (
+              <tr key={idx} className="border-t">
+                <td className="p-2 min-w-[220px]">
+                  <Select value={r.productId} onValueChange={(val: string) => updateRow(idx, { productId: val })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Produto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products.map(p => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.name} - {p.size}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="p-2 min-w-[160px]">
+                  <Select value={r.location} onValueChange={(val: string) => updateRow(idx, { location: val as Location })}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Local" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(LOCATION_LABELS).map(([key, label]) => (
+                        <SelectItem key={key} value={key}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </td>
+                <td className="p-2 w-[120px]">
+                  <Input type="number" min={1} value={r.quantity} onChange={(e) => updateRow(idx, { quantity: Number(e.target.value) })} />
+                </td>
+                <td className="p-2 min-w-[220px]">
+                  <Input type="text" value={r.note || ''} onChange={(e) => updateRow(idx, { note: e.target.value })} placeholder="Opcional" />
+                </td>
+                <td className="p-2">
+                  <Button size="sm" variant="ghost" onClick={() => removeRow(idx)} disabled={rows.length === 1}>Remover</Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex gap-2">
+        <Button variant="outline" onClick={addRow}>Adicionar linha</Button>
+        <Button onClick={handleSubmit} disabled={submitting || validRows.length === 0}>{submitting ? 'Registrando...' : 'Registrar Lote'}</Button>
+      </div>
+    </div>
+  );
+}
+
 // Schemas de validação
 const transferSchema = z.object({
   productId: z.string().min(1, 'Selecione um produto'),
@@ -96,6 +188,7 @@ export default function InventoryDashboard() {
   const [transferQuantity, setTransferQuantity] = useState<number>(1);
   const [entryLocation, setEntryLocation] = useState<Location | ''>('');
   const [entryQuantity, setEntryQuantity] = useState<number>(1);
+  const [entryNote, setEntryNote] = useState<string>('');
   const [adjustmentLocation, setAdjustmentLocation] = useState<Location | ''>('');
   const [adjustmentQuantity, setAdjustmentQuantity] = useState<number>(0);
   const [activeTab, setActiveTab] = useState<'overview' | 'transfer' | 'entry' | 'adjustment' | 'import'>('overview');
@@ -176,9 +269,10 @@ export default function InventoryDashboard() {
     }
     setIsEntering(true);
     try {
-      await stockEntry(selectedProduct, entryLocation as Location, entryQuantity, 'Entrada rápida');
+      await stockEntry(selectedProduct, entryLocation as Location, entryQuantity, entryNote || 'Entrada rápida');
       toast.success('Entrada registrada!');
       setEntryQuantity(1);
+      setEntryNote('');
       setActiveTab('overview');
     } catch (e) {
       toast.error('Erro na entrada de mercadoria');
@@ -694,6 +788,16 @@ export default function InventoryDashboard() {
               </div>
             </div>
 
+            <div>
+              <label className="block text-sm font-medium mb-2">Nota (opcional)</label>
+              <Input
+                type="text"
+                value={entryNote}
+                onChange={(e) => setEntryNote(e.target.value)}
+                placeholder="Ex: fornecedor, lote, observações"
+              />
+            </div>
+
             {selectedProduct && entryLocation && (
               <div className="text-xs text-muted-foreground">
                 Vai adicionar {entryQuantity} em {LOCATION_LABELS[entryLocation as Location]}.
@@ -708,6 +812,30 @@ export default function InventoryDashboard() {
                 Limpar
               </Button>
             </div>
+          </div>
+
+          {/* Entrada em lote */}
+          <div className="mt-8">
+            <h4 className="text-base font-semibold mb-2">Entrada em lote</h4>
+            <p className="text-xs text-muted-foreground mb-3">Adicione várias entradas de uma vez. Cada linha pode ter nota própria.</p>
+            <BatchEntrySection
+              products={products}
+              onSubmit={async (items) => {
+                setIsEntering(true);
+                let ok = 0; let fail = 0;
+                for (const it of items) {
+                  try {
+                    await stockEntry(it.productId, it.location as Location, it.quantity, it.note);
+                    ok++;
+                  } catch {
+                    fail++;
+                  }
+                }
+                setIsEntering(false);
+                if (ok > 0) toast.success(`${ok} entrada(s) registradas`);
+                if (fail > 0) toast.warning(`${fail} falhou(falharam)`);
+              }}
+            />
           </div>
         </Card>
       )}
