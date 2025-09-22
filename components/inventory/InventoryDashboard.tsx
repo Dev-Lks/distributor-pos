@@ -812,14 +812,14 @@ export default function InventoryDashboard() {
               <label className="text-sm font-medium">Local padrão:</label>
               <select
                 value={defaultImportLocation}
-                onChange={(e) => setDefaultImportLocation(e.target.value as any)}
+                onChange={(e) => setDefaultImportLocation(e.target.value as Location)}
                 className="px-3 py-2 border rounded bg-background"
               >
                 <option value="camara_fria">Câmara Fria</option>
                 <option value="casa">Casa</option>
                 <option value="ponto_venda">Ponto de Venda</option>
               </select>
-              <div className="text-xs text-muted-foreground">Pode ser sobrescrito pela coluna "Local" da planilha.</div>
+              <div className="text-xs text-muted-foreground">Pode ser sobrescrito pela coluna &quot;Local&quot; da planilha.</div>
             </div>
 
             <input
@@ -834,21 +834,27 @@ export default function InventoryDashboard() {
                   const workbook = XLSX.read(data);
                   const sheetName = workbook.SheetNames[0];
                   const sheet = workbook.Sheets[sheetName];
-                  const json: any[] = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+                  const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
 
                   // Mapear possíveis nomes de colunas
-                  const rows = json.map((row) => ({
-                    Quantidade: Number(row['Quantidade de compra'] || row['Quantidade'] || row['Qtd'] || 0),
-                    Item: String(row['Item'] || row['Produto'] || row['Nome'] || ''),
-                    Tamanho: String(row['Tamanho'] || row['Volume'] || row['Tamanho (L)'] || ''),
-                    Custo: Number(String(row['Custo'] || '').replace(/[^0-9.,]/g, '').replace(',', '.')) || undefined,
-                    ValorTotal: Number(String(row['Valor total'] || '').replace(/[^0-9.,]/g, '').replace(',', '.')) || undefined,
-                    Peso: String(row['Peso'] || ''),
-                    VendaConsumidor: Number(String(row['Venda Consumidor R$'] || row['Preço Venda'] || '').replace(/[^0-9.,]/g, '').replace(',', '.')) || undefined,
-                    TotalVenda: Number(String(row['Total Venda'] || '').replace(/[^0-9.,]/g, '').replace(',', '.')) || undefined,
-                    Local: (row['Local'] as any) || undefined,
-                    MinStock: Number(row['MinStock'] || row['Estoque Mínimo'] || 0) || 0
-                  })).filter(r => r.Item && r.Tamanho && r.Quantidade > 0);
+                  const rows = json.map((row) => {
+                    const get = (k: string) => (row as Record<string, unknown>)[k];
+                    const parseMoney = (v: unknown) => Number(String(v ?? '').replace(/[^0-9.,]/g, '').replace(',', '.'));
+                    const locRaw = String(get('Local') ?? '').trim();
+                    const loc = locRaw === 'camara_fria' || locRaw === 'casa' || locRaw === 'ponto_venda' ? (locRaw as Location) : undefined;
+                    return {
+                      Quantidade: Number(get('Quantidade de compra') ?? get('Quantidade') ?? get('Qtd') ?? 0),
+                      Item: String(get('Item') ?? get('Produto') ?? get('Nome') ?? ''),
+                      Tamanho: String(get('Tamanho') ?? get('Volume') ?? get('Tamanho (L)') ?? ''),
+                      Custo: parseMoney(get('Custo')) || undefined,
+                      ValorTotal: parseMoney(get('Valor total')) || undefined,
+                      Peso: String(get('Peso') ?? ''),
+                      VendaConsumidor: parseMoney(get('Venda Consumidor R$') ?? get('Preço Venda')) || undefined,
+                      TotalVenda: parseMoney(get('Total Venda')) || undefined,
+                      Local: loc,
+                      MinStock: Number(get('MinStock') ?? get('Estoque Mínimo') ?? 0) || 0
+                    };
+                  }).filter((r) => r.Item && r.Tamanho && r.Quantidade > 0);
 
                   const res = await fetch('/api/inventory/import', {
                     method: 'POST',
@@ -873,7 +879,7 @@ export default function InventoryDashboard() {
               disabled={importing}
             />
             <div className="text-sm text-muted-foreground">
-              Modelo esperado: colunas "Quantidade de compra", "Item", "Tamanho", "Venda Consumidor R$". Outras colunas são opcionais.
+              Modelo esperado: colunas &quot;Quantidade de compra&quot;, &quot;Item&quot;, &quot;Tamanho&quot;, &quot;Venda Consumidor R$&quot;. Outras colunas são opcionais.
             </div>
           </div>
         </div>
