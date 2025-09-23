@@ -9,9 +9,9 @@ import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { SidebarLayout } from "@/components/SidebarLayout"
+import { Snowflake, Home, Store } from "lucide-react"
 
 type Location = "coldRoom" | "house" | "salePoint"
 
@@ -25,6 +25,58 @@ const locationColors = {
   coldRoom: "bg-blue-100 text-blue-800",
   house: "bg-green-100 text-green-800",
   salePoint: "bg-orange-100 text-orange-800"
+}
+
+const locationIcons = {
+  coldRoom: Snowflake,
+  house: Home,
+  salePoint: Store
+}
+
+const locationDescriptions = {
+  coldRoom: "Armazenamento refrigerado",
+  house: "Estoque residencial",
+  salePoint: "Pontos de venda"
+}
+
+function LocationSelector({ value, onChange, label }: { value: Location | null, onChange: (location: Location) => void, label: string }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-3">{label}</label>
+      <div className="grid grid-cols-1 gap-3">
+        {(Object.keys(locationLabels) as Location[]).map((location) => {
+          const Icon = locationIcons[location]
+          const isSelected = value === location
+          return (
+            <Card
+              key={location}
+              className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                isSelected
+                  ? "ring-2 ring-primary bg-primary/5 border-primary"
+                  : "hover:bg-muted/50"
+              }`}
+              onClick={() => onChange(location)}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`p-2 rounded-lg ${isSelected ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                    <Icon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium">{locationLabels[location]}</h4>
+                    <p className="text-sm text-muted-foreground">{locationDescriptions[location]}</p>
+                  </div>
+                  {isSelected && (
+                    <div className="w-2 h-2 bg-primary rounded-full"></div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )
+        })}
+      </div>
+    </div>
+  )
 }
 
 export default function InventoryPage() {
@@ -301,37 +353,29 @@ export default function InventoryPage() {
         {/* Modal Adicionar Estoque */}
         {showAddModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-96">
+            <div className="bg-card text-card-foreground border border-border p-6 rounded-lg w-[500px] shadow-lg">
               <h3 className="text-lg font-bold mb-4">Adicionar Estoque</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Produto</label>
-                  <Select value={addProductId} onValueChange={setAddProductId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product: Product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} - {product.size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    value={addProductId}
+                    onChange={(e) => setAddProductId(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                  >
+                    <option value="">Selecione um produto</option>
+                    {products.map((product: Product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} - {product.size}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Local</label>
-                  <Select value={addLocation} onValueChange={(value: Location) => setAddLocation(value)}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="coldRoom">Câmara Fria</SelectItem>
-                      <SelectItem value="house">Casa</SelectItem>
-                      <SelectItem value="salePoint">Pontos de Venda</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <LocationSelector
+                  value={addLocation}
+                  onChange={setAddLocation}
+                  label="Local de Destino"
+                />
                 <div>
                   <label className="block text-sm font-medium mb-1">Quantidade</label>
                   <Input
@@ -340,6 +384,7 @@ export default function InventoryPage() {
                     value={addQuantity}
                     onChange={(e) => setAddQuantity(e.target.value)}
                     placeholder="Digite a quantidade"
+                    className="w-full"
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
@@ -358,51 +403,35 @@ export default function InventoryPage() {
         {/* Modal Transferir Estoque */}
         {showTransferModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white p-6 rounded-lg w-96">
+            <div className="bg-card text-card-foreground border border-border p-6 rounded-lg w-[600px] shadow-lg">
               <h3 className="text-lg font-bold mb-4">Transferir Estoque</h3>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Produto</label>
-                  <Select value={transferProductId} onValueChange={setTransferProductId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione um produto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products.map((product: Product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} - {product.size}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <select
+                    value={transferProductId}
+                    onChange={(e) => setTransferProductId(e.target.value)}
+                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                  >
+                    <option value="">Selecione um produto</option>
+                    {products.map((product: Product) => (
+                      <option key={product.id} value={product.id}>
+                        {product.name} - {product.size}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">De</label>
-                    <Select value={transferFrom} onValueChange={(value: Location) => setTransferFrom(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="coldRoom">Câmara Fria</SelectItem>
-                        <SelectItem value="house">Casa</SelectItem>
-                        <SelectItem value="salePoint">Pontos de Venda</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Para</label>
-                    <Select value={transferTo} onValueChange={(value: Location) => setTransferTo(value)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="coldRoom">Câmara Fria</SelectItem>
-                        <SelectItem value="house">Casa</SelectItem>
-                        <SelectItem value="salePoint">Pontos de Venda</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  <LocationSelector
+                    value={transferFrom}
+                    onChange={setTransferFrom}
+                    label="De"
+                  />
+                  <LocationSelector
+                    value={transferTo}
+                    onChange={setTransferTo}
+                    label="Para"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-1">Quantidade</label>
@@ -412,6 +441,7 @@ export default function InventoryPage() {
                     value={transferQuantity}
                     onChange={(e) => setTransferQuantity(e.target.value)}
                     placeholder="Digite a quantidade"
+                    className="w-full"
                   />
                 </div>
                 <div className="flex gap-2 justify-end">
@@ -462,9 +492,9 @@ export default function InventoryPage() {
           <CardContent>
             <Tabs defaultValue="coldRoom" className="w-full">
               <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="coldRoom">Câmara Fria</TabsTrigger>
-                <TabsTrigger value="house">Casa</TabsTrigger>
-                <TabsTrigger value="salePoint">Pontos de Venda</TabsTrigger>
+                <TabsTrigger className="border-red" value="coldRoom">Câmara Fria</TabsTrigger>
+                <TabsTrigger className="border-red" value="house">Casa</TabsTrigger>
+                <TabsTrigger className="border-red" value="salePoint">Pontos de Venda</TabsTrigger>
               </TabsList>
               <TabsContent value="coldRoom">
                 {renderInventoryTable("coldRoom")}
