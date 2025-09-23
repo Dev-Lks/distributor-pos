@@ -20,9 +20,9 @@ function OverviewDashboard() {
   if (metricsLoading || productsLoading || !metrics) return <div>Loading...</div>
 
   const totalProducts = products.length
-  const lowStockCount = products.filter((p: Product) => (p.inventory?.quantity ?? 0) <= 10).length
-  const outOfStockCount = products.filter((p: Product) => (p.inventory?.quantity ?? 0) === 0).length
-  const totalValue = products.reduce((sum: number, p: Product) => sum + (p.inventory?.quantity ?? 0) * p.salePrice, 0)
+  const lowStockCount = products.filter((p: Product) => (p.inventory?.totalQuantity ?? 0) <= 10).length
+  const outOfStockCount = products.filter((p: Product) => (p.inventory?.totalQuantity ?? 0) === 0).length
+  const totalValue = products.reduce((sum: number, p: Product) => sum + (p.inventory?.totalQuantity ?? 0) * p.salePrice, 0)
 
   return (
     <div className="space-y-6">

@@ -83,14 +83,14 @@ export async function POST(request: NextRequest) {
         if (inventory) {
           await tx.inventory.update({
             where: { productId: item.productId },
-            data: { quantity: inventory.quantity - item.quantity },
+            data: { salePointQuantity: inventory.salePointQuantity - item.quantity },
           })
         } else {
           // Create inventory with negative quantity if doesn't exist
           await tx.inventory.create({
             data: {
               productId: item.productId,
-              quantity: -item.quantity,
+              salePointQuantity: -item.quantity,
             },
           })
         }

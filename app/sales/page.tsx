@@ -23,7 +23,9 @@ export default function SalesPage() {
 
   // Play alert sound when products are low on stock
   useEffect(() => {
-    const hasAlerts = products.some((p: Product) => p.inventory?.alert)
+    const hasAlerts = products.some((p: Product) => 
+      p.inventory?.coldRoomAlert || p.inventory?.houseAlert || p.inventory?.salePointAlert
+    )
     if (hasAlerts) {
       const audio = new Audio('/alert.mp3')
       audio.play().catch(() => {}) // Ignore errors if audio fails
@@ -35,11 +37,11 @@ export default function SalesPage() {
   const filteredProducts = products.filter((product: Product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSize = selectedSize === "all" || product.size === selectedSize
-    return matchesSearch && matchesSize && (product.inventory?.quantity ?? 0) > 0
+    return matchesSearch && matchesSize && (product.inventory?.salePointQuantity ?? 0) > 0
   })
 
   const addToCart = (product: Product, quantity = 1) => {
-    const stock = product.inventory?.quantity ?? 0
+    const stock = product.inventory?.salePointQuantity ?? 0
     const existingItem = cart.find((item) => item.productId === product.id)
     if (existingItem) {
       setCart(
@@ -159,9 +161,9 @@ export default function SalesPage() {
                       <span className="text-lg font-bold text-primary">R$ {product.salePrice.toFixed(2)}</span>
                       <div className="flex gap-1">
                         <Badge variant="outline" className="text-xs">
-                          {product.inventory?.quantity ?? 0}
+                          {product.inventory?.salePointQuantity ?? 0}
                         </Badge>
-                        {product.inventory?.alert && (
+                        {(product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert) && (
                           <Badge variant="destructive" className="text-xs">
                             Baixo
                           </Badge>

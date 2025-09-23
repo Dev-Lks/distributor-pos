@@ -8,9 +8,16 @@ export interface Product {
   salePrice: number
   isBonified: boolean
   inventory?: {
-    quantity: number
-    minStock: number
-    alert?: boolean
+    coldRoomQuantity: number
+    houseQuantity: number
+    salePointQuantity: number
+    coldRoomMinStock: number
+    houseMinStock: number
+    salePointMinStock: number
+    coldRoomAlert?: boolean
+    houseAlert?: boolean
+    salePointAlert?: boolean
+    totalQuantity?: number
   }
 }
 
