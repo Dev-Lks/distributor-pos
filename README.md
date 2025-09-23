@@ -86,4 +86,12 @@ Sistema completo de ponto de venda para bares e restaurantes, desenvolvido com N
 
 ## Deploy
 
-Para produção, configure as variáveis de ambiente e faça deploy no Vercel ou similar.
+Para produção, configure as variáveis de ambiente no Vercel:
+
+1. **DATABASE_URL**: Sua string de conexão do Neon
+2. **NODE_ENV**: production
+
+O projeto está configurado para deploy automático no Vercel com:
+- Geração automática do cliente Prisma
+- Build otimizado para produção
+- APIs funcionais em produção
