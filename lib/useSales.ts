@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 
 export interface SaleItem {
   productId: string
@@ -6,30 +6,19 @@ export interface SaleItem {
 }
 
 export function useSales() {
-  const [sales, setSales] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
+  const queryClient = useQueryClient()
 
   const createSale = async (items: SaleItem[]) => {
-    setLoading(true)
-    try {
-      const res = await fetch('/api/sales', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ items }),
-      })
-      const sale = await res.json()
-      setSales(prev => [sale, ...prev])
-      return sale
-    } finally {
-      setLoading(false)
-    }
+    const res = await fetch('/api/sales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    })
+    const sale = await res.json()
+    // Invalidate products cache to refresh inventory
+    queryClient.invalidateQueries({ queryKey: ['products'] })
+    return sale
   }
 
-  const fetchSales = async () => {
-    const res = await fetch('/api/sales')
-    const data = await res.json()
-    setSales(data)
-  }
-
-  return { sales, createSale, fetchSales, loading }
+  return { createSale }
 }

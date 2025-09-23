@@ -8,7 +8,11 @@ export async function GET() {
         product: true,
       },
     })
-    return NextResponse.json(inventory)
+    const inventoryWithAlerts = inventory.map((item: any) => ({
+      ...item,
+      alert: item.quantity <= item.minStock,
+    }))
+    return NextResponse.json(inventoryWithAlerts)
   } catch (error) {
     return NextResponse.json({ error: 'Failed to fetch inventory' }, { status: 500 })
   }

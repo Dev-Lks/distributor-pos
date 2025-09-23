@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
 
 export interface Product {
   id: string
@@ -9,19 +9,15 @@ export interface Product {
   isBonified: boolean
   inventory?: {
     quantity: number
+    minStock: number
+    alert?: boolean
   }
 }
 
 export function useProducts() {
-  const [products, setProducts] = useState<Product[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/products')
-      .then(res => res.json())
-      .then(setProducts)
-      .finally(() => setLoading(false))
-  }, [])
-
-  return { products, loading }
+  return useQuery({
+    queryKey: ['products'],
+    queryFn: () => fetch('/api/products').then(res => res.json()),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  })
 }

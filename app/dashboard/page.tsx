@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { useQueryClient } from '@tanstack/react-query'
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -14,15 +15,25 @@ import { useProducts, type Product } from "@/lib/useProducts"
 import { useSales } from "@/lib/useSales"
 
 function SalesPanel() {
-  const { products, loading } = useProducts()
-  const { createSale, loading: saleLoading } = useSales()
+  const { data: products = [], isLoading: loading } = useProducts()
+  const { createSale } = useSales()
   const [cart, setCart] = useState<Array<{ productId: string; name: string; price: number; quantity: number; stock: number }>>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSize, setSelectedSize] = useState("all")
+  const [saleLoading, setSaleLoading] = useState(false)
 
-  const sizes = ["all", ...Array.from(new Set(products.map((p) => p.size)))]
+  // Play alert sound when products are low on stock
+  useEffect(() => {
+    const hasAlerts = products.some((p: Product) => p.inventory?.alert)
+    if (hasAlerts) {
+      const audio = new Audio('/alert.mp3')
+      audio.play().catch(() => {}) // Ignore errors if audio fails
+    }
+  }, [products])
 
-  const filteredProducts = products.filter((product) => {
+  const sizes = ["all", ...Array.from(new Set(products.map((p: Product) => p.size as string)))] as string[]
+
+  const filteredProducts = products.filter((product: Product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesSize = selectedSize === "all" || product.size === selectedSize
     return matchesSearch && matchesSize && (product.inventory?.quantity ?? 0) > 0
@@ -62,9 +73,14 @@ function SalesPanel() {
 
   const finalizeSale = async () => {
     if (cart.length === 0) return
-    const items = cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
-    await createSale(items)
-    setCart([])
+    setSaleLoading(true)
+    try {
+      const items = cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
+      await createSale(items)
+      setCart([])
+    } finally {
+      setSaleLoading(false)
+    }
   }
 
   if (loading) return <div>Loading...</div>
@@ -103,7 +119,7 @@ function SalesPanel() {
 
         {/* Grid de produtos */}
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-          {filteredProducts.map((product) => (
+          {filteredProducts.map((product: Product) => (
             <Card
               key={product.id}
               className="pos-quick-action cursor-pointer hover:scale-105 transition-transform"
@@ -114,9 +130,16 @@ function SalesPanel() {
                   <div className="font-medium text-sm leading-tight">{product.name}</div>
                   <div className="flex items-center justify-between">
                     <span className="text-lg font-bold text-primary">R$ {product.salePrice.toFixed(2)}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {product.inventory?.quantity ?? 0}
-                    </Badge>
+                    <div className="flex gap-1">
+                      <Badge variant="outline" className="text-xs">
+                        {product.inventory?.quantity ?? 0}
+                      </Badge>
+                      {product.inventory?.alert && (
+                        <Badge variant="destructive" className="text-xs">
+                          Baixo
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   <div className="text-xs text-muted-foreground">{product.size}</div>
                 </div>
@@ -222,7 +245,8 @@ function SalesPanel() {
 }
 
 function InventoryDashboard() {
-  const { products, loading } = useProducts()
+  const { data: products = [], isLoading: loading } = useProducts()
+  const queryClient = useQueryClient()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editStock, setEditStock] = useState("")
 
@@ -239,8 +263,8 @@ function InventoryDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ productId: id, quantity: newStock }),
       })
-      // Refresh products
-      window.location.reload()
+      // Invalidate products cache to refresh inventory
+      queryClient.invalidateQueries({ queryKey: ['products'] })
     }
     setEditingId(null)
     setEditStock("")
@@ -256,9 +280,9 @@ function InventoryDashboard() {
   if (loading) return <div>Loading...</div>
 
   const totalProducts = products.length
-  const lowStockCount = products.filter((p) => (p.inventory?.quantity ?? 0) <= 10).length
-  const outOfStockCount = products.filter((p) => (p.inventory?.quantity ?? 0) === 0).length
-  const totalValue = products.reduce((sum, p) => sum + (p.inventory?.quantity ?? 0) * p.salePrice, 0)
+  const lowStockCount = products.filter((p: Product) => (p.inventory?.quantity ?? 0) <= 10).length
+  const outOfStockCount = products.filter((p: Product) => (p.inventory?.quantity ?? 0) === 0).length
+  const totalValue = products.reduce((sum: number, p: Product) => sum + (p.inventory?.quantity ?? 0) * p.salePrice, 0)
 
   return (
     <div className="space-y-6">
@@ -313,6 +337,49 @@ function InventoryDashboard() {
         </Card>
       </div>
 
+      {/* Seção de Alertas */}
+      {products.some((p: Product) => p.inventory?.alert) && (
+        <Card className="border-destructive">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-destructive">
+              ⚠️ Alertas de Estoque
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {products.filter((p: Product) => p.inventory?.alert).map((product: Product) => (
+                <div key={product.id} className="flex items-center justify-between p-3 bg-destructive/10 rounded-lg">
+                  <div>
+                    <p className="font-medium">{product.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      Estoque: {product.inventory?.quantity} (Mínimo: {product.inventory?.minStock})
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      // Quick restock - add 10 units
+                      fetch('/api/inventory', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          productId: product.id,
+                          quantity: (product.inventory?.quantity ?? 0) + 10
+                        }),
+                      }).then(() => {
+                        queryClient.invalidateQueries({ queryKey: ['products'] })
+                      })
+                    }}
+                  >
+                    Repor
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabela de produtos */}
       <Card className="pos-metric-card">
         <CardHeader>
@@ -332,7 +399,7 @@ function InventoryDashboard() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((product) => {
+              {products.map((product: Product) => {
                 const stock = product.inventory?.quantity ?? 0
                 const status = getStockStatus(stock)
                 const isEditing = editingId === product.id
