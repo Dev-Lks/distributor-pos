@@ -22,67 +22,87 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  console.time('Sale Creation')
   try {
     const body = await request.json()
     const { items } = body // items: [{ productId, quantity }]
 
-    // Calculate total
-    let total = 0
-    const saleItems = []
+    // Fetch all products in one query
+    const productIds = items.map((item: any) => item.productId)
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+    })
 
+    // Create a map for quick lookup
+    const productMap = new Map(products.map(p => [p.id, p]))
+
+    // Validate all products exist
     for (const item of items) {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-      })
-      if (!product) {
+      if (!productMap.has(item.productId)) {
         return NextResponse.json({ error: 'Product not found' }, { status: 400 })
-      }
-      const price = product.salePrice
-      total += price * item.quantity
-      saleItems.push({
-        productId: item.productId,
-        quantity: item.quantity,
-        price,
-      })
-
-      // Update inventory
-      const inventory = await prisma.inventory.findUnique({
-        where: { productId: item.productId },
-      })
-      if (inventory) {
-        await prisma.inventory.update({
-          where: { productId: item.productId },
-          data: { quantity: inventory.quantity - item.quantity },
-        })
-      } else {
-        // If no inventory, create with negative? But assume exists
-        await prisma.inventory.create({
-          data: {
-            productId: item.productId,
-            quantity: -item.quantity,
-          },
-        })
       }
     }
 
-    const sale = await prisma.sale.create({
-      data: {
-        total,
-        items: {
-          create: saleItems,
-        },
-      },
-      include: {
-        items: {
-          include: {
-            product: true,
+    // Calculate total and prepare sale items
+    let total = 0
+    const saleItems = items.map((item: any) => {
+      const product = productMap.get(item.productId)!
+      const price = product.salePrice
+      total += price * item.quantity
+      return {
+        productId: item.productId,
+        quantity: item.quantity,
+        price,
+      }
+    })
+
+    // Use transaction for atomicity
+    const sale = await prisma.$transaction(async (tx) => {
+      // Create the sale
+      const newSale = await tx.sale.create({
+        data: {
+          total,
+          items: {
+            create: saleItems,
           },
         },
-      },
+        include: {
+          items: {
+            include: {
+              product: true,
+            },
+          },
+        },
+      })
+
+      // Update inventory for each item
+      for (const item of items) {
+        const inventory = await tx.inventory.findUnique({
+          where: { productId: item.productId },
+        })
+        if (inventory) {
+          await tx.inventory.update({
+            where: { productId: item.productId },
+            data: { quantity: inventory.quantity - item.quantity },
+          })
+        } else {
+          // Create inventory with negative quantity if doesn't exist
+          await tx.inventory.create({
+            data: {
+              productId: item.productId,
+              quantity: -item.quantity,
+            },
+          })
+        }
+      }
+
+      return newSale
     })
 
     return NextResponse.json(sale, { status: 201 })
   } catch (error) {
     return NextResponse.json({ error: 'Failed to create sale' }, { status: 500 })
+  } finally {
+    console.timeEnd('Sale Creation')
   }
 }

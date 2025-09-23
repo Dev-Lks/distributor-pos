@@ -51,6 +51,12 @@ function SalesPanel() {
     } else {
       setCart([...cart, { productId: product.id, name: product.name, price: product.salePrice, quantity: Math.min(quantity, stock), stock }])
     }
+    // Visual feedback
+    const card = document.querySelector(`[data-product-id="${product.id}"]`)
+    if (card) {
+      card.classList.add('animate-pulse')
+      setTimeout(() => card.classList.remove('animate-pulse'), 300)
+    }
   }
 
   const updateQuantity = (productId: string, newQuantity: number) => {
@@ -78,10 +84,38 @@ function SalesPanel() {
       const items = cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
       await createSale(items)
       setCart([])
+      // Success sound
+      const audio = new Audio('/alert.mp3')
+      audio.play().catch(() => {})
     } finally {
       setSaleLoading(false)
     }
   }
+
+  // Keyboard shortcuts for quick sales
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // Number keys 1-9 for quick quantity add
+      if (event.key >= '1' && event.key <= '9') {
+        const quantity = parseInt(event.key)
+        // Add the first visible product to cart with specified quantity
+        if (filteredProducts.length > 0) {
+          addToCart(filteredProducts[0], quantity)
+        }
+      }
+      // Enter to finalize sale
+      if (event.key === 'Enter' && cart.length > 0) {
+        finalizeSale()
+      }
+      // Escape to clear cart
+      if (event.key === 'Escape') {
+        setCart([])
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyPress)
+    return () => window.removeEventListener('keydown', handleKeyPress)
+  }, [filteredProducts, cart, addToCart, finalizeSale])
 
   if (loading) return <div>Loading...</div>
 
@@ -122,7 +156,8 @@ function SalesPanel() {
           {filteredProducts.map((product: Product) => (
             <Card
               key={product.id}
-              className="pos-quick-action cursor-pointer hover:scale-105 transition-transform"
+              data-product-id={product.id}
+              className="pos-quick-action cursor-pointer hover:scale-105 transition-transform touch-manipulation"
               onClick={() => addToCart(product)}
             >
               <CardContent className="p-4">
@@ -142,6 +177,19 @@ function SalesPanel() {
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground">{product.size}</div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="w-full mt-2"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      // Quick sale: add to cart and finalize immediately
+                      addToCart(product, 1)
+                      setTimeout(() => finalizeSale(), 100) // Small delay to ensure cart update
+                    }}
+                  >
+                    Venda Rápida
+                  </Button>
                 </div>
               </CardContent>
             </Card>
