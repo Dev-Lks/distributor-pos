@@ -91,17 +91,9 @@ export default function SalesPage() {
     }
   }
 
-  // Keyboard shortcuts for quick sales
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      // Number keys 1-9 for quick quantity add
-      if (event.key >= '1' && event.key <= '9') {
-        const quantity = parseInt(event.key)
-        // Add the first visible product to cart with specified quantity
-        if (filteredProducts.length > 0) {
-          addToCart(filteredProducts[0], quantity)
-        }
-      }
       // Enter to finalize sale
       if (event.key === 'Enter' && cart.length > 0) {
         finalizeSale()
@@ -114,7 +106,7 @@ export default function SalesPage() {
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [filteredProducts, cart, addToCart, finalizeSale])
+  }, [cart, finalizeSale])
 
   if (loading) return <div>Loading...</div>
 
@@ -177,19 +169,6 @@ export default function SalesPage() {
                       </div>
                     </div>
                     <div className="text-xs text-muted-foreground">{product.size}</div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full mt-2"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        // Quick sale: add to cart and finalize immediately
-                        addToCart(product, 1)
-                        setTimeout(() => finalizeSale(), 100) // Small delay to ensure cart update
-                      }}
-                    >
-                      Venda Rápida
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
