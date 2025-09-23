@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { SidebarLayout } from "@/components/SidebarLayout"
@@ -85,6 +87,10 @@ export default function InventoryPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
   const [editStock, setEditStock] = useState("")
+
+  // Estados para filtros
+  const [filterCategory, setFilterCategory] = useState("all")
+  const [filterAlert, setFilterAlert] = useState("all") // 'all', 'with_alert', 'no_alert'
 
   // Estados para adicionar estoque
   const [showAddModal, setShowAddModal] = useState(false)
@@ -181,154 +187,222 @@ export default function InventoryPage() {
     return { label: "Normal", className: "bg-green-100 text-green-800" }
   }
 
-  if (loading) return <div>Loading...</div>
-
   const totalProducts = products.length
 
-  // Calcular métricas gerais
+  // Calcular métricas gerais (removidas da UI, mas mantidas para referência)
   const totalColdRoom = products.reduce((sum: number, p: Product) => sum + (p.inventory?.coldRoomQuantity ?? 0), 0)
   const totalHouse = products.reduce((sum: number, p: Product) => sum + (p.inventory?.houseQuantity ?? 0), 0)
   const totalSalePoint = products.reduce((sum: number, p: Product) => sum + (p.inventory?.salePointQuantity ?? 0), 0)
-  const totalValue = products.reduce((sum: number, p: Product) => sum + ((p.inventory?.totalQuantity ?? 0) * p.salePrice), 0)
-
   const lowStockAlerts = products.filter((p: Product) => 
     (p.inventory?.coldRoomAlert || p.inventory?.houseAlert || p.inventory?.salePointAlert)
   )
+
+  // Filtrar produtos
+  const categories = ["all", ...Array.from(new Set(products.map((p: Product) => p.category).filter(Boolean))) as string[]]
+  const filteredProducts = products.filter((product: Product) => {
+    const matchesCategory = filterCategory === "all" || product.category === filterCategory
+    const matchesAlert = filterAlert === "all" || 
+      (filterAlert === "with_alert" && (product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert)) ||
+      (filterAlert === "no_alert" && !(product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert))
+    return matchesCategory && matchesAlert
+  })
 
   const renderInventoryTable = (location: Location) => {
     const quantityField = `${location}Quantity` as keyof Product["inventory"]
     const minStockField = `${location}MinStock` as keyof Product["inventory"]
     const alertField = `${location}Alert` as keyof Product["inventory"]
 
-    return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Produto</TableHead>
-            <TableHead>Tamanho</TableHead>
-            <TableHead>Preço</TableHead>
-            <TableHead>Estoque</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Valor</TableHead>
-            <TableHead></TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {products.map((product: Product) => {
-            const stock = product.inventory?.[quantityField] ?? 0
-            const minStock = product.inventory?.[minStockField] ?? 10
-            const status = getStockStatus(stock, minStock)
-            const isEditing = editingId === product.id && editingLocation === location
+    const locationData = {
+      coldRoom: { icon: "🧊", title: "Câmara Fria", desc: "Produtos refrigerados" },
+      house: { icon: "🏠", title: "Casa", desc: "Estoque residencial" },
+      salePoint: { icon: "🏪", title: "Pontos de Venda", desc: "Disponível para venda" }
+    }
 
-            return (
-              <TableRow key={`${product.id}-${location}`}>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>
-                  <Badge variant="outline">{product.size}</Badge>
-                </TableCell>
-                <TableCell>R$ {product.salePrice.toFixed(2)}</TableCell>
-                <TableCell>
-                  {isEditing ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        value={editStock}
-                        onChange={(e) => setEditStock(e.target.value)}
-                        className="w-20"
-                      />
-                      <Button size="sm" onClick={() => saveEdit(product.id, location)}>
-                        
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setEditingLocation(null) }}>
-                        
-                      </Button>
-                    </div>
-                  ) : (
-                    <span className="font-mono">{stock}</span>
-                  )}
-                </TableCell>
-                <TableCell>
-                  <Badge className={status.className}>{status.label}</Badge>
-                </TableCell>
-                <TableCell>R$ {(stock * product.salePrice).toFixed(2)}</TableCell>
-                <TableCell>
-                  {!isEditing && (
-                    <Button variant="ghost" size="sm" onClick={() => startEdit(product.id, location, stock)}>
-                      ✏️
-                    </Button>
-                  )}
-                </TableCell>
+    const { icon, title, desc } = locationData[location]
+
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <span className="text-2xl">{icon}</span>
+            <div>
+              <div>{title}</div>
+              <div className="text-sm font-normal text-muted-foreground">{desc}</div>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Produto</TableHead>
+                <TableHead>Categoria</TableHead>
+                <TableHead className="text-right">Estoque</TableHead>
+                <TableHead className="text-center">Status</TableHead>
+                <TableHead className="text-right">Valor</TableHead>
+                <TableHead className="w-20">Ações</TableHead>
               </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.map((product: Product) => {
+                const stock = product.inventory?.[quantityField] ?? 0
+                const minStock = product.inventory?.[minStockField] ?? 10
+                const status = getStockStatus(stock, minStock)
+                const isEditing = editingId === product.id && editingLocation === location
+
+                return (
+                  <TableRow key={`${product.id}-${location}`} className={product.inventory?.[alertField] ? "bg-orange-50" : ""}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{product.name}</div>
+                        <div className="text-sm text-muted-foreground">{product.size}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{product.category || "Sem categoria"}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {isEditing ? (
+                        <div className="flex items-center gap-2 justify-end">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editStock}
+                            onChange={(e) => setEditStock(e.target.value)}
+                            className="w-20 text-right"
+                          />
+                        </div>
+                      ) : (
+                        <span className={`font-mono font-bold ${stock <= minStock ? "text-red-600" : "text-green-600"}`}>
+                          {stock}
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge className={status.className}>{status.label}</Badge>
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      R$ {(stock * product.salePrice).toFixed(2)}
+                    </TableCell>
+                    <TableCell>
+                      {isEditing ? (
+                        <div className="flex gap-1">
+                          <Button size="sm" onClick={() => saveEdit(product.id, location)}>
+                            ✓
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setEditingLocation(null) }}>
+                            ✕
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button variant="ghost" size="sm" onClick={() => startEdit(product.id, location, stock)}>
+                          ✏️
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )
+              })}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     )
   }
 
   return (
     <SidebarLayout>
       <div className="space-y-6">
-        {/* Métricas gerais */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card className="pos-metric-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Produtos</p>
-                  <p className="text-3xl font-bold text-foreground">{totalProducts}</p>
-                </div>
-                <div className="text-2xl">📦</div>
+        {/* Métricas gerais - movidas para o layout superior */}
+
+        {/* Filtros e Métricas */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Filtros */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span>🔍</span>
+                Filtros
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="category-filter" className="text-sm font-medium">Categoria</Label>
+                <Select value={filterCategory} onValueChange={setFilterCategory}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Todas as categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">📦 Todas</SelectItem>
+                    {categories.filter(c => c !== "all").map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="alert-filter" className="text-sm font-medium">Status de Estoque</Label>
+                <Select value={filterAlert} onValueChange={setFilterAlert}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Todos os produtos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">📊 Todos</SelectItem>
+                    <SelectItem value="with_alert">⚠️ Com Alertas</SelectItem>
+                    <SelectItem value="no_alert">✅ Sem Alertas</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="pos-metric-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Câmara Fria</p>
-                  <p className="text-3xl font-bold text-blue-600">{totalColdRoom}</p>
-                </div>
-                <div className="text-2xl">🧊</div>
+          {/* Métricas Rápidas */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span>📈</span>
+                Visão Geral
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Total de Produtos</span>
+                <span className="font-bold text-lg">{filteredProducts.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Com Alertas</span>
+                <span className="font-bold text-orange-600">{lowStockAlerts.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Valor Total</span>
+                <span className="font-bold text-green-600">R$ {(filteredProducts.reduce((sum: number, p: Product) => sum + ((p.inventory?.totalQuantity ?? 0) * p.salePrice), 0) / 1000).toFixed(1)}k</span>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="pos-metric-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Casa</p>
-                  <p className="text-3xl font-bold text-green-600">{totalHouse}</p>
-                </div>
-                <div className="text-2xl">🏠</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="pos-metric-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Pontos de Venda</p>
-                  <p className="text-3xl font-bold text-orange-600">{totalSalePoint}</p>
-                </div>
-                <div className="text-2xl">🏪</div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="pos-metric-card">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Valor Total</p>
-                  <p className="text-3xl font-bold text-accent">R$ {(totalValue / 1000).toFixed(1)}k</p>
-                </div>
-                <div className="text-2xl">💰</div>
-              </div>
+          {/* Ações Rápidas */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <span>⚡</span>
+                Ações
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <Button
+                onClick={() => setShowAddModal(true)}
+                className="w-full justify-start"
+                variant="outline"
+              >
+                ➕ Adicionar Estoque
+              </Button>
+              <Button
+                onClick={() => setShowTransferModal(true)}
+                className="w-full justify-start"
+                variant="outline"
+              >
+                🔄 Transferir Estoque
+              </Button>
             </CardContent>
           </Card>
         </div>
@@ -490,22 +564,41 @@ export default function InventoryPage() {
             <CardTitle className="flex items-center gap-2"> Controle de Estoque por Local</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="coldRoom" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger className="border-red" value="coldRoom">Câmara Fria</TabsTrigger>
-                <TabsTrigger className="border-red" value="house">Casa</TabsTrigger>
-                <TabsTrigger className="border-red" value="salePoint">Pontos de Venda</TabsTrigger>
-              </TabsList>
-              <TabsContent value="coldRoom">
-                {renderInventoryTable("coldRoom")}
-              </TabsContent>
-              <TabsContent value="house">
-                {renderInventoryTable("house")}
-              </TabsContent>
-              <TabsContent value="salePoint">
-                {renderInventoryTable("salePoint")}
-              </TabsContent>
-            </Tabs>
+            {filteredProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📦</div>
+                <h3 className="text-lg font-medium mb-2">Nenhum produto encontrado</h3>
+                <p className="text-muted-foreground mb-4">
+                  Tente ajustar os filtros ou adicionar produtos ao inventário.
+                </p>
+                <Button onClick={() => { setFilterCategory("all"); setFilterAlert("all") }}>
+                  Mostrar Todos os Produtos
+                </Button>
+              </div>
+            ) : (
+              <Tabs defaultValue="coldRoom" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="coldRoom" className="flex items-center gap-2">
+                    🧊 Câmara Fria
+                  </TabsTrigger>
+                  <TabsTrigger value="house" className="flex items-center gap-2">
+                    🏠 Casa
+                  </TabsTrigger>
+                  <TabsTrigger value="salePoint" className="flex items-center gap-2">
+                    🏪 Pontos de Venda
+                  </TabsTrigger>
+                </TabsList>
+                <TabsContent value="coldRoom" className="mt-6">
+                  {renderInventoryTable("coldRoom")}
+                </TabsContent>
+                <TabsContent value="house" className="mt-6">
+                  {renderInventoryTable("house")}
+                </TabsContent>
+                <TabsContent value="salePoint" className="mt-6">
+                  {renderInventoryTable("salePoint")}
+                </TabsContent>
+              </Tabs>
+            )}
           </CardContent>
         </Card>
       </div>

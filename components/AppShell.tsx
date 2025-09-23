@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { LogOut, Activity } from "lucide-react"
+import { ThemeToggle } from "./ThemeToggle"
 
 interface AppShellProps {
   children: React.ReactNode
@@ -55,10 +56,13 @@ export function AppShell({ children, currentView, onViewChange, onLogout, metric
             </div>
           )}
 
-          <Button variant="outline" onClick={onLogout} className="gap-2 bg-transparent">
-            <LogOut className="h-4 w-4" />
-            Sair
-          </Button>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="outline" onClick={onLogout} className="gap-2 bg-transparent">
+              <LogOut className="h-4 w-4" />
+              Sair
+            </Button>
+          </div>
         </div>
       </header>
 

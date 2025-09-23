@@ -27,19 +27,25 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { items } = body // items: [{ productId, quantity }]
 
-    // Fetch all products in one query
+    // Fetch all products and inventory in one query
     const productIds = items.map((item: any) => item.productId)
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
+      include: { inventory: true },
     })
 
     // Create a map for quick lookup
     const productMap = new Map(products.map(p => [p.id, p]))
 
-    // Validate all products exist
+    // Validate all products exist and have sufficient stock
     for (const item of items) {
-      if (!productMap.has(item.productId)) {
-        return NextResponse.json({ error: 'Product not found' }, { status: 400 })
+      const product = productMap.get(item.productId)
+      if (!product) {
+        return NextResponse.json({ error: `Product ${item.productId} not found` }, { status: 400 })
+      }
+      const availableStock = product.inventory?.salePointQuantity ?? 0
+      if (availableStock < item.quantity) {
+        return NextResponse.json({ error: `Insufficient stock for ${product.name}. Available: ${availableStock}, Requested: ${item.quantity}` }, { status: 400 })
       }
     }
 

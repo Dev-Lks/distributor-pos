@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { ThemeToggle } from "./ThemeToggle"
 import {
   BarChart3,
   ShoppingCart,
@@ -181,6 +182,7 @@ export function SidebarLayout({ children }: SidebarProps) {
 
             {/* Right side */}
             <div className="flex items-center gap-4 ml-auto">
+              <ThemeToggle />
               <Badge variant="outline" className="hidden sm:flex">
                 Online
               </Badge>

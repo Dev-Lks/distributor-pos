@@ -20,6 +20,10 @@ model Product {
   cost      Float
   salePrice Float
   isBonified Boolean @default(false)
+  category  String? // Ex.: "Cerveja", "Vinho"
+  supplier  String? // Fornecedor
+  isActive  Boolean @default(true) // Para desativar produtos sem deletar
+  sku       String? @unique // Código único para identificação
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -47,6 +51,7 @@ model Sale {
   id        String @id @default(cuid())
   date      DateTime @default(now())
   total     Float
+  status    String @default("completed") // 'pending', 'completed', 'cancelled'
   items     SaleItem[]
 }
 

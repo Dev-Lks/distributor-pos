@@ -7,6 +7,10 @@ export interface Product {
   cost: number
   salePrice: number
   isBonified: boolean
+  category?: string
+  supplier?: string
+  isActive: boolean
+  sku?: string
   inventory?: {
     coldRoomQuantity: number
     houseQuantity: number
