@@ -6,7 +6,7 @@ import { QueryProvider } from "@/components/QueryProvider"
 
 
 export const metadata: Metadata = {
-  title: "NitroBeer POS",
+  title: "NitroBeer",
   description: "Sistema de Ponto de Venda para NitroBeer",
 }
 
