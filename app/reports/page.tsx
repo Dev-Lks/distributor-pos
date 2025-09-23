@@ -1,105 +1,153 @@
 "use client"
 
-import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-
-interface Sale {
-  id: string
-  date: string
-  total: number
-  items: {
-    product: {
-      name: string
-      size: string
-    }
-    quantity: number
-    price: number
-  }[]
-}
+import { useSalesMetrics } from "@/lib/useSales"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 
 export default function ReportsPage() {
-  const [sales, setSales] = useState<Sale[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: metrics, isLoading } = useSalesMetrics()
 
-  useEffect(() => {
-    fetch('/api/sales')
-      .then(res => res.json())
-      .then(setSales)
-      .finally(() => setLoading(false))
-  }, [])
-
-  if (loading) return <div>Loading...</div>
-
-  const totalSales = sales.reduce((sum, sale) => sum + sale.total, 0)
-  const totalItems = sales.reduce((sum, sale) => sum + sale.items.reduce((s, item) => s + item.quantity, 0), 0)
+  if (isLoading || !metrics) return <div>Loading...</div>
 
   return (
     <div className="space-y-6">
+      {/* Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Vendas</p>
-                <p className="text-3xl font-bold">R$ {totalSales.toFixed(2)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Vendas Hoje</p>
+                <p className="text-3xl font-bold">R$ {metrics.totalToday.toFixed(2)}</p>
               </div>
               <div className="text-2xl">💰</div>
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Transações</p>
-                <p className="text-3xl font-bold">{sales.length}</p>
+                <p className="text-sm font-medium text-muted-foreground">Total Vendas</p>
+                <p className="text-3xl font-bold">{metrics.salesCount}</p>
+              </div>
+              <div className="text-2xl">🛒</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
+                <p className="text-3xl font-bold">
+                  R$ {metrics.salesCount > 0 ? (metrics.totalToday / metrics.salesCount).toFixed(2) : '0.00'}
+                </p>
               </div>
               <div className="text-2xl">📊</div>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Gráficos */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Vendas por Hora */}
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Itens Vendidos</p>
-                <p className="text-3xl font-bold">{totalItems}</p>
-              </div>
-              <div className="text-2xl">📦</div>
-            </div>
+          <CardHeader>
+            <CardTitle>Vendas por Hora (Últimas 24h)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={metrics.hourlyData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="hour"
+                  tickFormatter={(hour) => `${hour}h`}
+                />
+                <YAxis />
+                <Tooltip
+                  labelFormatter={(hour) => `Hora: ${hour}h`}
+                  formatter={(value: any, name) => [
+                    name === 'sales' ? `${value} vendas` : `R$ ${Number(value).toFixed(2)}`,
+                    name === 'sales' ? 'Vendas' : 'Receita'
+                  ]}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#8884d8"
+                  strokeWidth={2}
+                  name="sales"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#82ca9d"
+                  strokeWidth={2}
+                  name="revenue"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Top Produtos */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Top Produtos Mais Vendidos</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={metrics.topProducts}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                  interval={0}
+                />
+                <YAxis />
+                <Tooltip
+                  formatter={(value: any, name) => [
+                    name === 'count' ? `${value} unidades` : `R$ ${Number(value).toFixed(2)}`,
+                    name === 'count' ? 'Quantidade' : 'Receita'
+                  ]}
+                />
+                <Bar dataKey="count" fill="#8884d8" name="count" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
+      {/* Tabela de Top Produtos */}
       <Card>
         <CardHeader>
-          <CardTitle>Histórico de Vendas</CardTitle>
+          <CardTitle>Detalhes dos Top Produtos</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Itens</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Detalhes</TableHead>
+                <TableHead>Produto</TableHead>
+                <TableHead>Unidades Vendidas</TableHead>
+                <TableHead>Receita Total</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sales.map((sale) => (
-                <TableRow key={sale.id}>
-                  <TableCell>{new Date(sale.date).toLocaleString()}</TableCell>
-                  <TableCell>{sale.items.reduce((sum, item) => sum + item.quantity, 0)}</TableCell>
-                  <TableCell>R$ {sale.total.toFixed(2)}</TableCell>
+              {metrics.topProducts.map((product: any, index: number) => (
+                <TableRow key={index}>
+                  <TableCell className="font-medium">{product.name}</TableCell>
                   <TableCell>
-                    {sale.items.map((item, idx) => (
-                      <Badge key={idx} variant="outline" className="mr-1">
-                        {item.product.name} ({item.product.size}) x{item.quantity}
-                      </Badge>
-                    ))}
+                    <Badge variant="secondary">{product.count}</Badge>
                   </TableCell>
+                  <TableCell>R$ {product.revenue.toFixed(2)}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
