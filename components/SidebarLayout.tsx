@@ -44,6 +44,12 @@ const navigation = [
     description: "Controle de estoque"
   },
   {
+    name: "Estoque por Ponto",
+    href: "/inventory-by-point",
+    icon: Package,
+    description: "Estoque específico por ponto"
+  },
+  {
     name: "Pontos de Venda",
     href: "/points",
     icon: Settings,

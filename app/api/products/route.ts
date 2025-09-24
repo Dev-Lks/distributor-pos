@@ -6,7 +6,12 @@ export async function GET() {
     const products = await prisma.product.findMany({
       include: {
         inventory: true,
-      },
+        productPointsOfSale: {
+          include: {
+            pointOfSale: true
+          }
+        }
+      } as any,
     })
     return NextResponse.json(products)
   } catch (error) {

@@ -39,15 +39,19 @@ export function useSales(pointOfSale?: string) {
     for (const item of enrichedItems) {
       const product = products.find((p: Product) => p.id === item.productId)
       let availableStock = 0
-      if (pointOfSale === 'Ponto1') {
-        availableStock = product?.inventory?.point1Quantity ?? 0
-      } else if (pointOfSale === 'Ponto2') {
-        availableStock = product?.inventory?.point2Quantity ?? 0
-      } else if (pointOfSale === 'Ponto3') {
-        availableStock = product?.inventory?.point3Quantity ?? 0
+
+      // Find the point of sale by ID and get the stock for this product
+      const productPointOfSale = product?.productPointsOfSale?.find(
+        (pps: any) => pps.pointOfSale.id === pointOfSale
+      )
+
+      if (productPointOfSale) {
+        availableStock = productPointOfSale.quantity
       } else {
-        availableStock = product?.inventory?.salePointQuantity ?? 0 // Fallback
+        // Fallback to general sale point quantity if no specific point stock found
+        availableStock = product?.inventory?.salePointQuantity ?? 0
       }
+
       if (availableStock < item.quantity) {
         throw new Error(`Estoque insuficiente para ${product?.name}. Disponível: ${availableStock}, Solicitado: ${item.quantity}`)
       }
