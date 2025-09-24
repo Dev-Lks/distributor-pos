@@ -11,10 +11,11 @@ export async function GET() {
             pointOfSale: true
           }
         }
-      } as any,
+      },
     })
     return NextResponse.json(products)
   } catch (error) {
+    console.error('Error fetching products:', error)
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 })
   }
 }
