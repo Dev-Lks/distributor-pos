@@ -17,7 +17,7 @@ export interface CreateSaleParams {
   customerName?: string
 }
 
-export function useSales() {
+export function useSales(pointOfSale?: string) {
   const queryClient = useQueryClient()
   const { data: products = [] } = useProducts()
 
@@ -38,7 +38,16 @@ export function useSales() {
     // Check stock (client-side validation)
     for (const item of enrichedItems) {
       const product = products.find((p: Product) => p.id === item.productId)
-      const availableStock = product?.inventory?.salePointQuantity ?? 0
+      let availableStock = 0
+      if (pointOfSale === 'Ponto1') {
+        availableStock = product?.inventory?.point1Quantity ?? 0
+      } else if (pointOfSale === 'Ponto2') {
+        availableStock = product?.inventory?.point2Quantity ?? 0
+      } else if (pointOfSale === 'Ponto3') {
+        availableStock = product?.inventory?.point3Quantity ?? 0
+      } else {
+        availableStock = product?.inventory?.salePointQuantity ?? 0 // Fallback
+      }
       if (availableStock < item.quantity) {
         throw new Error(`Estoque insuficiente para ${product?.name}. Disponível: ${availableStock}, Solicitado: ${item.quantity}`)
       }
@@ -59,7 +68,7 @@ export function useSales() {
 
     // Try to backup to Google Sheets (async, don't block)
     try {
-      const backupSuccess = await sheetsBackup.saveSale(saleData)
+      const backupSuccess = await sheetsBackup.saveSale(saleData, pointOfSale || 'default')
       if (backupSuccess) {
         console.log('✅ Venda backupada no Google Sheets')
       } else {
@@ -126,11 +135,11 @@ export function useSales() {
   return { createSale, backupAllSales, getSheetsSummary }
 }
 
-export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 'today') {
+export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 'today', pointOfSale: string = 'all') {
   return useQuery({
-    queryKey: ['sales-metrics', period],
+    queryKey: ['sales-metrics', period, pointOfSale],
     queryFn: async () => {
-      const sales = await getAllSales()
+      const sales = await sheetsBackup.getAllSales(pointOfSale)
 
       // Calculate date range based on period
       const now = new Date()

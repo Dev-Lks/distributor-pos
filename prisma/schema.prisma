@@ -39,10 +39,18 @@ model Inventory {
   coldRoomQuantity Int @default(0) // Câmara fria
   houseQuantity     Int @default(0) // Casa
   salePointQuantity Int @default(0) // Pontos de venda
+  // Quantidades por ponto de venda
+  point1Quantity    Int @default(0) // Ponto 1
+  point2Quantity    Int @default(0) // Ponto 2
+  point3Quantity    Int @default(0) // Ponto 3
   // Estoque mínimo por local
   coldRoomMinStock  Int @default(10)
   houseMinStock     Int @default(5)
   salePointMinStock Int @default(2)
+  // Estoque mínimo por ponto
+  point1MinStock    Int @default(2)
+  point2MinStock    Int @default(2)
+  point3MinStock    Int @default(2)
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
@@ -67,4 +75,12 @@ model SaleItem {
 
   @@unique([saleId, productId])
   @@index([productId])
+}
+
+model PointOfSale {
+  id        String @id @default(cuid())
+  name      String @unique
+  isActive  Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

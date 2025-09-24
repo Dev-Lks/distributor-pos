@@ -42,6 +42,12 @@ const navigation = [
     href: "/inventory",
     icon: Package,
     description: "Controle de estoque"
+  },
+  {
+    name: "Pontos de Venda",
+    href: "/points",
+    icon: Settings,
+    description: "Configurar pontos"
   }
 ]
 

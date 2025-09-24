@@ -16,12 +16,21 @@ export interface Product {
     coldRoomQuantity: number
     houseQuantity: number
     salePointQuantity: number
+    point1Quantity: number
+    point2Quantity: number
+    point3Quantity: number
     coldRoomMinStock: number
     houseMinStock: number
     salePointMinStock: number
+    point1MinStock: number
+    point2MinStock: number
+    point3MinStock: number
     coldRoomAlert?: boolean
     houseAlert?: boolean
     salePointAlert?: boolean
+    point1Alert?: boolean
+    point2Alert?: boolean
+    point3Alert?: boolean
     totalQuantity?: number
   }
 }

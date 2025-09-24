@@ -18,7 +18,7 @@ export interface SaleData {
 }
 
 export class GoogleSheetsBackup {
-  async saveSale(sale: SaleData): Promise<boolean> {
+  async saveSale(sale: SaleData, pointOfSale: string = 'default'): Promise<boolean> {
     try {
       const response = await fetch(`${API_BASE}/api/sheets`, {
         method: 'POST',
@@ -27,7 +27,8 @@ export class GoogleSheetsBackup {
         },
         body: JSON.stringify({
           ...sale,
-          date: sale.date.toISOString() // Converter Date para string
+          date: sale.date.toISOString(), // Converter Date para string
+          pointOfSale // Adicionar identificador do ponto de venda
         })
       });
 
@@ -38,7 +39,7 @@ export class GoogleSheetsBackup {
       }
 
       const result = await response.json();
-      console.log('✅ Venda salva no Google Sheets:', result.saleId);
+      console.log(`✅ Venda salva no Google Sheets (Ponto: ${pointOfSale}):`, result.saleId);
       return true;
     } catch (error) {
       console.error('❌ Erro ao salvar venda no Google Sheets:', error);
@@ -46,9 +47,9 @@ export class GoogleSheetsBackup {
     }
   }
 
-  async getAllSales(): Promise<any[]> {
+  async getAllSales(pointOfSale: string = 'all'): Promise<any[]> {
     try {
-      const response = await fetch(`${API_BASE}/api/sheets`);
+      const response = await fetch(`${API_BASE}/api/sheets?pointOfSale=${encodeURIComponent(pointOfSale)}`);
 
       if (!response.ok) {
         console.error('Erro ao buscar vendas:', response.statusText);
@@ -63,14 +64,14 @@ export class GoogleSheetsBackup {
     }
   }
 
-  async getSalesSummary(): Promise<{
+  async getSalesSummary(pointOfSale: string = 'all'): Promise<{
     totalSales: number;
     totalRevenue: number;
     todaySales: number;
     todayRevenue: number;
   }> {
     try {
-      const response = await fetch(`${API_BASE}/api/sheets`);
+      const response = await fetch(`${API_BASE}/api/sheets?pointOfSale=${encodeURIComponent(pointOfSale)}`);
 
       if (!response.ok) {
         console.error('Erro ao buscar resumo:', response.statusText);

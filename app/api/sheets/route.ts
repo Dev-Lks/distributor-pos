@@ -18,19 +18,8 @@ const sheets = google.sheets({ version: 'v4', auth });
 
 export async function POST(request: NextRequest) {
   try {
-    const sale: {
-      id: string;
-      date: string; // ISO string
-      total: number;
-      paymentMethod?: string;
-      customerName?: string;
-      items: Array<{
-        productId: string;
-        productName: string;
-        quantity: number;
-        price: number;
-      }>;
-    } = await request.json();
+    const body = await request.json();
+    const { pointOfSale = 'default', ...sale } = body;
 
     // Prepare the row data
     const formattedDate = new Date(sale.date).toLocaleString('pt-BR', {
@@ -41,7 +30,7 @@ export async function POST(request: NextRequest) {
       minute: '2-digit',
     });
     const formattedTotal = `R$ ${sale.total.toFixed(2).replace('.', ',')}`;
-    const formattedItems = sale.items.map(item => 
+    const formattedItems = sale.items.map((item: any) => 
       `${item.productName} x${item.quantity} @R$ ${item.price.toFixed(2).replace('.', ',')}`
     ).join(', ');
 
@@ -51,12 +40,16 @@ export async function POST(request: NextRequest) {
       formattedTotal,
       formattedItems,
       sale.paymentMethod || 'Não informado',
+      pointOfSale, // Adicionar coluna para ponto de venda
     ];
+
+    // Use aba específica para o ponto de venda
+    const sheetName = pointOfSale === 'default' ? SHEET_NAME : `${SHEET_NAME}_${pointOfSale}`;
 
     // Append to sheet
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `'${SHEET_NAME}'!A:E`, // Assuming columns A to E
+      range: `'${sheetName}'!A:F`, // Agora até F
       valueInputOption: 'RAW',
       requestBody: {
         values: [row],
@@ -70,43 +63,64 @@ export async function POST(request: NextRequest) {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Read all data from sheet
-    const response = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `'${SHEET_NAME}'!A:E`,
-    });
+    const { searchParams } = new URL(request.url);
+    const pointOfSale = searchParams.get('pointOfSale') || 'all';
 
-    const rows = response.data.values || [];
-    if (rows.length === 0) {
-      return NextResponse.json({ sales: [], totalSales: 0, totalRevenue: 0, todaySales: 0, todayRevenue: 0 });
+    let allSales: any[] = [];
+    let sheetNames: string[] = [];
+
+    if (pointOfSale === 'all') {
+      // Listar todas as abas e ler
+      const spreadsheet = await sheets.spreadsheets.get({
+        spreadsheetId: SPREADSHEET_ID,
+      });
+      sheetNames = spreadsheet.data.sheets?.map(sheet => sheet.properties?.title || '').filter(title => title.startsWith(SHEET_NAME)) || [SHEET_NAME];
+    } else {
+      sheetNames = [pointOfSale === 'default' ? SHEET_NAME : `${SHEET_NAME}_${pointOfSale}`];
     }
 
-    // Skip header row
-    const dataRows = rows.slice(1);
+    for (const sheetName of sheetNames) {
+      try {
+        const response = await sheets.spreadsheets.values.get({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `'${sheetName}'!A:F`,
+        });
 
-    const sales = dataRows.map(row => ({
-      id: row[0],
-      date: row[1], // Keep as formatted
-      total: parseFloat(row[2].replace('R$ ', '').replace(',', '.')) || 0,
-      items: [], // Not parsing since it's formatted as string for readability
-      paymentMethod: row[4] || '',
-    }));
+        const rows = response.data.values || [];
+        if (rows.length > 1) { // Skip header
+          const dataRows = rows.slice(1);
+          const sales = dataRows.map(row => ({
+            id: row[0],
+            date: row[1],
+            total: parseFloat(row[2].replace('R$ ', '').replace(',', '.')) || 0,
+            items: [],
+            paymentMethod: row[4] || '',
+            pointOfSale: row[5] || 'default',
+          }));
+          allSales.push(...sales);
+        }
+      } catch (error) {
+        console.warn(`Erro ao ler aba ${sheetName}:`, error);
+      }
+    }
+
+    if (allSales.length === 0) {
+      return NextResponse.json({ sales: [], totalSales: 0, totalRevenue: 0, todaySales: 0, todayRevenue: 0 });
+    }
 
     // Calculate summary
     const now = new Date();
     const today = now.toISOString().split('T')[0];
-
     let totalSales = 0;
     let totalRevenue = 0;
     let todaySales = 0;
     let todayRevenue = 0;
 
-    sales.forEach(sale => {
+    allSales.forEach(sale => {
       totalSales++;
       totalRevenue += sale.total;
-      // Parse formatted date to YYYY-MM-DD
       const saleDateStr = sale.date.split(' ')[0]; // "24/09/2025"
       const [day, month, year] = saleDateStr.split('/');
       const saleDate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
@@ -117,7 +131,7 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      sales,
+      sales: allSales,
       totalSales,
       totalRevenue,
       todaySales,

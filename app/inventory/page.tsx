@@ -15,30 +15,42 @@ import { useProducts, type Product } from "@/lib/useProducts"
 import { SidebarLayout } from "@/components/SidebarLayout"
 import { Snowflake, Home, Store } from "lucide-react"
 
-type Location = "coldRoom" | "house" | "salePoint"
+type Location = "coldRoom" | "house" | "salePoint" | "point1" | "point2" | "point3"
 
 const locationLabels = {
   coldRoom: "Câmara Fria",
   house: "Casa",
-  salePoint: "Pontos de Venda"
+  salePoint: "Pontos de Venda",
+  point1: "Ponto 1",
+  point2: "Ponto 2",
+  point3: "Ponto 3"
 }
 
 const locationColors = {
   coldRoom: "bg-blue-100 text-blue-800",
   house: "bg-green-100 text-green-800",
-  salePoint: "bg-orange-100 text-orange-800"
+  salePoint: "bg-orange-100 text-orange-800",
+  point1: "bg-purple-100 text-purple-800",
+  point2: "bg-indigo-100 text-indigo-800",
+  point3: "bg-pink-100 text-pink-800"
 }
 
 const locationIcons = {
   coldRoom: Snowflake,
   house: Home,
-  salePoint: Store
+  salePoint: Store,
+  point1: Store,
+  point2: Store,
+  point3: Store
 }
 
 const locationDescriptions = {
   coldRoom: "Armazenamento refrigerado",
   house: "Estoque residencial",
-  salePoint: "Pontos de venda"
+  salePoint: "Pontos de venda",
+  point1: "Estoque no Ponto 1",
+  point2: "Estoque no Ponto 2",
+  point3: "Estoque no Ponto 3"
 }
 
 function LocationSelector({ value, onChange, label }: { value: Location | null, onChange: (location: Location) => void, label: string }) {
@@ -82,8 +94,23 @@ function LocationSelector({ value, onChange, label }: { value: Location | null, 
 }
 
 export default function InventoryPage() {
-  const { data: products = [], isLoading: loading } = useProducts()
+  const { data: rawProducts = [], isLoading: loading } = useProducts()
   const queryClient = useQueryClient()
+
+  // Calcular alertas para produtos
+  const products = rawProducts.map((product: Product) => ({
+    ...product,
+    inventory: product.inventory ? {
+      ...product.inventory,
+      coldRoomAlert: (product.inventory.coldRoomQuantity ?? 0) <= (product.inventory.coldRoomMinStock ?? 10),
+      houseAlert: (product.inventory.houseQuantity ?? 0) <= (product.inventory.houseMinStock ?? 5),
+      salePointAlert: (product.inventory.salePointQuantity ?? 0) <= (product.inventory.salePointMinStock ?? 2),
+      point1Alert: (product.inventory.point1Quantity ?? 0) <= (product.inventory.point1MinStock ?? 2),
+      point2Alert: (product.inventory.point2Quantity ?? 0) <= (product.inventory.point2MinStock ?? 2),
+      point3Alert: (product.inventory.point3Quantity ?? 0) <= (product.inventory.point3MinStock ?? 2),
+      totalQuantity: (product.inventory.coldRoomQuantity ?? 0) + (product.inventory.houseQuantity ?? 0) + (product.inventory.salePointQuantity ?? 0) + (product.inventory.point1Quantity ?? 0) + (product.inventory.point2Quantity ?? 0) + (product.inventory.point3Quantity ?? 0)
+    } : undefined
+  }))
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
   const [editStock, setEditStock] = useState("")
@@ -217,8 +244,11 @@ export default function InventoryPage() {
   const totalColdRoom = products.reduce((sum: number, p: Product) => sum + (p.inventory?.coldRoomQuantity ?? 0), 0)
   const totalHouse = products.reduce((sum: number, p: Product) => sum + (p.inventory?.houseQuantity ?? 0), 0)
   const totalSalePoint = products.reduce((sum: number, p: Product) => sum + (p.inventory?.salePointQuantity ?? 0), 0)
+  const totalPoint1 = products.reduce((sum: number, p: Product) => sum + (p.inventory?.point1Quantity ?? 0), 0)
+  const totalPoint2 = products.reduce((sum: number, p: Product) => sum + (p.inventory?.point2Quantity ?? 0), 0)
+  const totalPoint3 = products.reduce((sum: number, p: Product) => sum + (p.inventory?.point3Quantity ?? 0), 0)
   const lowStockAlerts = products.filter((p: Product) => 
-    (p.inventory?.coldRoomAlert || p.inventory?.houseAlert || p.inventory?.salePointAlert)
+    (p.inventory?.coldRoomAlert || p.inventory?.houseAlert || p.inventory?.salePointAlert || p.inventory?.point1Alert || p.inventory?.point2Alert || p.inventory?.point3Alert)
   )
 
   // Filtrar produtos
@@ -226,8 +256,8 @@ export default function InventoryPage() {
   const filteredProducts = products.filter((product: Product) => {
     const matchesCategory = filterCategory === "all" || product.category === filterCategory
     const matchesAlert = filterAlert === "all" || 
-      (filterAlert === "with_alert" && (product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert)) ||
-      (filterAlert === "no_alert" && !(product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert))
+      (filterAlert === "with_alert" && (product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert || product.inventory?.point1Alert || product.inventory?.point2Alert || product.inventory?.point3Alert)) ||
+      (filterAlert === "no_alert" && !(product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert || product.inventory?.point1Alert || product.inventory?.point2Alert || product.inventory?.point3Alert))
     const matchesSearch = searchQuery === "" || product.name.toLowerCase().includes(searchQuery.toLowerCase()) || product.size.toLowerCase().includes(searchQuery.toLowerCase())
     return matchesCategory && matchesAlert && matchesSearch
   })
@@ -240,7 +270,10 @@ export default function InventoryPage() {
     const locationData = {
       coldRoom: { icon: "🧊", title: "Câmara Fria", desc: "Produtos refrigerados" },
       house: { icon: "🏠", title: "Casa", desc: "Estoque residencial" },
-      salePoint: { icon: "🏪", title: "Pontos de Venda", desc: "Disponível para venda" }
+      salePoint: { icon: "🏪", title: "Pontos de Venda", desc: "Disponível para venda" },
+      point1: { icon: "🏪", title: "Ponto 1", desc: "Estoque no Ponto 1" },
+      point2: { icon: "🏪", title: "Ponto 2", desc: "Estoque no Ponto 2" },
+      point3: { icon: "🏪", title: "Ponto 3", desc: "Estoque no Ponto 3" }
     }
 
     const { icon, title, desc } = locationData[location]
@@ -645,7 +678,10 @@ export default function InventoryPage() {
                       <p className="text-sm text-muted-foreground">
                         {product.inventory?.coldRoomAlert && `Câmara Fria: ${product.inventory.coldRoomQuantity} `}
                         {product.inventory?.houseAlert && `Casa: ${product.inventory.houseQuantity} `}
-                        {product.inventory?.salePointAlert && `Pontos: ${product.inventory.salePointQuantity}`}
+                        {product.inventory?.salePointAlert && `Pontos: ${product.inventory.salePointQuantity} `}
+                        {product.inventory?.point1Alert && `Ponto 1: ${product.inventory.point1Quantity} `}
+                        {product.inventory?.point2Alert && `Ponto 2: ${product.inventory.point2Quantity} `}
+                        {product.inventory?.point3Alert && `Ponto 3: ${product.inventory.point3Quantity}`}
                       </p>
                     </div>
                   </div>
@@ -674,7 +710,7 @@ export default function InventoryPage() {
               </div>
             ) : (
               <Tabs defaultValue="coldRoom" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-6">
                   <TabsTrigger value="coldRoom" className="flex items-center gap-2">
                     🧊 Câmara Fria
                   </TabsTrigger>
@@ -683,6 +719,15 @@ export default function InventoryPage() {
                   </TabsTrigger>
                   <TabsTrigger value="salePoint" className="flex items-center gap-2">
                     🏪 Pontos de Venda
+                  </TabsTrigger>
+                  <TabsTrigger value="point1" className="flex items-center gap-2">
+                    🏪 Ponto 1
+                  </TabsTrigger>
+                  <TabsTrigger value="point2" className="flex items-center gap-2">
+                    🏪 Ponto 2
+                  </TabsTrigger>
+                  <TabsTrigger value="point3" className="flex items-center gap-2">
+                    🏪 Ponto 3
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="coldRoom" className="mt-6">
@@ -693,6 +738,15 @@ export default function InventoryPage() {
                 </TabsContent>
                 <TabsContent value="salePoint" className="mt-6">
                   {renderInventoryTable("salePoint")}
+                </TabsContent>
+                <TabsContent value="point1" className="mt-6">
+                  {renderInventoryTable("point1")}
+                </TabsContent>
+                <TabsContent value="point2" className="mt-6">
+                  {renderInventoryTable("point2")}
+                </TabsContent>
+                <TabsContent value="point3" className="mt-6">
+                  {renderInventoryTable("point3")}
                 </TabsContent>
               </Tabs>
             )}
