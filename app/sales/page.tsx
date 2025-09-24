@@ -140,9 +140,9 @@ export default function SalesPage() {
 
   return (
     <SidebarLayout>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 h-full">
         {/* Produtos - 2/3 da tela */}
-        <div className="lg:col-span-2 space-y-4">
+        <div className="xl:col-span-2 space-y-4">
           {/* Busca e filtros */}
           <Card className="pos-metric-card">
             <CardContent className="p-4">

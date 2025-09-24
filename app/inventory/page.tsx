@@ -267,18 +267,19 @@ export default function InventoryPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Produto</TableHead>
-                <TableHead>Categoria</TableHead>
-                <TableHead className="text-center">Bonificações</TableHead>
-                <TableHead className="text-right">Estoque</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-                <TableHead className="text-right">Valor</TableHead>
-                <TableHead className="w-20">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs md:text-sm">Produto</TableHead>
+                  <TableHead className="text-xs md:text-sm">Categoria</TableHead>
+                  <TableHead className="text-center text-xs md:text-sm">Bonificações</TableHead>
+                  <TableHead className="text-right text-xs md:text-sm">Estoque</TableHead>
+                  <TableHead className="text-center text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="text-right text-xs md:text-sm">Valor</TableHead>
+                  <TableHead className="w-16 md:w-20 text-xs md:text-sm">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
             <TableBody>
               {filteredProducts.map((product: Product) => {
                 const stock = product.inventory?.[quantityField] ?? 0
@@ -381,6 +382,7 @@ export default function InventoryPage() {
               })}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     )
@@ -388,11 +390,11 @@ export default function InventoryPage() {
 
   return (
     <SidebarLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         {/* Métricas gerais - movidas para o layout superior */}
 
         {/* Filtros e Métricas */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6">
           {/* Filtros */}
           <Card>
             <CardHeader>
@@ -684,15 +686,20 @@ export default function InventoryPage() {
               </div>
             ) : (
               <Tabs defaultValue="coldRoom" className="w-full">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="coldRoom" className="flex items-center gap-2">
-                    🧊 Câmara Fria
+                <TabsList className="grid w-full grid-cols-3 h-auto">
+                  <TabsTrigger value="coldRoom" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
+                    <span className="hidden sm:inline">🧊</span> <span className="sm:hidden">❄️</span>
+                    <span className="hidden sm:inline">Câmara Fria</span>
+                    <span className="sm:inline hidden md:inline">Câmara</span>
                   </TabsTrigger>
-                  <TabsTrigger value="house" className="flex items-center gap-2">
-                    🏠 Casa
+                  <TabsTrigger value="house" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
+                    <span className="hidden sm:inline">🏠</span> <span className="sm:hidden">🏡</span>
+                    <span className="hidden sm:inline">Casa</span>
                   </TabsTrigger>
-                  <TabsTrigger value="salePoint" className="flex items-center gap-2">
-                    🏪 Pontos de Venda
+                  <TabsTrigger value="salePoint" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
+                    <span className="hidden sm:inline">🏪</span> <span className="sm:hidden">🏪</span>
+                    <span className="hidden sm:inline">Pontos de Venda</span>
+                    <span className="sm:inline hidden md:inline">Pontos</span>
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="coldRoom" className="mt-6">

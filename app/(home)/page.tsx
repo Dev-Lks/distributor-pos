@@ -61,7 +61,7 @@ export default function NitroBeerLinktree() {
       {/* Decorative background pattern */}
       <div className="fixed inset-0 decorative-pattern opacity-30" />
 
-      <div className="relative z-10 container max-w-sm sm:max-w-md lg:max-w-lg mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <div className="relative z-10 container max-w-xs sm:max-w-sm md:max-w-md lg:max-w-lg xl:max-w-xl mx-auto px-3 sm:px-4 md:px-6 py-6 sm:py-8 md:py-12">
         {/* Profile Section */}
         <div className="text-center mb-8 sm:mb-12">
           <div className={`w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto mb-6 sm:mb-8 relative transition-all duration-500 ${imageLoaded ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
@@ -75,20 +75,20 @@ export default function NitroBeerLinktree() {
             />
           </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 text-balance animate-fade-in">
+          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold text-foreground mb-2 text-balance animate-fade-in">
             NitroBeer
           </h1>
-          <p className="text-base sm:text-lg text-muted-foreground mb-3 sm:mb-4 animate-fade-in animation-delay-200">
+          <p className="text-sm sm:text-base md:text-lg text-muted-foreground mb-3 sm:mb-4 animate-fade-in animation-delay-200">
             Cerveja Artesanal Premium
           </p>
-          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed px-2 animate-fade-in animation-delay-400">
+          <p className="text-xs sm:text-sm md:text-base text-muted-foreground leading-relaxed px-2 animate-fade-in animation-delay-400">
             {"✨ Chopp premium, vibes únicas, para quem não aceita a mesmice! 🍻"}
           </p>
         </div>
      
 
         {/* Social Links */}
-        <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
+        <div className="space-y-2 sm:space-y-3 md:space-y-4 mb-4 sm:mb-6 md:mb-8">
           {socialLinks.map((link, index) => {
             const IconComponent = link.icon
             return (
@@ -96,16 +96,16 @@ export default function NitroBeerLinktree() {
                 key={link.name}
                 asChild
                 variant="outline"
-                className={`w-full h-12 sm:h-14 justify-start gap-3 sm:gap-4 bg-card/50 backdrop-blur-sm border-border/50 transition-all duration-300 hover-lift ${link.color} text-sm sm:text-base animate-fade-in`}
+                className={`w-full h-10 sm:h-12 md:h-14 justify-start gap-2 sm:gap-3 md:gap-4 bg-card/50 backdrop-blur-sm border-border/50 transition-all duration-300 hover-lift ${link.color} text-xs sm:text-sm md:text-base animate-fade-in`}
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <a href={link.url} target="_blank" rel="noopener noreferrer">
-                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
+                  <IconComponent className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
                   <div className="flex flex-col items-start min-w-0 flex-1">
-                    <span className="font-medium truncate w-full">{link.name}</span>
+                    <span className="font-medium truncate w-full text-xs sm:text-sm md:text-base">{link.name}</span>
                     <span className="text-xs sm:text-sm text-muted-foreground truncate w-full">{link.handle}</span>
                   </div>
-                  <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 opacity-50 flex-shrink-0 transition-transform duration-200 hover:translate-x-1" />
+                  <ExternalLink className="w-2 h-2 sm:w-3 sm:h-3 md:w-4 md:h-4 opacity-50 flex-shrink-0 transition-transform duration-200 hover:translate-x-1" />
                 </a>
               </Button>
             )
@@ -113,7 +113,7 @@ export default function NitroBeerLinktree() {
         </div>
 
         {/* Location Section */}
-        <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8 hover-lift animate-fade-in animation-delay-200">
+        <Card className="p-3 sm:p-4 md:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-4 sm:mb-6 md:mb-8 hover-lift animate-fade-in animation-delay-200">
           <Button
             asChild
             variant="outline"
@@ -131,7 +131,7 @@ export default function NitroBeerLinktree() {
             </a>
           </Button>
 
-          <div className={`w-full h-48 sm:h-64 lg:h-72 rounded-lg overflow-hidden border border-border/50 map-container ${mapLoaded ? 'map-loaded' : 'map-loading'}`}>
+          <div className={`w-full h-40 sm:h-48 md:h-56 lg:h-64 xl:h-72 rounded-lg overflow-hidden border border-border/50 map-container ${mapLoaded ? 'map-loaded' : 'map-loading'}`}>
             <div className="map-skeleton" aria-hidden={!mapLoaded}>
               <span className="text-sm text-muted-foreground">Carregando mapa…</span>
             </div>
@@ -177,13 +177,13 @@ export default function NitroBeerLinktree() {
         </Card>
 
         {/* Share Section */}
-        <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8 hover-lift animate-fade-in animation-delay-400">
-          <div className="flex items-center gap-3 mb-3 sm:mb-4">
-            <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
-            <h2 className="text-base sm:text-lg font-semibold">Compartilhar</h2>
+        <Card className="p-3 sm:p-4 md:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-4 sm:mb-6 md:mb-8 hover-lift animate-fade-in animation-delay-400">
+          <div className="flex items-center gap-2 md:gap-3 mb-2 md:mb-4">
+            <ExternalLink className="w-3 h-3 md:w-4 md:h-4 text-primary flex-shrink-0" />
+            <h2 className="text-sm md:text-base md:text-lg font-semibold">Compartilhar</h2>
           </div>
 
-          <p className="text-sm text-muted-foreground mb-3 sm:mb-4">
+          <p className="text-xs md:text-sm text-muted-foreground mb-2 md:mb-4">
             Escaneie o QR Code para compartilhar esta página
           </p>
 

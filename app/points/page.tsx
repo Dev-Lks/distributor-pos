@@ -53,10 +53,10 @@ export default function PointsOfSalePage() {
 
   return (
     <SidebarLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Pontos de Venda</h1>
-          <p className="text-muted-foreground">Gerencie os pontos de venda do seu negócio</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Pontos de Venda</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Gerencie os pontos de venda do seu negócio</p>
         </div>
 
         {/* Criar Novo Ponto */}
@@ -68,7 +68,7 @@ export default function PointsOfSalePage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex gap-4">
+            <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
               <div className="flex-1">
                 <Label htmlFor="newName">Nome do Ponto</Label>
                 <Input
@@ -102,75 +102,78 @@ export default function PointsOfSalePage() {
             {deleteMutation.error && (
               <div className="text-red-500 mb-4">Erro ao excluir: {deleteMutation.error.message}</div>
             )}
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Criado em</TableHead>
-                  <TableHead className="w-32">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {points.map((point: PointOfSale) => (
-                  <TableRow key={point.id}>
-                    <TableCell>
-                      {editingId === point.id ? (
-                        <Input
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                        />
-                      ) : (
-                        point.name
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {editingId === point.id ? (
-                        <Select value={editActive ? "active" : "inactive"} onValueChange={(value) => setEditActive(value === "active")}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="active">Ativo</SelectItem>
-                            <SelectItem value="inactive">Inativo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <span className={point.isActive ? "text-green-600" : "text-red-600"}>
-                          {point.isActive ? "Ativo" : "Inativo"}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {new Date(point.createdAt).toLocaleDateString('pt-BR')}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {editingId === point.id ? (
-                          <>
-                            <Button size="sm" onClick={handleSaveEdit} disabled={updateMutation.isPending}>
-                              {updateMutation.isPending ? "Salvando..." : "Salvar"}
-                            </Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
-                              Cancelar
-                            </Button>
-                          </>
-                        ) : (
-                          <>
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(point)}>
-                              <Edit className="w-4 h-4" />
-                            </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDelete(point.id)} disabled={deleteMutation.isPending}>
-                              {deleteMutation.isPending ? "Excluindo..." : <Trash2 className="w-4 h-4" />}
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs md:text-sm">Nome</TableHead>
+                    <TableHead className="text-xs md:text-sm">Status</TableHead>
+                    <TableHead className="text-xs md:text-sm">Criado em</TableHead>
+                    <TableHead className="w-24 md:w-32 text-xs md:text-sm">Ações</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {points.map((point: PointOfSale) => (
+                    <TableRow key={point.id}>
+                      <TableCell className="text-xs md:text-sm">
+                        {editingId === point.id ? (
+                          <Input
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            className="h-8 text-xs md:text-sm"
+                          />
+                        ) : (
+                          point.name
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs md:text-sm">
+                        {editingId === point.id ? (
+                          <Select value={editActive ? "active" : "inactive"} onValueChange={(value) => setEditActive(value === "active")}>
+                            <SelectTrigger className="w-24 md:w-32 h-8">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="active">Ativo</SelectItem>
+                              <SelectItem value="inactive">Inativo</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <span className={point.isActive ? "text-green-600" : "text-red-600"}>
+                            {point.isActive ? "Ativo" : "Inativo"}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-xs md:text-sm">
+                        {new Date(point.createdAt).toLocaleDateString('pt-BR')}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-1 md:gap-2">
+                          {editingId === point.id ? (
+                            <>
+                              <Button size="sm" onClick={handleSaveEdit} disabled={updateMutation.isPending} className="h-7 md:h-8 text-xs">
+                                {updateMutation.isPending ? "Salvando..." : "Salvar"}
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="h-7 md:h-8 text-xs">
+                                Cancelar
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button size="sm" variant="outline" onClick={() => handleEdit(point)} className="h-7 md:h-8 p-1 md:p-2">
+                                <Edit className="w-3 h-3 md:w-4 md:h-4" />
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => handleDelete(point.id)} disabled={deleteMutation.isPending} className="h-7 md:h-8 p-1 md:p-2">
+                                {deleteMutation.isPending ? "Excluindo..." : <Trash2 className="w-3 h-3 md:w-4 md:h-4" />}
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </CardContent>
         </Card>
       </div>

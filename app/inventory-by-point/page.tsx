@@ -76,10 +76,10 @@ export default function InventoryByPointPage() {
 
   return (
     <SidebarLayout>
-      <div className="space-y-6">
+      <div className="space-y-4 md:space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Estoque por Ponto de Venda</h1>
-          <p className="text-muted-foreground">Gerencie o estoque de produtos em cada ponto de venda</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Estoque por Ponto de Venda</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Gerencie o estoque de produtos em cada ponto de venda</p>
         </div>
 
         {/* Filtro por Ponto */}
@@ -116,7 +116,7 @@ export default function InventoryByPointPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
               <div>
                 <Label htmlFor="product">Produto</Label>
                 <Select value={selectedProductId} onValueChange={setSelectedProductId}>
@@ -197,66 +197,68 @@ export default function InventoryByPointPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Produto</TableHead>
-                  <TableHead>Ponto de Venda</TableHead>
-                  <TableHead>Quantidade</TableHead>
-                  <TableHead>Estoque Mínimo</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-32">Ações</TableHead>
+                  <TableHead className="text-xs md:text-sm">Produto</TableHead>
+                  <TableHead className="text-xs md:text-sm">Ponto de Venda</TableHead>
+                  <TableHead className="text-xs md:text-sm">Quantidade</TableHead>
+                  <TableHead className="text-xs md:text-sm">Estoque Mínimo</TableHead>
+                  <TableHead className="text-xs md:text-sm">Status</TableHead>
+                  <TableHead className="w-24 md:w-32 text-xs md:text-sm">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredProductPointsOfSale.map((pps: any) => (
                   <TableRow key={pps.id}>
-                    <TableCell>
+                    <TableCell className="text-xs md:text-sm">
                       {pps.product.name} {pps.product.sku && `(${pps.product.sku})`}
                     </TableCell>
-                    <TableCell>{pps.pointOfSale.name}</TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs md:text-sm">{pps.pointOfSale.name}</TableCell>
+                    <TableCell className="text-xs md:text-sm">
                       {editingId === pps.id ? (
                         <Input
                           type="number"
                           value={editQuantity}
                           onChange={(e) => setEditQuantity(e.target.value)}
+                          className="h-8 text-xs md:text-sm"
                         />
                       ) : (
                         pps.quantity
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs md:text-sm">
                       {editingId === pps.id ? (
                         <Input
                           type="number"
                           value={editMinStock}
                           onChange={(e) => setEditMinStock(e.target.value)}
+                          className="h-8 text-xs md:text-sm"
                         />
                       ) : (
                         pps.minStock
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-xs md:text-sm">
                       <span className={pps.quantity <= pps.minStock ? "text-red-600" : "text-green-600"}>
                         {pps.quantity <= pps.minStock ? "Baixo" : "OK"}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1 md:gap-2">
                         {editingId === pps.id ? (
                           <>
-                            <Button size="sm" onClick={handleSaveEdit} disabled={updateMutation.isPending}>
+                            <Button size="sm" onClick={handleSaveEdit} disabled={updateMutation.isPending} className="h-7 md:h-8 text-xs">
                               {updateMutation.isPending ? "Salvando..." : "Salvar"}
                             </Button>
-                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)}>
+                            <Button size="sm" variant="outline" onClick={() => setEditingId(null)} className="h-7 md:h-8 text-xs">
                               Cancelar
                             </Button>
                           </>
                         ) : (
                           <>
-                            <Button size="sm" variant="outline" onClick={() => handleEdit(pps)}>
-                              <Edit className="w-4 h-4" />
+                            <Button size="sm" variant="outline" onClick={() => handleEdit(pps)} className="h-7 md:h-8 p-1 md:p-2">
+                              <Edit className="w-3 h-3 md:w-4 md:h-4" />
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleDelete(pps.id)} disabled={deleteMutation.isPending}>
-                              {deleteMutation.isPending ? "Removendo..." : <Trash2 className="w-4 h-4" />}
+                            <Button size="sm" variant="destructive" onClick={() => handleDelete(pps.id)} disabled={deleteMutation.isPending} className="h-7 md:h-8 p-1 md:p-2">
+                              {deleteMutation.isPending ? "Removendo..." : <Trash2 className="w-3 h-3 md:w-4 md:h-4" />}
                             </Button>
                           </>
                         )}

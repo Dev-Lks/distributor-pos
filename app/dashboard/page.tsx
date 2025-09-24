@@ -47,14 +47,14 @@ function OverviewDashboard() {
   return (
     <div className="space-y-6">
       {/* Cabeçalho com Filtros */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 md:gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-          <p className="text-muted-foreground">Visão geral do seu negócio</p>
+          <h1 className="text-2xl md:text-3xl font-bold">Dashboard</h1>
+          <p className="text-sm md:text-base text-muted-foreground">Visão geral do seu negócio</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as "today" | "week" | "month" | "year")}>
-            <SelectTrigger className="w-40">
+            <SelectTrigger className="w-full sm:w-40">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -71,76 +71,76 @@ function OverviewDashboard() {
       <BackupManager />
 
       {/* Métricas Principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card className="relative overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Vendas {periodLabels[selectedPeriod as keyof typeof periodLabels]}</p>
-                <p className="text-3xl font-bold">R$ {metrics.totalToday.toFixed(2)}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Vendas {periodLabels[selectedPeriod as keyof typeof periodLabels]}</p>
+                <p className="text-2xl md:text-3xl font-bold">R$ {metrics.totalToday.toFixed(2)}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="w-4 h-4 text-green-500" />
-                  <span className="text-sm text-green-600">+{salesGrowth}%</span>
+                  <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-green-500" />
+                  <span className="text-xs md:text-sm text-green-600">+{salesGrowth}%</span>
                 </div>
               </div>
-              <div className="p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
-                <DollarSign className="w-6 h-6 text-green-600" />
+              <div className="p-2 md:p-3 bg-green-100 dark:bg-green-900/20 rounded-full">
+                <DollarSign className="w-4 h-4 md:w-6 md:h-6 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total de Vendas</p>
-                <p className="text-3xl font-bold">{metrics.salesCount}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total de Vendas</p>
+                <p className="text-2xl md:text-3xl font-bold">{metrics.salesCount}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <Activity className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm text-blue-600">Ativo</span>
+                  <Activity className="w-3 h-3 md:w-4 md:h-4 text-blue-500" />
+                  <span className="text-xs md:text-sm text-blue-600">Ativo</span>
                 </div>
               </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                <ShoppingCart className="w-6 h-6 text-blue-600" />
+              <div className="p-2 md:p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                <ShoppingCart className="w-4 h-4 md:w-6 md:h-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Ticket Médio</p>
-                <p className="text-3xl font-bold">
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Ticket Médio</p>
+                <p className="text-2xl md:text-3xl font-bold">
                   R$ {metrics.salesCount > 0 ? (metrics.totalToday / metrics.salesCount).toFixed(2) : '0.00'}
                 </p>
                 <div className="flex items-center gap-1 mt-1">
-                  <TrendingUp className="w-4 h-4 text-purple-500" />
-                  <span className="text-sm text-purple-600">+5.2%</span>
+                  <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-purple-500" />
+                  <span className="text-xs md:text-sm text-purple-600">+5.2%</span>
                 </div>
               </div>
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
-                <BarChart3 className="w-6 h-6 text-purple-600" />
+              <div className="p-2 md:p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                <BarChart3 className="w-4 h-4 md:w-6 md:h-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Valor em Estoque</p>
-                <p className="text-3xl font-bold">R$ {(totalValue / 1000).toFixed(1)}k</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Valor em Estoque</p>
+                <p className="text-2xl md:text-3xl font-bold">R$ {(totalValue / 1000).toFixed(1)}k</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <Package className="w-4 h-4 text-orange-500" />
-                  <span className="text-sm text-orange-600">Estável</span>
+                  <Package className="w-3 h-3 md:w-4 md:h-4 text-orange-500" />
+                  <span className="text-xs md:text-sm text-orange-600">Estável</span>
                 </div>
               </div>
-              <div className="p-3 bg-orange-100 dark:bg-orange-900/20 rounded-full">
-                <Package className="w-6 h-6 text-orange-600" />
+              <div className="p-2 md:p-3 bg-orange-100 dark:bg-orange-900/20 rounded-full">
+                <Package className="w-4 h-4 md:w-6 md:h-6 text-orange-600" />
               </div>
             </div>
           </CardContent>
@@ -148,74 +148,74 @@ function OverviewDashboard() {
       </div>
 
       {/* Métricas de Estoque e Alertas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         <Card className="relative overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Produtos</p>
-                <p className="text-3xl font-bold">{totalProducts}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Total Produtos</p>
+                <p className="text-2xl md:text-3xl font-bold">{totalProducts}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <Package className="w-4 h-4 text-blue-500" />
-                  <span className="text-sm text-blue-600">Ativos</span>
+                  <Package className="w-3 h-3 md:w-4 md:h-4 text-blue-500" />
+                  <span className="text-xs md:text-sm text-blue-600">Ativos</span>
                 </div>
               </div>
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
-                <Package className="w-6 h-6 text-blue-600" />
+              <div className="p-2 md:p-3 bg-blue-100 dark:bg-blue-900/20 rounded-full">
+                <Package className="w-4 h-4 md:w-6 md:h-6 text-blue-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Estoque Crítico</p>
-                <p className="text-3xl font-bold text-red-600">{lowStockCount}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Estoque Crítico</p>
+                <p className="text-2xl md:text-3xl font-bold text-red-600">{lowStockCount}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <AlertTriangle className="w-4 h-4 text-red-500" />
-                  <span className="text-sm text-red-600">Atenção</span>
+                  <AlertTriangle className="w-3 h-3 md:w-4 md:h-4 text-red-500" />
+                  <span className="text-xs md:text-sm text-red-600">Atenção</span>
                 </div>
               </div>
-              <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
+              <div className="p-2 md:p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
+                <AlertTriangle className="w-4 h-4 md:w-6 md:h-6 text-red-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Esgotados</p>
-                <p className="text-3xl font-bold text-red-700">{outOfStockCount}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Esgotados</p>
+                <p className="text-2xl md:text-3xl font-bold text-red-700">{outOfStockCount}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <AlertTriangle className="w-4 h-4 text-red-500" />
-                  <span className="text-sm text-red-600">Urgente</span>
+                  <AlertTriangle className="w-3 h-3 md:w-4 md:h-4 text-red-500" />
+                  <span className="text-xs md:text-sm text-red-600">Urgente</span>
                 </div>
               </div>
-              <div className="p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
-                <AlertTriangle className="w-6 h-6 text-red-600" />
+              <div className="p-2 md:p-3 bg-red-100 dark:bg-red-900/20 rounded-full">
+                <AlertTriangle className="w-4 h-4 md:w-6 md:h-6 text-red-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="relative overflow-hidden">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Bonificações</p>
-                <p className="text-3xl font-bold text-purple-600">{totalBonifications}</p>
+                <p className="text-xs md:text-sm font-medium text-muted-foreground">Bonificações</p>
+                <p className="text-2xl md:text-3xl font-bold text-purple-600">{totalBonifications}</p>
                 <div className="flex items-center gap-1 mt-1">
-                  <Users className="w-4 h-4 text-purple-500" />
-                  <span className="text-sm text-purple-600">Disponíveis</span>
+                  <Users className="w-3 h-3 md:w-4 md:h-4 text-purple-500" />
+                  <span className="text-xs md:text-sm text-purple-600">Disponíveis</span>
                 </div>
               </div>
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
-                <Users className="w-6 h-6 text-purple-600" />
+              <div className="p-2 md:p-3 bg-purple-100 dark:bg-purple-900/20 rounded-full">
+                <Users className="w-4 h-4 md:w-6 md:h-6 text-purple-600" />
               </div>
             </div>
           </CardContent>
@@ -232,28 +232,28 @@ function OverviewDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 md:gap-4">
               {lowStockCount > 0 && (
-                <div className="flex items-center gap-3 p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-yellow-600" />
                   <div>
-                    <p className="font-medium text-yellow-800 dark:text-yellow-200">
+                    <p className="text-sm md:font-medium text-yellow-800 dark:text-yellow-200">
                       {lowStockCount} produto{lowStockCount > 1 ? 's' : ''} com estoque baixo
                     </p>
-                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    <p className="text-xs md:text-sm text-yellow-700 dark:text-yellow-300">
                       Considere repor estes itens
                     </p>
                   </div>
                 </div>
               )}
               {outOfStockCount > 0 && (
-                <div className="flex items-center gap-3 p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                <div className="flex items-center gap-2 md:gap-3 p-2 md:p-3 bg-red-100 dark:bg-red-900/20 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-red-600" />
                   <div>
-                    <p className="font-medium text-red-800 dark:text-red-200">
+                    <p className="text-sm md:font-medium text-red-800 dark:text-red-200">
                       {outOfStockCount} produto{outOfStockCount > 1 ? 's' : ''} esgotado{outOfStockCount > 1 ? 's' : ''}
                     </p>
-                    <p className="text-sm text-red-700 dark:text-red-300">
+                    <p className="text-xs md:text-sm text-red-700 dark:text-red-300">
                       Ação imediata necessária
                     </p>
                   </div>
@@ -266,34 +266,34 @@ function OverviewDashboard() {
 
       {/* Gráficos com Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="sales" className="flex items-center gap-2">
-            <BarChart3 className="w-4 h-4" />
-            Vendas
+        <TabsList className="grid w-full grid-cols-3 h-auto">
+          <TabsTrigger value="sales" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
+            <BarChart3 className="w-3 h-3 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">Vendas</span>
           </TabsTrigger>
-          <TabsTrigger value="products" className="flex items-center gap-2">
-            <Package className="w-4 h-4" />
-            Produtos
+          <TabsTrigger value="products" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
+            <Package className="w-3 h-3 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">Produtos</span>
           </TabsTrigger>
-          <TabsTrigger value="performance" className="flex items-center gap-2">
-            <TrendingUp className="w-4 h-4" />
-            Performance
+          <TabsTrigger value="performance" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
+            <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">Performance</span>
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="sales" className="space-y-4">
           {activeTab === 'sales' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 md:gap-6">
               {/* Vendas por Hora */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Activity className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                    <Activity className="w-4 h-4 md:w-5 md:h-5" />
                     Vendas por Hora ({selectedPeriod === 'today' ? 'Últimas 24h' : `Últimos ${selectedPeriod === 'week' ? '7 dias' : selectedPeriod === 'month' ? '30 dias' : '365 dias'}`})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={250} className="text-xs md:text-sm">
                     <AreaChart data={metrics.hourlyData}>
                       <defs>
                         <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
@@ -305,14 +305,16 @@ function OverviewDashboard() {
                       <XAxis
                         dataKey="hour"
                         tickFormatter={(hour) => selectedPeriod === 'today' ? `${hour}h` : `${hour}`}
+                        fontSize={10}
                       />
-                      <YAxis />
+                      <YAxis fontSize={10} />
                       <Tooltip
                         labelFormatter={(hour) => selectedPeriod === 'today' ? `Hora: ${hour}h` : `Dia: ${hour}`}
                         formatter={(value: any, name) => [
                           name === 'sales' ? `${value} vendas` : `R$ ${Number(value).toFixed(2)}`,
                           name === 'sales' ? 'Vendas' : 'Receita'
                         ]}
+                        contentStyle={{ fontSize: '12px' }}
                       />
                       <Area
                         type="monotone"
@@ -330,28 +332,30 @@ function OverviewDashboard() {
               {/* Top Produtos */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
+                  <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+                    <BarChart3 className="w-4 h-4 md:w-5 md:h-5" />
                     Top Produtos Mais Vendidos
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
+                  <ResponsiveContainer width="100%" height={250} className="text-xs md:text-sm">
                     <BarChart data={metrics.topProducts}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="name"
                         angle={-45}
                         textAnchor="end"
-                        height={80}
+                        height={60}
                         interval={0}
+                        fontSize={10}
                       />
-                      <YAxis />
+                      <YAxis fontSize={10} />
                       <Tooltip
                         formatter={(value: any, name) => [
                           name === 'count' ? `${value} unidades` : `R$ ${Number(value).toFixed(2)}`,
                           name === 'count' ? 'Quantidade' : 'Receita'
                         ]}
+                        contentStyle={{ fontSize: '12px' }}
                       />
                       <Bar dataKey="count" fill="#8884d8" name="count" radius={[4, 4, 0, 0]} />
                     </BarChart>
@@ -518,47 +522,49 @@ function OverviewDashboard() {
       {/* Tabela de Top Produtos */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <BarChart3 className="w-5 h-5" />
+          <CardTitle className="flex items-center gap-2 text-sm md:text-base">
+            <BarChart3 className="w-4 h-4 md:w-5 md:h-5" />
             Detalhes dos Top Produtos
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Produto</TableHead>
-                <TableHead>Unidades Vendidas</TableHead>
-                <TableHead>Receita Total</TableHead>
-                <TableHead>Margem</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {metrics.topProducts.map((product: any, index: number) => {
-                const productData = products.find((p: Product) => p.name === product.name)
-                const margin = productData ? ((productData.salePrice - productData.cost) / productData.salePrice * 100) : 0
-                return (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="secondary">{product.count}</Badge>
-                    </TableCell>
-                    <TableCell>R$ {product.revenue.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <span className={margin > 0 ? 'text-green-600' : 'text-red-600'}>
-                        {margin > 0 ? '+' : ''}{margin.toFixed(1)}%
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-xs md:text-sm">Produto</TableHead>
+                  <TableHead className="text-xs md:text-sm">Unidades Vendidas</TableHead>
+                  <TableHead className="text-xs md:text-sm">Receita Total</TableHead>
+                  <TableHead className="text-xs md:text-sm">Margem</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {metrics.topProducts.map((product: any, index: number) => {
+                  const productData = products.find((p: Product) => p.name === product.name)
+                  const margin = productData ? ((productData.salePrice - productData.cost) / productData.salePrice * 100) : 0
+                  return (
+                    <TableRow key={index}>
+                      <TableCell className="text-xs md:text-sm font-medium">{product.name}</TableCell>
+                      <TableCell className="text-xs md:text-sm">
+                        <Badge variant="secondary" className="text-xs">{product.count}</Badge>
+                      </TableCell>
+                      <TableCell className="text-xs md:text-sm">R$ {product.revenue.toFixed(2)}</TableCell>
+                      <TableCell className="text-xs md:text-sm">
+                        <span className={margin > 0 ? 'text-green-600' : 'text-red-600'}>
+                          {margin > 0 ? '+' : ''}{margin.toFixed(1)}%
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
       {/* Ações e Exportações */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-6">
         {/* Botões de Exportação */}
         <Card>
           <CardHeader>
