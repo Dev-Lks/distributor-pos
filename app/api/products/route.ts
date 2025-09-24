@@ -25,3 +25,17 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to create product' }, { status: 500 })
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { id, ...updateData } = body
+    const product = await prisma.product.update({
+      where: { id },
+      data: updateData,
+    })
+    return NextResponse.json(product)
+  } catch (error) {
+    return NextResponse.json({ error: 'Failed to update product' }, { status: 500 })
+  }
+}

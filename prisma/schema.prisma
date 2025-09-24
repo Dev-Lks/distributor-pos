@@ -20,6 +20,7 @@ model Product {
   cost      Float
   salePrice Float
   isBonified Boolean @default(false)
+  bonifications Int @default(0) // Número de bonificações disponíveis
   category  String? // Ex.: "Cerveja", "Vinho"
   supplier  String? // Fornecedor
   isActive  Boolean @default(true) // Para desativar produtos sem deletar

@@ -87,16 +87,20 @@ export default function InventoryPage() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editingLocation, setEditingLocation] = useState<Location | null>(null)
   const [editStock, setEditStock] = useState("")
+  const [editingBonifications, setEditingBonifications] = useState<string | null>(null)
+  const [editBonifications, setEditBonifications] = useState("")
 
   // Estados para filtros
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterAlert, setFilterAlert] = useState("all") // 'all', 'with_alert', 'no_alert'
+  const [searchQuery, setSearchQuery] = useState("") // Busca por nome do produto
 
   // Estados para adicionar estoque
   const [showAddModal, setShowAddModal] = useState(false)
   const [addProductId, setAddProductId] = useState("")
   const [addLocation, setAddLocation] = useState<Location>("coldRoom")
   const [addQuantity, setAddQuantity] = useState("")
+  const [addProductSearch, setAddProductSearch] = useState("")
 
   // Estados para transferir estoque
   const [showTransferModal, setShowTransferModal] = useState(false)
@@ -126,6 +130,25 @@ export default function InventoryPage() {
     setEditStock("")
   }
 
+  const startEditBonifications = (id: string, currentBonifications: number) => {
+    setEditingBonifications(id)
+    setEditBonifications(currentBonifications.toString())
+  }
+
+  const saveBonifications = async (id: string) => {
+    const newBonifications = Number(editBonifications)
+    if (newBonifications >= 0) {
+      await fetch("/api/products", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, bonifications: newBonifications }),
+      })
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+    }
+    setEditingBonifications(null)
+    setEditBonifications("")
+  }
+
   const addStock = async () => {
     const quantity = Number(addQuantity)
     if (quantity > 0 && addProductId) {
@@ -146,6 +169,7 @@ export default function InventoryPage() {
     setShowAddModal(false)
     setAddProductId("")
     setAddQuantity("")
+    setAddProductSearch("")
   }
 
   const transferStock = async () => {
@@ -187,7 +211,7 @@ export default function InventoryPage() {
     return { label: "Normal", className: "bg-green-100 text-green-800" }
   }
 
-  const totalProducts = products.length
+  const totalBonifications = products.reduce((sum: number, p: Product) => sum + p.bonifications, 0)
 
   // Calcular métricas gerais (removidas da UI, mas mantidas para referência)
   const totalColdRoom = products.reduce((sum: number, p: Product) => sum + (p.inventory?.coldRoomQuantity ?? 0), 0)
@@ -204,7 +228,8 @@ export default function InventoryPage() {
     const matchesAlert = filterAlert === "all" || 
       (filterAlert === "with_alert" && (product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert)) ||
       (filterAlert === "no_alert" && !(product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert))
-    return matchesCategory && matchesAlert
+    const matchesSearch = searchQuery === "" || product.name.toLowerCase().includes(searchQuery.toLowerCase()) || product.size.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesCategory && matchesAlert && matchesSearch
   })
 
   const renderInventoryTable = (location: Location) => {
@@ -237,6 +262,7 @@ export default function InventoryPage() {
               <TableRow>
                 <TableHead>Produto</TableHead>
                 <TableHead>Categoria</TableHead>
+                <TableHead className="text-center">Bonificações</TableHead>
                 <TableHead className="text-right">Estoque</TableHead>
                 <TableHead className="text-center">Status</TableHead>
                 <TableHead className="text-right">Valor</TableHead>
@@ -251,15 +277,39 @@ export default function InventoryPage() {
                 const isEditing = editingId === product.id && editingLocation === location
 
                 return (
-                  <TableRow key={`${product.id}-${location}`} className={product.inventory?.[alertField] ? "bg-orange-50" : ""}>
+                  <TableRow key={`${product.id}-${location}`} className={`${product.inventory?.[alertField] ? "bg-orange-50" : ""} ${product.bonifications > 0 ? "bg-blue-50/30" : ""}`}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{product.name}</div>
-                        <div className="text-sm text-muted-foreground">{product.size}</div>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <div className="font-medium">{product.name}</div>
+                          <div className="text-sm text-muted-foreground">{product.size}</div>
+                        </div>
+                        {product.bonifications > 0 && (
+                          <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                            🎁 {product.bonifications}
+                          </Badge>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">{product.category || "Sem categoria"}</Badge>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {editingBonifications === product.id ? (
+                        <div className="flex items-center gap-2 justify-center">
+                          <Input
+                            type="number"
+                            min="0"
+                            value={editBonifications}
+                            onChange={(e) => setEditBonifications(e.target.value)}
+                            className="w-16 text-center"
+                          />
+                        </div>
+                      ) : (
+                        <span className={`font-mono font-bold ${product.bonifications > 0 ? "text-blue-600" : "text-gray-400"}`}>
+                          {product.bonifications}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-right">
                       {isEditing ? (
@@ -285,20 +335,36 @@ export default function InventoryPage() {
                       R$ {(stock * product.salePrice).toFixed(2)}
                     </TableCell>
                     <TableCell>
-                      {isEditing ? (
-                        <div className="flex gap-1">
-                          <Button size="sm" onClick={() => saveEdit(product.id, location)}>
-                            ✓
-                          </Button>
-                          <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setEditingLocation(null) }}>
-                            ✕
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button variant="ghost" size="sm" onClick={() => startEdit(product.id, location, stock)}>
-                          ✏️
-                        </Button>
-                      )}
+                      <div className="flex gap-1">
+                        {isEditing ? (
+                          <>
+                            <Button size="sm" onClick={() => saveEdit(product.id, location)}>
+                              ✓
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); setEditingLocation(null) }}>
+                              ✕
+                            </Button>
+                          </>
+                        ) : editingBonifications === product.id ? (
+                          <>
+                            <Button size="sm" onClick={() => saveBonifications(product.id)}>
+                              ✓
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => setEditingBonifications(null)}>
+                              ✕
+                            </Button>
+                          </>
+                        ) : (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={() => startEdit(product.id, location, stock)}>
+                              ✏️
+                            </Button>
+                            <Button variant="ghost" size="sm" onClick={() => startEditBonifications(product.id, product.bonifications)}>
+                              🎁
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
@@ -326,6 +392,17 @@ export default function InventoryPage() {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="search" className="text-sm font-medium">Buscar Produto</Label>
+                <Input
+                  id="search"
+                  type="text"
+                  placeholder="Nome ou tamanho do produto..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="mt-1"
+                />
+              </div>
               <div>
                 <Label htmlFor="category-filter" className="text-sm font-medium">Categoria</Label>
                 <Select value={filterCategory} onValueChange={setFilterCategory}>
@@ -372,6 +449,10 @@ export default function InventoryPage() {
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Com Alertas</span>
                 <span className="font-bold text-orange-600">{lowStockAlerts.length}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">Bonificações Disponíveis</span>
+                <span className="font-bold text-blue-600">{totalBonifications}</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Valor Total</span>
@@ -431,6 +512,16 @@ export default function InventoryPage() {
               <h3 className="text-lg font-bold mb-4">Adicionar Estoque</h3>
               <div className="space-y-4">
                 <div>
+                  <label className="block text-sm font-medium mb-1">Buscar Produto</label>
+                  <Input
+                    type="text"
+                    placeholder="Digite o nome do produto..."
+                    value={addProductSearch}
+                    onChange={(e) => setAddProductSearch(e.target.value)}
+                    className="w-full"
+                  />
+                </div>
+                <div>
                   <label className="block text-sm font-medium mb-1">Produto</label>
                   <select
                     value={addProductId}
@@ -438,11 +529,17 @@ export default function InventoryPage() {
                     className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
                   >
                     <option value="">Selecione um produto</option>
-                    {products.map((product: Product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name} - {product.size}
-                      </option>
-                    ))}
+                    {products
+                      .filter((product: Product) => 
+                        addProductSearch === "" || 
+                        product.name.toLowerCase().includes(addProductSearch.toLowerCase()) ||
+                        product.size.toLowerCase().includes(addProductSearch.toLowerCase())
+                      )
+                      .map((product: Product) => (
+                        <option key={product.id} value={product.id}>
+                          {product.name} - {product.size} (Estoque atual: {product.inventory?.[`${addLocation}Quantity`] || 0})
+                        </option>
+                      ))}
                   </select>
                 </div>
                 <LocationSelector

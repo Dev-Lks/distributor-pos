@@ -7,6 +7,7 @@ export interface Product {
   cost: number
   salePrice: number
   isBonified: boolean
+  bonifications: number
   category?: string
   supplier?: string
   isActive: boolean
