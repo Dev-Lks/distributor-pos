@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { SidebarLayout } from "@/components/SidebarLayout"
 import { Snowflake, Home, Store } from "lucide-react"
@@ -521,129 +522,132 @@ export default function InventoryPage() {
         </Card>
 
         {/* Modal Adicionar Estoque */}
-        {showAddModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-card text-card-foreground border border-border p-6 rounded-lg w-[500px] shadow-lg">
-              <h3 className="text-lg font-bold mb-4">Adicionar Estoque</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Buscar Produto</label>
-                  <Input
-                    type="text"
-                    placeholder="Digite o nome do produto..."
-                    value={addProductSearch}
-                    onChange={(e) => setAddProductSearch(e.target.value)}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Produto</label>
-                  <select
-                    value={addProductId}
-                    onChange={(e) => setAddProductId(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                  >
-                    <option value="">Selecione um produto</option>
-                    {products
-                      .filter((product: Product) => 
-                        addProductSearch === "" || 
-                        product.name.toLowerCase().includes(addProductSearch.toLowerCase()) ||
-                        product.size.toLowerCase().includes(addProductSearch.toLowerCase())
-                      )
-                      .map((product: Product) => (
-                        <option key={product.id} value={product.id}>
-                          {product.name} - {product.size} (Estoque atual: {product.inventory?.[`${addLocation}Quantity`] || 0})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-                <LocationSelector
-                  value={addLocation}
-                  onChange={setAddLocation}
-                  label="Local de Destino"
+        <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+          <DialogContent className="w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Adicionar Estoque</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="addProductSearch">Buscar Produto</Label>
+                <Input
+                  id="addProductSearch"
+                  type="text"
+                  placeholder="Digite o nome do produto..."
+                  value={addProductSearch}
+                  onChange={(e) => setAddProductSearch(e.target.value)}
+                  className="w-full"
                 />
-                <div>
-                  <label className="block text-sm font-medium mb-1">Quantidade</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={addQuantity}
-                    onChange={(e) => setAddQuantity(e.target.value)}
-                    placeholder="Digite a quantidade"
-                    className="w-full"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setShowAddModal(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={addStock} disabled={!addProductId || !addQuantity}>
-                    Adicionar
-                  </Button>
-                </div>
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Modal Transferir Estoque */}
-        {showTransferModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-card text-card-foreground border border-border p-6 rounded-lg w-[600px] shadow-lg">
-              <h3 className="text-lg font-bold mb-4">Transferir Estoque</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-1">Produto</label>
-                  <select
-                    value={transferProductId}
-                    onChange={(e) => setTransferProductId(e.target.value)}
-                    className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
-                  >
-                    <option value="">Selecione um produto</option>
-                    {products.map((product: Product) => (
+              <div>
+                <Label htmlFor="addProductId">Produto</Label>
+                <select
+                  id="addProductId"
+                  value={addProductId}
+                  onChange={(e) => setAddProductId(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                >
+                  <option value="">Selecione um produto</option>
+                  {products
+                    .filter((product: Product) => 
+                      addProductSearch === "" || 
+                      product.name.toLowerCase().includes(addProductSearch.toLowerCase()) ||
+                      product.size.toLowerCase().includes(addProductSearch.toLowerCase())
+                    )
+                    .map((product: Product) => (
                       <option key={product.id} value={product.id}>
-                        {product.name} - {product.size}
+                        {product.name} - {product.size} (Estoque atual: {product.inventory?.[`${addLocation}Quantity`] || 0})
                       </option>
                     ))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <LocationSelector
-                    value={transferFrom}
-                    onChange={setTransferFrom}
-                    label="De"
-                  />
-                  <LocationSelector
-                    value={transferTo}
-                    onChange={setTransferTo}
-                    label="Para"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1">Quantidade</label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={transferQuantity}
-                    onChange={(e) => setTransferQuantity(e.target.value)}
-                    placeholder="Digite a quantidade"
-                    className="w-full"
-                  />
-                </div>
-                <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={() => setShowTransferModal(false)}>
-                    Cancelar
-                  </Button>
-                  <Button onClick={transferStock} disabled={!transferProductId || !transferQuantity || transferFrom === transferTo}>
-                    Transferir
-                  </Button>
-                </div>
+                </select>
+              </div>
+              <LocationSelector
+                value={addLocation}
+                onChange={setAddLocation}
+                label="Local de Destino"
+              />
+              <div>
+                <Label htmlFor="addQuantity">Quantidade</Label>
+                <Input
+                  id="addQuantity"
+                  type="number"
+                  min="1"
+                  value={addQuantity}
+                  onChange={(e) => setAddQuantity(e.target.value)}
+                  placeholder="Digite a quantidade"
+                  className="w-full"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setShowAddModal(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={addStock} disabled={!addProductId || !addQuantity}>
+                  Adicionar
+                </Button>
               </div>
             </div>
-          </div>
-        )}
+          </DialogContent>
+        </Dialog>
 
-        {/* Alertas */}
+        {/* Modal Transferir Estoque */}
+        <Dialog open={showTransferModal} onOpenChange={setShowTransferModal}>
+          <DialogContent className="w-[600px]">
+            <DialogHeader>
+              <DialogTitle>Transferir Estoque</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="transferProductId">Produto</Label>
+                <select
+                  id="transferProductId"
+                  value={transferProductId}
+                  onChange={(e) => setTransferProductId(e.target.value)}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground"
+                >
+                  <option value="">Selecione um produto</option>
+                  {products.map((product: Product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name} - {product.size}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <LocationSelector
+                  value={transferFrom}
+                  onChange={setTransferFrom}
+                  label="De"
+                />
+                <LocationSelector
+                  value={transferTo}
+                  onChange={setTransferTo}
+                  label="Para"
+                />
+              </div>
+              <div>
+                <Label htmlFor="transferQuantity">Quantidade</Label>
+                <Input
+                  id="transferQuantity"
+                  type="number"
+                  min="1"
+                  value={transferQuantity}
+                  onChange={(e) => setTransferQuantity(e.target.value)}
+                  placeholder="Digite a quantidade"
+                  className="w-full"
+                />
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setShowTransferModal(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={transferStock} disabled={!transferProductId || !transferQuantity || transferFrom === transferTo}>
+                  Transferir
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>        {/* Alertas */}
         {lowStockAlerts.length > 0 && (
           <Card className="border-destructive">
             <CardHeader>
