@@ -24,16 +24,6 @@ export interface Product {
     salePointAlert?: boolean
     totalQuantity?: number
   }
-  productPointsOfSale?: {
-    id: string
-    quantity: number
-    minStock: number
-    pointOfSale: {
-      id: string
-      name: string
-      isActive: boolean
-    }
-  }[]
 }
 
 export function useProducts() {
