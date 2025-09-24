@@ -12,18 +12,23 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { useSalesMetrics } from "@/lib/useSales"
+import { useSales } from "@/lib/useSales"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell, AreaChart, Area } from 'recharts'
 import { exportSalesToXLSX, exportSalesToCSV } from "@/lib/salesDB"
 import { SidebarLayout } from "@/components/SidebarLayout"
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
 import { BackupManager } from "@/components/BackupManager"
-import { CalendarDays, TrendingUp, TrendingDown, DollarSign, Package, AlertTriangle, ShoppingCart, Users, BarChart3, PieChart as PieChartIcon, Activity } from "lucide-react"
+import { CalendarDays, TrendingUp, TrendingDown, DollarSign, Package, AlertTriangle, ShoppingCart, Users, BarChart3, PieChart as PieChartIcon, Activity, History } from "lucide-react"
 
 function OverviewDashboard() {
   const [selectedPeriod, setSelectedPeriod] = useState<"today" | "week" | "month" | "year">("today")
   const [activeTab, setActiveTab] = useState("sales")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [paymentFilter, setPaymentFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState("")
   const { data: metrics, isLoading: metricsLoading } = useSalesMetrics(selectedPeriod)
   const { data: products = [], isLoading: productsLoading } = useProducts()
+  const { sales, salesLoading, cancelSale } = useSales()
 
   if (metricsLoading || productsLoading || !metrics) return <div>Loading...</div>
 
@@ -40,6 +45,20 @@ function OverviewDashboard() {
   const outOfStockCount = products.filter((p: Product) => (p.inventory?.totalQuantity ?? 0) === 0).length
   const totalValue = products.reduce((sum: number, p: Product) => sum + (p.inventory?.totalQuantity ?? 0) * p.salePrice, 0)
   const totalBonifications = products.reduce((sum: number, p: Product) => sum + p.bonifications, 0)
+
+  // Filtrar vendas
+  const filteredSales = sales?.filter((sale: any) => {
+    const matchesSearch = searchTerm === "" || 
+      sale.customerName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sale.items.some((item: any) => item.product?.name.toLowerCase().includes(searchTerm.toLowerCase()))
+    
+    const matchesPayment = paymentFilter === "all" || sale.paymentMethod === paymentFilter
+    
+    const matchesDate = dateFilter === "" || 
+      new Date(sale.date).toDateString() === new Date(dateFilter).toDateString()
+    
+    return matchesSearch && matchesPayment && matchesDate
+  }) || []
 
   // Calcular métricas de crescimento (simulado)
   const growthRate = 12.5 // Simulado
@@ -274,7 +293,7 @@ function OverviewDashboard() {
 
       {/* Gráficos com Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 h-auto">
+        <TabsList className="grid w-full grid-cols-4 h-auto">
           <TabsTrigger value="sales" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
             <BarChart3 className="w-3 h-3 md:w-4 md:h-4" />
             <span className="hidden sm:inline">Vendas</span>
@@ -286,6 +305,10 @@ function OverviewDashboard() {
           <TabsTrigger value="performance" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
             <TrendingUp className="w-3 h-3 md:w-4 md:h-4" />
             <span className="hidden sm:inline">Performance</span>
+          </TabsTrigger>
+          <TabsTrigger value="historico" className="flex items-center gap-1 md:gap-2 text-xs md:text-sm py-2 md:py-3">
+            <History className="w-3 h-3 md:w-4 md:h-4" />
+            <span className="hidden sm:inline">Histórico</span>
           </TabsTrigger>
         </TabsList>
 
@@ -520,6 +543,140 @@ function OverviewDashboard() {
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="historico" className="space-y-4">
+          {activeTab === 'historico' && (
+            <div className="space-y-4">
+              {/* Filtros e Busca */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <History className="w-5 h-5" />
+                    Histórico de Vendas
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="search">Buscar</Label>
+                      <Input
+                        id="search"
+                        placeholder="Cliente ou produto..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="payment">Método de Pagamento</Label>
+                      <Select value={paymentFilter} onValueChange={setPaymentFilter}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          <SelectItem value="cash">Dinheiro</SelectItem>
+                          <SelectItem value="card">Cartão</SelectItem>
+                          <SelectItem value="pix">PIX</SelectItem>
+                          <SelectItem value="other">Outros</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="date">Data</Label>
+                      <Input
+                        id="date"
+                        type="date"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Tabela de Vendas */}
+              <Card>
+                <CardContent className="p-0">
+                  {salesLoading ? (
+                    <div className="text-center py-8">Carregando vendas...</div>
+                  ) : filteredSales.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p className="font-medium">Nenhuma venda encontrada</p>
+                      <p className="text-sm">Tente ajustar os filtros de busca</p>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="text-xs md:text-sm">Data</TableHead>
+                            <TableHead className="text-xs md:text-sm">Cliente</TableHead>
+                            <TableHead className="text-xs md:text-sm">Total</TableHead>
+                            <TableHead className="text-xs md:text-sm">Pagamento</TableHead>
+                            <TableHead className="text-xs md:text-sm">Itens</TableHead>
+                            <TableHead className="text-xs md:text-sm">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {filteredSales.map((sale: any) => (
+                            <TableRow key={sale.id}>
+                              <TableCell className="text-xs md:text-sm">
+                                {new Date(sale.date).toLocaleString('pt-BR')}
+                              </TableCell>
+                              <TableCell className="text-xs md:text-sm font-medium">
+                                {sale.customerName || '-'}
+                              </TableCell>
+                              <TableCell className="text-xs md:text-sm font-bold">
+                                R$ {sale.total.toFixed(2)}
+                              </TableCell>
+                              <TableCell className="text-xs md:text-sm">
+                                <Badge variant="outline">
+                                  {sale.paymentMethod === 'cash' ? '💵 Dinheiro' : 
+                                   sale.paymentMethod === 'card' ? '💳 Cartão' : 
+                                   sale.paymentMethod === 'pix' ? '⚡ PIX' : 
+                                   sale.paymentMethod || 'Não informado'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-xs md:text-sm">
+                                <div className="max-w-32 truncate">
+                                  {sale.items.map((item: any, index: number) => (
+                                    <div key={index} className="truncate">
+                                      {item.quantity}x {item.product?.name || 'Produto'}
+                                    </div>
+                                  ))}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-xs md:text-sm">
+                                <Button
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={async () => {
+                                    if (confirm('Tem certeza que deseja cancelar esta venda? O estoque será restaurado.')) {
+                                      try {
+                                        await cancelSale(sale.id)
+                                        alert('Venda cancelada com sucesso!')
+                                      } catch (error) {
+                                        alert('Erro ao cancelar venda: ' + error)
+                                      }
+                                    }
+                                  }}
+                                  className="text-xs"
+                                >
+                                  Cancelar
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

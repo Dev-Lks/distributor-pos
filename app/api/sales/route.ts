@@ -32,10 +32,7 @@ export async function POST(request: NextRequest) {
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
       include: { 
-        inventory: true,
-        productPointsOfSale: {
-          include: { pointOfSale: true }
-        }
+        inventory: true
       },
     })
 

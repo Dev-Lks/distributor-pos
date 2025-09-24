@@ -9,10 +9,11 @@ import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { useSales } from "@/lib/useSales"
 import { SidebarLayout } from "@/components/SidebarLayout"
-import { Plus, Minus, X, ShoppingCart, CreditCard, DollarSign, Receipt, History, Zap, Calculator, Search } from "lucide-react"
+import { Plus, Minus, X, ShoppingCart, CreditCard, DollarSign, Receipt, Zap, Calculator, Search } from "lucide-react"
 
 export default function SalesPage() {
   const { data: products = [], isLoading: loading } = useProducts()
@@ -140,7 +141,13 @@ export default function SalesPage() {
 
   return (
     <SidebarLayout>
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 h-full">
+      <Tabs defaultValue="nova-venda" className="w-full">
+        <TabsList className="grid w-full grid-cols-1">
+          <TabsTrigger value="nova-venda">Nova Venda</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="nova-venda" className="mt-4">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 h-full">
         {/* Produtos - 2/3 da tela */}
         <div className="xl:col-span-2 space-y-4">
           {/* Busca e filtros */}
@@ -439,6 +446,8 @@ export default function SalesPage() {
           </Card>
         </div>
       </div>
+        </TabsContent>
+      </Tabs>
     </SidebarLayout>
   )
 }

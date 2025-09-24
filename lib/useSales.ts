@@ -20,6 +20,16 @@ export function useSales(pointOfSale?: string) {
   const queryClient = useQueryClient()
   const { data: products = [] } = useProducts()
 
+  const { data: sales = [], isLoading: salesLoading, refetch: refetchSales } = useQuery({
+    queryKey: ['sales'],
+    queryFn: async () => {
+      const response = await fetch('/api/sales')
+      if (!response.ok) throw new Error('Failed to fetch sales')
+      return response.json()
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  })
+
   const createSale = async ({ items, paymentMethod, customerName }: CreateSaleParams) => {
     // Enrich items with product data
     const enrichedItems = items.map(item => {
@@ -144,6 +154,26 @@ export function useSales(pointOfSale?: string) {
     }
   }
 
+  const cancelSale = async (saleId: string) => {
+    try {
+      const response = await fetch(`/api/sales/${saleId}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) {
+        const error = await response.text()
+        throw new Error(`Failed to cancel sale: ${error}`)
+      }
+      // Invalidate caches
+      queryClient.invalidateQueries({ queryKey: ['sales'] })
+      queryClient.invalidateQueries({ queryKey: ['sales-metrics'] })
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      return true
+    } catch (error) {
+      console.error('Error canceling sale:', error)
+      throw error
+    }
+  }
+
   const getSheetsSummary = async () => {
     try {
       return await sheetsBackup.getSalesSummary()
@@ -153,7 +183,7 @@ export function useSales(pointOfSale?: string) {
     }
   }
 
-  return { createSale, backupAllSales, getSheetsSummary }
+  return { createSale, backupAllSales, getSheetsSummary, cancelSale, sales, salesLoading, refetchSales }
 }
 
 export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 'today', pointOfSale: string = 'all') {
