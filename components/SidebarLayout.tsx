@@ -44,6 +44,12 @@ const navigation = [
     description: "Controle de estoque"
   },
   {
+    name: "Produtos",
+    href: "/products",
+    icon: Package,
+    description: "Gerenciar produtos"
+  },
+  {
     name: "Estoque por Ponto",
     href: "/inventory-by-point",
     icon: Package,
@@ -59,7 +65,7 @@ const navigation = [
 
 export function SidebarLayout({ children }: SidebarProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true) // Colapsada por padrão em tablets
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false) // Temporariamente revertido
   const pathname = usePathname()
 
   return (

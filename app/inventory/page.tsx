@@ -41,6 +41,16 @@ const locationDescriptions = {
   salePoint: "Pontos de venda"
 }
 
+function getStockStatus(stock: number, minStock: number) {
+  if (stock === 0) {
+    return { label: "Esgotado", className: "bg-red-100 text-red-800" }
+  } else if (stock <= minStock) {
+    return { label: "Crítico", className: "bg-yellow-100 text-yellow-800" }
+  } else {
+    return { label: "OK", className: "bg-green-100 text-green-800" }
+  }
+}
+
 function LocationSelector({ value, onChange, label }: { value: Location | null, onChange: (location: Location) => void, label: string }) {
   return (
     <div>
@@ -214,13 +224,6 @@ export default function InventoryPage() {
     setShowTransferModal(false)
     setTransferProductId("")
     setTransferQuantity("")
-  }
-
-  const getStockStatus = (stock: number, minStock: number) => {
-    if (stock === 0) return { label: "Esgotado", className: "bg-red-100 text-red-800" }
-    if (stock <= minStock) return { label: "Crítico", className: "bg-yellow-100 text-yellow-800" }
-    if (stock <= minStock * 2) return { label: "Baixo", className: "bg-orange-100 text-orange-800" }
-    return { label: "Normal", className: "bg-green-100 text-green-800" }
   }
 
   const totalBonifications = products.reduce((sum: number, p: Product) => sum + p.bonifications, 0)

@@ -27,6 +27,14 @@ function OverviewDashboard() {
 
   if (metricsLoading || productsLoading || !metrics) return <div>Loading...</div>
 
+  // Garantir que as propriedades existam
+  const safeMetrics = {
+    totalToday: metrics.totalToday || 0,
+    salesCount: metrics.salesCount || 0,
+    hourlyData: metrics.hourlyData || [],
+    topProducts: metrics.topProducts || []
+  }
+
   const totalProducts = products.length
   const lowStockCount = products.filter((p: Product) => (p.inventory?.totalQuantity ?? 0) <= 10).length
   const outOfStockCount = products.filter((p: Product) => (p.inventory?.totalQuantity ?? 0) === 0).length
@@ -77,7 +85,7 @@ function OverviewDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs md:text-sm font-medium text-muted-foreground">Vendas {periodLabels[selectedPeriod as keyof typeof periodLabels]}</p>
-                <p className="text-2xl md:text-3xl font-bold">R$ {metrics.totalToday.toFixed(2)}</p>
+                <p className="text-2xl md:text-3xl font-bold">R$ {safeMetrics.totalToday.toFixed(2)}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-green-500" />
                   <span className="text-xs md:text-sm text-green-600">+{salesGrowth}%</span>
@@ -95,7 +103,7 @@ function OverviewDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs md:text-sm font-medium text-muted-foreground">Total de Vendas</p>
-                <p className="text-2xl md:text-3xl font-bold">{metrics.salesCount}</p>
+                <p className="text-2xl md:text-3xl font-bold">{safeMetrics.salesCount}</p>
                 <div className="flex items-center gap-1 mt-1">
                   <Activity className="w-3 h-3 md:w-4 md:h-4 text-blue-500" />
                   <span className="text-xs md:text-sm text-blue-600">Ativo</span>
@@ -114,7 +122,7 @@ function OverviewDashboard() {
               <div>
                 <p className="text-xs md:text-sm font-medium text-muted-foreground">Ticket Médio</p>
                 <p className="text-2xl md:text-3xl font-bold">
-                  R$ {metrics.salesCount > 0 ? (metrics.totalToday / metrics.salesCount).toFixed(2) : '0.00'}
+                  R$ {safeMetrics.salesCount > 0 ? (safeMetrics.totalToday / safeMetrics.salesCount).toFixed(2) : '0.00'}
                 </p>
                 <div className="flex items-center gap-1 mt-1">
                   <TrendingUp className="w-3 h-3 md:w-4 md:h-4 text-purple-500" />
@@ -294,7 +302,7 @@ function OverviewDashboard() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={250} className="text-xs md:text-sm">
-                    <AreaChart data={metrics.hourlyData}>
+                    <AreaChart data={safeMetrics.hourlyData}>
                       <defs>
                         <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
@@ -339,7 +347,7 @@ function OverviewDashboard() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={250} className="text-xs md:text-sm">
-                    <BarChart data={metrics.topProducts}>
+                    <BarChart data={safeMetrics.topProducts}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="name"
@@ -444,7 +452,7 @@ function OverviewDashboard() {
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={metrics.hourlyData}>
+                    <LineChart data={safeMetrics.hourlyData}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
                         dataKey="hour"
@@ -495,7 +503,7 @@ function OverviewDashboard() {
                       </div>
                       <div className="text-right">
                         <p className="text-2xl font-bold text-blue-600">
-                          R$ {metrics.salesCount > 0 ? (metrics.totalToday / metrics.salesCount).toFixed(2) : '0.00'}
+                          R$ {safeMetrics.salesCount > 0 ? (safeMetrics.totalToday / safeMetrics.salesCount).toFixed(2) : '0.00'}
                         </p>
                       </div>
                     </div>
@@ -539,7 +547,7 @@ function OverviewDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {metrics.topProducts.map((product: any, index: number) => {
+                {safeMetrics.topProducts.map((product: any, index: number) => {
                   const productData = products.find((p: Product) => p.name === product.name)
                   const margin = productData ? ((productData.salePrice - productData.cost) / productData.salePrice * 100) : 0
                   return (

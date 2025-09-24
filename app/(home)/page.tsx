@@ -7,8 +7,7 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import QRCode from "react-qr-code"
 import { ExternalLink as LinkIcon, Maximize2, Minimize2 } from 'lucide-react'
-import Link from "next/link"
-import { useProducts, type Product } from "@/lib/useProducts"
+
 
 export default function NitroBeerLinktree() {
   const [currentUrl, setCurrentUrl] = useState('')
@@ -16,21 +15,10 @@ export default function NitroBeerLinktree() {
   const [fullscreen, setFullscreen] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
 
-  // Buscar dados do inventário
-  const { data: products = [], isLoading: loadingProducts } = useProducts()
 
   useEffect(() => {
     setCurrentUrl(window.location.href)
   }, [])
-
-  // Calcular métricas rápidas
-  const totalProducts = products.length
-  const totalStock = products.reduce((sum: number, p: Product) => sum + (p.inventory?.totalQuantity ?? 0), 0)
-  const lowStockAlerts = products.filter((p: Product) => 
-    (p.inventory?.coldRoomAlert || p.inventory?.houseAlert || p.inventory?.salePointAlert)
-  ).length
-  const totalValue = products.reduce((sum: number, p: Product) => sum + ((p.inventory?.totalQuantity ?? 0) * p.salePrice), 0)
-  const totalBonifications = products.reduce((sum: number, p: Product) => sum + p.bonifications, 0)
 
   const socialLinks = [
     {
