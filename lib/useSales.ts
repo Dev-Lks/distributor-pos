@@ -1,25 +1,54 @@
 import { useQueryClient, useQuery } from '@tanstack/react-query'
+import { addSale, getAllSales } from './salesDB'
+import { useProducts } from './useProducts'
+import type { Product } from './useProducts'
 
 export interface SaleItem {
   productId: string
   quantity: number
+  productName?: string
+  price?: number
 }
 
 export function useSales() {
   const queryClient = useQueryClient()
+  const { data: products = [] } = useProducts()
 
   const createSale = async (items: SaleItem[]) => {
-    const res = await fetch('/api/sales', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items }),
+    // Enrich items with product data
+    const enrichedItems = items.map(item => {
+      const product = products.find((p: Product) => p.id === item.productId)
+      return {
+        ...item,
+        productName: product?.name || 'Unknown',
+        price: product?.salePrice || 0
+      }
     })
-    const sale = await res.json()
-    // Invalidate products cache to refresh inventory
+
+    // Calculate total
+    const total = enrichedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0)
+
+    // Check stock (client-side validation)
+    for (const item of enrichedItems) {
+      const product = products.find((p: Product) => p.id === item.productId)
+      const availableStock = product?.inventory?.salePointQuantity ?? 0
+      if (availableStock < item.quantity) {
+        throw new Error(`Estoque insuficiente para ${product?.name}. Disponível: ${availableStock}, Solicitado: ${item.quantity}`)
+      }
+    }
+
+    // Save to IndexedDB
+    const id = await addSale({
+      date: new Date(),
+      total,
+      items: enrichedItems
+    })
+
+    // Invalidate caches
     queryClient.invalidateQueries({ queryKey: ['products'] })
-    // Invalidate sales metrics
     queryClient.invalidateQueries({ queryKey: ['sales-metrics'] })
-    return sale
+
+    return { id, total, items: enrichedItems }
   }
 
   return { createSale }
@@ -29,8 +58,7 @@ export function useSalesMetrics() {
   return useQuery({
     queryKey: ['sales-metrics'],
     queryFn: async () => {
-      const res = await fetch('/api/sales')
-      const sales = await res.json()
+      const sales = await getAllSales()
 
       // Calculate metrics
       const today = new Date()
@@ -63,15 +91,15 @@ export function useSalesMetrics() {
       const productCount: { [key: string]: { name: string; count: number; revenue: number } } = {}
       sales.forEach((sale: any) => {
         sale.items.forEach((item: any) => {
-          if (!productCount[item.product.id]) {
-            productCount[item.product.id] = {
-              name: item.product.name,
+          if (!productCount[item.productId]) {
+            productCount[item.productId] = {
+              name: item.productName || 'Unknown',
               count: 0,
               revenue: 0
             }
           }
-          productCount[item.product.id].count += item.quantity
-          productCount[item.product.id].revenue += item.price * item.quantity
+          productCount[item.productId].count += item.quantity
+          productCount[item.productId].revenue += (item.price || 0) * item.quantity
         })
       })
 

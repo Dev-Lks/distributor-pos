@@ -11,6 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useProducts, type Product } from "@/lib/useProducts"
 import { useSalesMetrics } from "@/lib/useSales"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { exportSalesToXLSX, exportSalesToCSV } from "@/lib/salesDB"
 import { SidebarLayout } from "@/components/SidebarLayout"
 
 function OverviewDashboard() {
@@ -26,6 +27,20 @@ function OverviewDashboard() {
 
   return (
     <div className="space-y-6">
+      {/* Botões de Exportação */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex gap-2">
+            <Button onClick={() => exportSalesToXLSX()} variant="outline">
+              Exportar Vendas para XLSX
+            </Button>
+            <Button onClick={() => exportSalesToCSV()} variant="outline">
+              Exportar Vendas para CSV
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="pos-metric-card">
@@ -235,13 +250,20 @@ function OverviewDashboard() {
 }
 
 export default function DashboardPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    // Verifica se o usuário já está autenticado no localStorage
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('dashboardAuthenticated') === 'true'
+    }
+    return false
+  })
   const [pin, setPin] = useState("")
 
   const handlePinSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (pin === "1234") {
       setIsAuthenticated(true)
+      localStorage.setItem('dashboardAuthenticated', 'true') // Salva no localStorage
     } else {
       alert("PIN incorreto")
       setPin("")
@@ -251,6 +273,7 @@ export default function DashboardPage() {
   const handleLogout = () => {
     setIsAuthenticated(false)
     setPin("")
+    localStorage.removeItem('dashboardAuthenticated') // Remove do localStorage
   }
 
   if (!isAuthenticated) {

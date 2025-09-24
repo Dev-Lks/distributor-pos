@@ -42,7 +42,7 @@ export default function NitroBeerLinktree() {
   ]
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-800">
       {/* Decorative background pattern */}
       <div className="fixed inset-0 decorative-pattern opacity-30" />
 
@@ -51,7 +51,7 @@ export default function NitroBeerLinktree() {
         <div className="text-center mb-8 sm:mb-12">
           <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto mb-6 sm:mb-8 relative">
             <Image
-              src="/nitrobeer-logo.png"
+              src="/MANUAL NITROBEER ID VISUAL.svg"
               alt="NitroBeer Logo"
               fill
               className="object-contain drop-shadow-2xl"
@@ -65,7 +65,6 @@ export default function NitroBeerLinktree() {
             {"✨ Chopp premium, vibes únicas, para quem não aceita a mesmice! 🍻"}
           </p>
         </div>
-        {/* Quick Sales Panel (removed from public view) */}
 
         {/* Social Links */}
         <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
@@ -93,7 +92,6 @@ export default function NitroBeerLinktree() {
 
         {/* Location Section */}
         <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8">
-
           <Button
             asChild
             variant="outline"
@@ -126,7 +124,6 @@ export default function NitroBeerLinktree() {
               >
                 <LinkIcon className="w-4 h-4 inline-block mr-1" />
                 Abrir
-
               </a>
               <button
                 type="button"
