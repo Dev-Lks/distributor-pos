@@ -160,7 +160,10 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
   return useQuery({
     queryKey: ['sales-metrics', period, pointOfSale],
     queryFn: async () => {
-      const sales = await sheetsBackup.getAllSales(pointOfSale)
+      // Fetch sales from database API
+      const response = await fetch('/api/sales')
+      if (!response.ok) throw new Error('Failed to fetch sales')
+      const sales = await response.json()
 
       // Calculate date range based on period
       const now = new Date()
@@ -244,13 +247,13 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
         sale.items.forEach((item: any) => {
           if (!productCount[item.productId]) {
             productCount[item.productId] = {
-              name: item.productName || 'Unknown',
+              name: item.product?.name || 'Unknown',
               count: 0,
               revenue: 0
             }
           }
           productCount[item.productId].count += item.quantity
-          productCount[item.productId].revenue += (item.price || 0) * item.quantity
+          productCount[item.productId].revenue += item.price * item.quantity
         })
       })
 

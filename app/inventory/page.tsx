@@ -177,8 +177,8 @@ export default function InventoryPage() {
     if (quantity > 0 && addProductId) {
       // Buscar estoque atual
       const product = products.find((p: Product) => p.id === addProductId)
-      if (product?.inventory) {
-        const currentQuantity = product.inventory[`${addLocation}Quantity` as keyof Product['inventory']] as number || 0
+      if (product) {
+        const currentQuantity = product.inventory?.[`${addLocation}Quantity` as keyof Product['inventory']] as number || 0
         const newQuantity = currentQuantity + quantity
 
         await fetch("/api/inventory", {
