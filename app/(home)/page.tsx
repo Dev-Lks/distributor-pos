@@ -1,12 +1,14 @@
 'use client'
 
-import { Instagram, Facebook, Phone, MapPin, ExternalLink } from "lucide-react"
+import { Instagram, Facebook, Phone, MapPin, ExternalLink, BarChart3, Package, TrendingUp, Users } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import QRCode from "react-qr-code"
 import { ExternalLink as LinkIcon, Maximize2, Minimize2 } from 'lucide-react'
+import Link from "next/link"
+import { useProducts, type Product } from "@/lib/useProducts"
 
 export default function NitroBeerLinktree() {
   const [currentUrl, setCurrentUrl] = useState('')
@@ -14,9 +16,21 @@ export default function NitroBeerLinktree() {
   const [fullscreen, setFullscreen] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
 
+  // Buscar dados do inventário
+  const { data: products = [], isLoading: loadingProducts } = useProducts()
+
   useEffect(() => {
     setCurrentUrl(window.location.href)
   }, [])
+
+  // Calcular métricas rápidas
+  const totalProducts = products.length
+  const totalStock = products.reduce((sum: number, p: Product) => sum + (p.inventory?.totalQuantity ?? 0), 0)
+  const lowStockAlerts = products.filter((p: Product) => 
+    (p.inventory?.coldRoomAlert || p.inventory?.houseAlert || p.inventory?.salePointAlert)
+  ).length
+  const totalValue = products.reduce((sum: number, p: Product) => sum + ((p.inventory?.totalQuantity ?? 0) * p.salePrice), 0)
+  const totalBonifications = products.reduce((sum: number, p: Product) => sum + p.bonifications, 0)
 
   const socialLinks = [
     {
@@ -71,6 +85,104 @@ export default function NitroBeerLinktree() {
             {"✨ Chopp premium, vibes únicas, para quem não aceita a mesmice! 🍻"}
           </p>
         </div>
+
+        {/* Sistema de Gestão Section */}
+        <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8 hover-lift animate-fade-in animation-delay-600">
+          <div className="flex items-center gap-3 mb-4">
+            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+            <h2 className="text-lg sm:text-xl font-semibold">Sistema de Gestão</h2>
+          </div>
+
+          {/* Métricas Rápidas */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4">
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <Package className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-blue-500" />
+              <div className="text-lg sm:text-xl font-bold">{loadingProducts ? '...' : totalProducts}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Produtos</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-green-500" />
+              <div className="text-lg sm:text-xl font-bold">{loadingProducts ? '...' : totalStock}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Em Estoque</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <Users className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-orange-500" />
+              <div className="text-lg sm:text-xl font-bold">{loadingProducts ? '...' : lowStockAlerts}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Alertas</div>
+            </div>
+            <div className="text-center p-3 bg-muted/50 rounded-lg">
+              <BarChart3 className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-purple-500" />
+              <div className="text-lg sm:text-xl font-bold">{loadingProducts ? '...' : totalBonifications}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Bonificações</div>
+            </div>
+          </div>
+
+          {/* Botões de Acesso Rápido */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
+            <Button asChild variant="outline" className="h-10 sm:h-12 hover:bg-primary/10">
+              <Link href="/inventory" className="flex items-center justify-center gap-2">
+                <Package className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm">Inventário</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-10 sm:h-12 hover:bg-primary/10">
+              <Link href="/sales" className="flex items-center justify-center gap-2">
+                <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm">Vendas</span>
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-10 sm:h-12 hover:bg-primary/10">
+              <Link href="/dashboard" className="flex items-center justify-center gap-2">
+                <BarChart3 className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm">Dashboard</span>
+              </Link>
+            </Button>
+          </div>
+
+          {/* Botão Principal */}
+          <Button asChild className="w-full h-12 sm:h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold">
+            <Link href="/dashboard" className="flex items-center justify-center gap-2">
+              <BarChart3 className="w-4 h-4 sm:w-5 sm:h-5" />
+              Acessar Sistema Completo
+            </Link>
+          </Button>
+        </Card>
+
+        {/* Produtos em Destaque */}
+        {!loadingProducts && products.length > 0 && (
+          <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8 hover-lift animate-fade-in animation-delay-800">
+            <div className="flex items-center gap-3 mb-4">
+              <Package className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
+              <h2 className="text-lg sm:text-xl font-semibold">Produtos em Destaque</h2>
+            </div>
+
+            <div className="space-y-3">
+              {products
+                .filter((p: Product) => p.isActive && (p.inventory?.totalQuantity ?? 0) > 0)
+                .sort((a: Product, b: Product) => (b.inventory?.totalQuantity ?? 0) - (a.inventory?.totalQuantity ?? 0))
+                .slice(0, 3)
+                .map((product: Product, index: number) => (
+                  <div key={product.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{product.name}</div>
+                      <div className="text-sm text-muted-foreground">{product.size}</div>
+                    </div>
+                    <div className="text-right ml-4">
+                      <div className="font-bold text-green-600">{product.inventory?.totalQuantity ?? 0}</div>
+                      <div className="text-xs text-muted-foreground">em estoque</div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            <Button asChild variant="ghost" className="w-full mt-4 hover:bg-primary/10">
+              <Link href="/inventory" className="flex items-center justify-center gap-2">
+                Ver Todos os Produtos
+                <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
+              </Link>
+            </Button>
+          </Card>
+        )}
 
         {/* Social Links */}
         <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
