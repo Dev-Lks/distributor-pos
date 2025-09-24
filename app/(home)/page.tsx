@@ -12,6 +12,7 @@ export default function NitroBeerLinktree() {
   const [currentUrl, setCurrentUrl] = useState('')
   const [mapLoaded, setMapLoaded] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
 
   useEffect(() => {
     setCurrentUrl(window.location.href)
@@ -49,41 +50,47 @@ export default function NitroBeerLinktree() {
       <div className="relative z-10 container max-w-sm sm:max-w-md lg:max-w-lg mx-auto px-4 sm:px-6 py-8 sm:py-12">
         {/* Profile Section */}
         <div className="text-center mb-8 sm:mb-12">
-          <div className="w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto mb-6 sm:mb-8 relative">
+          <div className={`w-32 h-32 sm:w-40 sm:h-40 lg:w-48 lg:h-48 mx-auto mb-6 sm:mb-8 relative transition-all duration-500 ${imageLoaded ? 'scale-100 opacity-100' : 'scale-95 opacity-0'}`}>
             <Image
               src="/MANUAL NITROBEER ID VISUAL.svg"
               alt="NitroBeer Logo"
               fill
-              className="object-contain drop-shadow-2xl"
+              className="object-contain drop-shadow-2xl animate-pulse"
               priority
+              onLoad={() => setImageLoaded(true)}
             />
           </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 text-balance">NitroBeer</h1>
-          <p className="text-base sm:text-lg text-muted-foreground mb-3 sm:mb-4">Cerveja Artesanal Premium</p>
-          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed px-2">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground mb-2 text-balance animate-fade-in">
+            NitroBeer
+          </h1>
+          <p className="text-base sm:text-lg text-muted-foreground mb-3 sm:mb-4 animate-fade-in animation-delay-200">
+            Cerveja Artesanal Premium
+          </p>
+          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed px-2 animate-fade-in animation-delay-400">
             {"✨ Chopp premium, vibes únicas, para quem não aceita a mesmice! 🍻"}
           </p>
         </div>
 
         {/* Social Links */}
         <div className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
-          {socialLinks.map((link) => {
+          {socialLinks.map((link, index) => {
             const IconComponent = link.icon
             return (
               <Button
                 key={link.name}
                 asChild
                 variant="outline"
-                className={`w-full h-12 sm:h-14 justify-start gap-3 sm:gap-4 bg-card/50 backdrop-blur-sm border-border/50 transition-all duration-300 ${link.color} text-sm sm:text-base`}
+                className={`w-full h-12 sm:h-14 justify-start gap-3 sm:gap-4 bg-card/50 backdrop-blur-sm border-border/50 transition-all duration-300 hover-lift ${link.color} text-sm sm:text-base animate-fade-in`}
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <a href={link.url} target="_blank" rel="noopener noreferrer">
-                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-110" />
                   <div className="flex flex-col items-start min-w-0 flex-1">
                     <span className="font-medium truncate w-full">{link.name}</span>
                     <span className="text-xs sm:text-sm text-muted-foreground truncate w-full">{link.handle}</span>
                   </div>
-                  <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 opacity-50 flex-shrink-0" />
+                  <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4 opacity-50 flex-shrink-0 transition-transform duration-200 hover:translate-x-1" />
                 </a>
               </Button>
             )
@@ -91,7 +98,7 @@ export default function NitroBeerLinktree() {
         </div>
 
         {/* Location Section */}
-        <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8">
+        <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8 hover-lift animate-fade-in animation-delay-200">
           <Button
             asChild
             variant="outline"
@@ -155,7 +162,7 @@ export default function NitroBeerLinktree() {
         </Card>
 
         {/* Share Section */}
-        <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8">
+        <Card className="p-4 sm:p-6 bg-card/50 backdrop-blur-sm border-border/50 mb-6 sm:mb-8 hover-lift animate-fade-in animation-delay-400">
           <div className="flex items-center gap-3 mb-3 sm:mb-4">
             <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
             <h2 className="text-base sm:text-lg font-semibold">Compartilhar</h2>

@@ -13,6 +13,8 @@ import { useSalesMetrics } from "@/lib/useSales"
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
 import { exportSalesToXLSX, exportSalesToCSV } from "@/lib/salesDB"
 import { SidebarLayout } from "@/components/SidebarLayout"
+import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
+import { BackupManager } from "@/components/BackupManager"
 
 function OverviewDashboard() {
   const { data: metrics, isLoading: metricsLoading } = useSalesMetrics()
@@ -40,6 +42,9 @@ function OverviewDashboard() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Backup Manager */}
+      <BackupManager />
 
       {/* Métricas Principais */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -319,6 +324,7 @@ export default function DashboardPage() {
   return (
     <SidebarLayout>
       <OverviewDashboard />
+      <PWAInstallPrompt />
     </SidebarLayout>
   )
 }

@@ -2,6 +2,7 @@ import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { addSale, getAllSales } from './salesDB'
 import { useProducts } from './useProducts'
 import type { Product } from './useProducts'
+import { sheetsBackup, type SaleData } from './googleSheets'
 
 export interface SaleItem {
   productId: string
@@ -10,11 +11,17 @@ export interface SaleItem {
   price?: number
 }
 
+export interface CreateSaleParams {
+  items: SaleItem[]
+  paymentMethod?: 'cash' | 'card' | 'pix' | 'other'
+  customerName?: string
+}
+
 export function useSales() {
   const queryClient = useQueryClient()
   const { data: products = [] } = useProducts()
 
-  const createSale = async (items: SaleItem[]) => {
+  const createSale = async ({ items, paymentMethod, customerName }: CreateSaleParams) => {
     // Enrich items with product data
     const enrichedItems = items.map(item => {
       const product = products.find((p: Product) => p.id === item.productId)
@@ -37,21 +44,86 @@ export function useSales() {
       }
     }
 
-    // Save to IndexedDB
-    const id = await addSale({
+    // Create sale data
+    const saleData: SaleData = {
+      id: `sale_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       date: new Date(),
       total,
+      paymentMethod,
+      customerName,
       items: enrichedItems
-    })
+    }
+
+    // Save to IndexedDB first (local)
+    const localId = await addSale(saleData)
+
+    // Try to backup to Google Sheets (async, don't block)
+    try {
+      const backupSuccess = await sheetsBackup.saveSale(saleData)
+      if (backupSuccess) {
+        console.log('✅ Venda backupada no Google Sheets')
+      } else {
+        console.warn('⚠️ Falha no backup do Google Sheets (dados seguros localmente)')
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro no backup do Google Sheets:', error)
+    }
 
     // Invalidate caches
     queryClient.invalidateQueries({ queryKey: ['products'] })
     queryClient.invalidateQueries({ queryKey: ['sales-metrics'] })
 
-    return { id, total, items: enrichedItems }
+    return { ...saleData, localId }
   }
 
-  return { createSale }
+  const backupAllSales = async () => {
+    try {
+      const localSales = await getAllSales()
+      let successCount = 0
+      let errorCount = 0
+
+      for (const sale of localSales) {
+        try {
+          const saleData: SaleData = {
+            id: String(sale.id) || `backup_${Date.now()}`,
+            date: new Date(sale.date),
+            total: sale.total,
+            paymentMethod: 'Não informado',
+            customerName: 'Backup local',
+            items: (sale.items || []).map(item => ({
+              productId: item.productId,
+              productName: item.productName || 'Produto',
+              quantity: item.quantity,
+              price: item.price || 0
+            }))
+          }
+
+          const success = await sheetsBackup.saveSale(saleData)
+          if (success) successCount++
+          else errorCount++
+        } catch (error) {
+          errorCount++
+          console.error('Erro ao backupar venda:', sale.id, error)
+        }
+      }
+
+      return { successCount, errorCount, total: localSales.length }
+    } catch (error) {
+      console.error('Erro no backup geral:', error)
+      throw error
+    }
+  }
+
+  const getSheetsSummary = async () => {
+    try {
+      return await sheetsBackup.getSalesSummary()
+    } catch (error) {
+      console.error('Erro ao buscar resumo do Sheets:', error)
+      return { totalSales: 0, totalRevenue: 0, todaySales: 0, todayRevenue: 0 }
+    }
+  }
+
+  return { createSale, backupAllSales, getSheetsSummary }
 }
 
 export function useSalesMetrics() {

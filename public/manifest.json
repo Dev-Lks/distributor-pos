@@ -1,0 +1,36 @@
+{
+  "name": "NitroBeer POS",
+  "short_name": "NitroBeer",
+  "description": "Sistema de Ponto de Venda para NitroBeer",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a2e",
+  "theme_color": "#fbbf24",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/MANUAL NITROBEER ID VISUAL.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Nova Venda",
+      "short_name": "Vender",
+      "description": "Iniciar nova venda",
+      "url": "/sales",
+      "icons": [{ "src": "/icon-venda.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "Ver métricas",
+      "url": "/dashboard",
+      "icons": [{ "src": "/icon-dashboard.svg", "sizes": "96x96" }]
+    }
+  ]
+}

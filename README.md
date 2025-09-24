@@ -84,7 +84,26 @@ Sistema completo de ponto de venda para bares e restaurantes, desenvolvido com N
 - **Relatórios Avançados**: Gráficos e filtros por período
 - **Notificações**: Alertas de estoque baixo
 
-## Deploy
+## Configuração do Google Sheets (Backup Opcional)
+
+Para backup automático das vendas no Google Sheets:
+
+1. **Siga o guia completo**: [GOOGLE_SHEETS_OAUTH_SETUP.md](./GOOGLE_SHEETS_OAUTH_SETUP.md)
+
+2. **Resumo rápido**:
+   - Crie uma Service Account no Google Cloud Console
+   - Ative a Google Sheets API
+   - Baixe o arquivo JSON de credenciais
+   - Renomeie para `service-account.json` na raiz do projeto
+   - Compartilhe sua planilha com o email da Service Account
+
+3. **Variáveis de ambiente** (opcional para produção):
+   ```
+   GOOGLE_SERVICE_ACCOUNT_EMAIL=your-service-account@your-project.iam.gserviceaccount.com
+   GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\nYOUR_PRIVATE_KEY\n-----END PRIVATE KEY-----"
+   ```
+
+## Deploy no Vercel
 
 Para produção, configure as variáveis de ambiente no Vercel:
 

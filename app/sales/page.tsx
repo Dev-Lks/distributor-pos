@@ -83,7 +83,7 @@ export default function SalesPage() {
     setSaleLoading(true)
     try {
       const items = cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
-      await createSale(items)
+      await createSale({ items })
       setCart([])
       // Success sound
       const audio = new Audio('/alert.mp3')
