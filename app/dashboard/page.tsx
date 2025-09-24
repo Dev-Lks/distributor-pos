@@ -20,9 +20,10 @@ import { BackupManager } from "@/components/BackupManager"
 import { CalendarDays, TrendingUp, TrendingDown, DollarSign, Package, AlertTriangle, ShoppingCart, Users, BarChart3, PieChart as PieChartIcon, Activity } from "lucide-react"
 
 function OverviewDashboard() {
-  const { data: metrics, isLoading: metricsLoading } = useSalesMetrics()
+  const [selectedPeriod, setSelectedPeriod] = useState<"today" | "week" | "month" | "year">("today")
+  const [activeTab, setActiveTab] = useState("sales")
+  const { data: metrics, isLoading: metricsLoading } = useSalesMetrics(selectedPeriod)
   const { data: products = [], isLoading: productsLoading } = useProducts()
-  const [selectedPeriod, setSelectedPeriod] = useState("today")
 
   if (metricsLoading || productsLoading || !metrics) return <div>Loading...</div>
 
@@ -52,7 +53,7 @@ function OverviewDashboard() {
           <p className="text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex gap-2">
-          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+          <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as "today" | "week" | "month" | "year")}>
             <SelectTrigger className="w-40">
               <SelectValue />
             </SelectTrigger>
@@ -264,7 +265,7 @@ function OverviewDashboard() {
       )}
 
       {/* Gráficos com Tabs */}
-      <Tabs defaultValue="sales" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="sales" className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
@@ -281,230 +282,236 @@ function OverviewDashboard() {
         </TabsList>
 
         <TabsContent value="sales" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Vendas por Hora */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Vendas por Hora (Últimas 24h)
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={metrics.hourlyData}>
-                    <defs>
-                      <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
-                        <stop offset="95%" stopColor="#8884d8" stopOpacity={0.1}/>
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="hour"
-                      tickFormatter={(hour) => `${hour}h`}
-                    />
-                    <YAxis />
-                    <Tooltip
-                      labelFormatter={(hour) => `Hora: ${hour}h`}
-                      formatter={(value: any, name) => [
-                        name === 'sales' ? `${value} vendas` : `R$ ${Number(value).toFixed(2)}`,
-                        name === 'sales' ? 'Vendas' : 'Receita'
-                      ]}
-                    />
-                    <Area
-                      type="monotone"
-                      dataKey="sales"
-                      stroke="#8884d8"
-                      fillOpacity={1}
-                      fill="url(#colorSales)"
-                      name="sales"
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          {activeTab === 'sales' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Vendas por Hora */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Vendas por Hora ({selectedPeriod === 'today' ? 'Últimas 24h' : `Últimos ${selectedPeriod === 'week' ? '7 dias' : selectedPeriod === 'month' ? '30 dias' : '365 dias'}`})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={metrics.hourlyData}>
+                      <defs>
+                        <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#8884d8" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#8884d8" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="hour"
+                        tickFormatter={(hour) => selectedPeriod === 'today' ? `${hour}h` : `${hour}`}
+                      />
+                      <YAxis />
+                      <Tooltip
+                        labelFormatter={(hour) => selectedPeriod === 'today' ? `Hora: ${hour}h` : `Dia: ${hour}`}
+                        formatter={(value: any, name) => [
+                          name === 'sales' ? `${value} vendas` : `R$ ${Number(value).toFixed(2)}`,
+                          name === 'sales' ? 'Vendas' : 'Receita'
+                        ]}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="sales"
+                        stroke="#8884d8"
+                        fillOpacity={1}
+                        fill="url(#colorSales)"
+                        name="sales"
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
 
-            {/* Top Produtos */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  Top Produtos Mais Vendidos
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={metrics.topProducts}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="name"
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                      interval={0}
-                    />
-                    <YAxis />
-                    <Tooltip
-                      formatter={(value: any, name) => [
-                        name === 'count' ? `${value} unidades` : `R$ ${Number(value).toFixed(2)}`,
-                        name === 'count' ? 'Quantidade' : 'Receita'
-                      ]}
-                    />
-                    <Bar dataKey="count" fill="#8884d8" name="count" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          </div>
+              {/* Top Produtos */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5" />
+                    Top Produtos Mais Vendidos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={metrics.topProducts}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="name"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        interval={0}
+                      />
+                      <YAxis />
+                      <Tooltip
+                        formatter={(value: any, name) => [
+                          name === 'count' ? `${value} unidades` : `R$ ${Number(value).toFixed(2)}`,
+                          name === 'count' ? 'Quantidade' : 'Receita'
+                        ]}
+                      />
+                      <Bar dataKey="count" fill="#8884d8" name="count" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="products" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Distribuição de Estoque */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <PieChartIcon className="w-5 h-5" />
-                  Distribuição de Estoque
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Estoque Normal', value: totalProducts - lowStockCount - outOfStockCount, fill: '#10b981' },
-                        { name: 'Estoque Baixo', value: lowStockCount, fill: '#f59e0b' },
-                        { name: 'Esgotado', value: outOfStockCount, fill: '#ef4444' }
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      <Cell fill="#10b981" />
-                      <Cell fill="#f59e0b" />
-                      <Cell fill="#ef4444" />
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          {activeTab === 'products' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Distribuição de Estoque */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <PieChartIcon className="w-5 h-5" />
+                    Distribuição de Estoque
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Estoque Normal', value: totalProducts - lowStockCount - outOfStockCount, fill: '#10b981' },
+                          { name: 'Estoque Baixo', value: lowStockCount, fill: '#f59e0b' },
+                          { name: 'Esgotado', value: outOfStockCount, fill: '#ef4444' }
+                        ]}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="value"
+                      >
+                        <Cell fill="#10b981" />
+                        <Cell fill="#f59e0b" />
+                        <Cell fill="#ef4444" />
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
 
-            {/* Valor por Categoria */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="w-5 h-5" />
-                  Valor em Estoque por Categoria
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {Array.from(new Set(products.map((p: Product) => p.category).filter(Boolean) as string[])).map((category: string) => {
-                    const categoryProducts = products.filter((p: Product) => p.category === category)
-                    const categoryValue = categoryProducts.reduce((sum: number, p: Product) => sum + (p.inventory?.totalQuantity ?? 0) * p.salePrice, 0)
-                    return (
-                      <div key={category} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <span className="font-medium">{category}</span>
-                        <span className="font-bold text-green-600">R$ {(categoryValue / 1000).toFixed(1)}k</span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+              {/* Valor por Categoria */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    Valor em Estoque por Categoria
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {Array.from(new Set(products.map((p: Product) => p.category).filter(Boolean) as string[])).map((category: string) => {
+                      const categoryProducts = products.filter((p: Product) => p.category === category)
+                      const categoryValue = categoryProducts.reduce((sum: number, p: Product) => sum + (p.inventory?.totalQuantity ?? 0) * p.salePrice, 0)
+                      return (
+                        <div key={category} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                          <span className="font-medium">{category}</span>
+                          <span className="font-bold text-green-600">R$ {(categoryValue / 1000).toFixed(1)}k</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="performance" className="space-y-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Receita por Hora */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5" />
-                  Receita por Hora
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={metrics.hourlyData}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="hour"
-                      tickFormatter={(hour) => `${hour}h`}
-                    />
-                    <YAxis />
-                    <Tooltip
-                      labelFormatter={(hour) => `Hora: ${hour}h`}
-                      formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Receita']}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="revenue"
-                      stroke="#10b981"
-                      strokeWidth={3}
-                      dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
-                      activeDot={{ r: 6 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          {activeTab === 'performance' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Receita por Hora */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5" />
+                    Receita por Hora
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={metrics.hourlyData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis
+                        dataKey="hour"
+                        tickFormatter={(hour) => selectedPeriod === 'today' ? `${hour}h` : `${hour}`}
+                      />
+                      <YAxis />
+                      <Tooltip
+                        labelFormatter={(hour) => selectedPeriod === 'today' ? `Hora: ${hour}h` : `Dia: ${hour}`}
+                        formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Receita']}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="revenue"
+                        stroke="#10b981"
+                        strokeWidth={3}
+                        dot={{ fill: '#10b981', strokeWidth: 2, r: 4 }}
+                        activeDot={{ r: 6 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
 
-            {/* Métricas de Performance */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  Indicadores de Performance
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
-                    <div>
-                      <p className="font-medium text-green-800 dark:text-green-200">Crescimento de Vendas</p>
-                      <p className="text-sm text-green-600 dark:text-green-400">Comparado ao período anterior</p>
+              {/* Métricas de Performance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Indicadores de Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                      <div>
+                        <p className="font-medium text-green-800 dark:text-green-200">Crescimento de Vendas</p>
+                        <p className="text-sm text-green-600 dark:text-green-400">Comparado ao período anterior</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-green-600">+{salesGrowth}%</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-green-600">+{salesGrowth}%</p>
+
+                    <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                      <div>
+                        <p className="font-medium text-blue-800 dark:text-blue-200">Ticket Médio</p>
+                        <p className="text-sm text-blue-600 dark:text-blue-400">Valor médio por venda</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-blue-600">
+                          R$ {metrics.salesCount > 0 ? (metrics.totalToday / metrics.salesCount).toFixed(2) : '0.00'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
+                      <div>
+                        <p className="font-medium text-purple-800 dark:text-purple-200">Produtos Ativos</p>
+                        <p className="text-sm text-purple-600 dark:text-purple-400">Com estoque disponível</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-bold text-purple-600">
+                          {products.filter((p: Product) => (p.inventory?.totalQuantity ?? 0) > 0).length}
+                        </p>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
-                    <div>
-                      <p className="font-medium text-blue-800 dark:text-blue-200">Ticket Médio</p>
-                      <p className="text-sm text-blue-600 dark:text-blue-400">Valor médio por venda</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-blue-600">
-                        R$ {metrics.salesCount > 0 ? (metrics.totalToday / metrics.salesCount).toFixed(2) : '0.00'}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-purple-50 dark:bg-purple-950/20 rounded-lg">
-                    <div>
-                      <p className="font-medium text-purple-800 dark:text-purple-200">Produtos Ativos</p>
-                      <p className="text-sm text-purple-600 dark:text-purple-400">Com estoque disponível</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-purple-600">
-                        {products.filter((p: Product) => (p.inventory?.totalQuantity ?? 0) > 0).length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
 
