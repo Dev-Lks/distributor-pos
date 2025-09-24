@@ -40,6 +40,6 @@ export function useProducts() {
   return useQuery({
     queryKey: ['products'],
     queryFn: () => fetch('/api/products').then(res => res.json()),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 0, // Always refetch for instant updates
   })
 }

@@ -14,10 +14,7 @@ export async function GET() {
       coldRoomAlert: item.coldRoomQuantity <= item.coldRoomMinStock,
       houseAlert: item.houseQuantity <= item.houseMinStock,
       salePointAlert: item.salePointQuantity <= item.salePointMinStock,
-      point1Alert: item.point1Quantity <= item.point1MinStock,
-      point2Alert: item.point2Quantity <= item.point2MinStock,
-      point3Alert: item.point3Quantity <= item.point3MinStock,
-      totalQuantity: item.coldRoomQuantity + item.houseQuantity + item.salePointQuantity + item.point1Quantity + item.point2Quantity + item.point3Quantity,
+      totalQuantity: item.coldRoomQuantity + item.houseQuantity + item.salePointQuantity,
     }))
     return NextResponse.json(inventoryWithAlerts)
   } catch (error) {
@@ -30,7 +27,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { productId, location, quantity } = body
 
-    if (!location || !['coldRoom', 'house', 'salePoint', 'point1', 'point2', 'point3'].includes(location)) {
+    if (!location || !['coldRoom', 'house', 'salePoint'].includes(location)) {
       return NextResponse.json({ error: 'Invalid location' }, { status: 400 })
     }
 
@@ -38,9 +35,6 @@ export async function POST(request: NextRequest) {
       coldRoom: 'coldRoomQuantity',
       house: 'houseQuantity',
       salePoint: 'salePointQuantity',
-      point1: 'point1Quantity',
-      point2: 'point2Quantity',
-      point3: 'point3Quantity',
     }
 
     const field = fieldMap[location as keyof typeof fieldMap]
