@@ -40,6 +40,7 @@ export async function POST(request: NextRequest) {
       formattedTotal,
       formattedItems,
       sale.paymentMethod || 'Não informado',
+      sale.customerName || '',
       pointOfSale, // Adicionar coluna para ponto de venda
     ];
 

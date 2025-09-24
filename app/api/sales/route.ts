@@ -25,13 +25,18 @@ export async function POST(request: NextRequest) {
   console.time('Sale Creation')
   try {
     const body = await request.json()
-    const { items } = body // items: [{ productId, quantity }]
+    const { items, paymentMethod, customerName, pointOfSaleId } = body // items: [{ productId, quantity }]
 
     // Fetch all products and inventory in one query
     const productIds = items.map((item: any) => item.productId)
     const products = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      include: { inventory: true },
+      include: { 
+        inventory: true,
+        productPointsOfSale: {
+          include: { pointOfSale: true }
+        }
+      },
     })
 
     // Create a map for quick lookup
@@ -39,11 +44,21 @@ export async function POST(request: NextRequest) {
 
     // Validate all products exist and have sufficient stock
     for (const item of items) {
-      const product = productMap.get(item.productId)
+      const product = productMap.get(item.productId) as any
       if (!product) {
         return NextResponse.json({ error: `Product ${item.productId} not found` }, { status: 400 })
       }
-      const availableStock = product.inventory?.salePointQuantity ?? 0
+      let availableStock = 0
+      if (pointOfSaleId && product.productPointsOfSale && product.productPointsOfSale.length > 0) {
+        const pps = product.productPointsOfSale.find((p: any) => p.pointOfSaleId === pointOfSaleId)
+        if (pps) {
+          availableStock = pps.quantity
+        } else {
+          availableStock = product.inventory?.salePointQuantity ?? 0
+        }
+      } else {
+        availableStock = product.inventory?.salePointQuantity ?? 0
+      }
       if (availableStock < item.quantity) {
         return NextResponse.json({ error: `Insufficient stock for ${product.name}. Available: ${availableStock}, Requested: ${item.quantity}` }, { status: 400 })
       }
@@ -68,10 +83,12 @@ export async function POST(request: NextRequest) {
       const newSale = await tx.sale.create({
         data: {
           total,
+          paymentMethod,
+          customerName,
           items: {
             create: saleItems,
           },
-        },
+        } as any,
         include: {
           items: {
             include: {
@@ -83,22 +100,45 @@ export async function POST(request: NextRequest) {
 
       // Update inventory for each item
       for (const item of items) {
-        const inventory = await tx.inventory.findUnique({
-          where: { productId: item.productId },
-        })
-        if (inventory) {
-          await tx.inventory.update({
-            where: { productId: item.productId },
-            data: { salePointQuantity: inventory.salePointQuantity - item.quantity },
+        if (pointOfSaleId) {
+          // Update ProductPointOfSale
+          const pps = await (tx as any).productPointOfSale.findUnique({
+            where: { productId_pointOfSaleId: { productId: item.productId, pointOfSaleId } }
           })
+          if (pps) {
+            await (tx as any).productPointOfSale.update({
+              where: { productId_pointOfSaleId: { productId: item.productId, pointOfSaleId } },
+              data: { quantity: pps.quantity - item.quantity },
+            })
+          } else {
+            // Create if doesn't exist
+            await (tx as any).productPointOfSale.create({
+              data: {
+                productId: item.productId,
+                pointOfSaleId,
+                quantity: -item.quantity,
+              },
+            })
+          }
         } else {
-          // Create inventory with negative quantity if doesn't exist
-          await tx.inventory.create({
-            data: {
-              productId: item.productId,
-              salePointQuantity: -item.quantity,
-            },
+          // Update general inventory
+          const inventory = await tx.inventory.findUnique({
+            where: { productId: item.productId },
           })
+          if (inventory) {
+            await tx.inventory.update({
+              where: { productId: item.productId },
+              data: { salePointQuantity: inventory.salePointQuantity - item.quantity },
+            })
+          } else {
+            // Create inventory with negative quantity if doesn't exist
+            await tx.inventory.create({
+              data: {
+                productId: item.productId,
+                salePointQuantity: -item.quantity,
+              },
+            })
+          }
         }
       }
 

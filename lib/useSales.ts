@@ -1,5 +1,4 @@
 import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { addSale, getAllSales } from './salesDB'
 import { useProducts } from './useProducts'
 import type { Product } from './useProducts'
 import { sheetsBackup, type SaleData } from './googleSheets'
@@ -67,8 +66,24 @@ export function useSales(pointOfSale?: string) {
       items: enrichedItems
     }
 
-    // Save to IndexedDB first (local)
-    const localId = await addSale(saleData)
+    // Save to database
+    const response = await fetch('/api/sales', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: enrichedItems.map(i => ({ productId: i.productId, quantity: i.quantity })),
+        paymentMethod,
+        customerName,
+        pointOfSaleId: pointOfSale
+      })
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Failed to save sale: ${error}`)
+    }
+
+    const newSale = await response.json()
 
     // Try to backup to Google Sheets (async, don't block)
     try {
@@ -76,7 +91,7 @@ export function useSales(pointOfSale?: string) {
       if (backupSuccess) {
         console.log('✅ Venda backupada no Google Sheets')
       } else {
-        console.warn('⚠️ Falha no backup do Google Sheets (dados seguros localmente)')
+        console.warn('⚠️ Falha no backup do Google Sheets (dados seguros no banco)')
       }
     } catch (error) {
       console.warn('⚠️ Erro no backup do Google Sheets:', error)
@@ -86,32 +101,34 @@ export function useSales(pointOfSale?: string) {
     queryClient.invalidateQueries({ queryKey: ['products'] })
     queryClient.invalidateQueries({ queryKey: ['sales-metrics'] })
 
-    return { ...saleData, localId }
+    return newSale
   }
 
   const backupAllSales = async () => {
     try {
-      const localSales = await getAllSales()
+      const response = await fetch('/api/sales')
+      if (!response.ok) throw new Error('Failed to fetch sales')
+      const dbSales = await response.json()
       let successCount = 0
       let errorCount = 0
 
-      for (const sale of localSales) {
+      for (const sale of dbSales) {
         try {
           const saleData: SaleData = {
-            id: String(sale.id) || `backup_${Date.now()}`,
+            id: sale.id,
             date: new Date(sale.date),
             total: sale.total,
-            paymentMethod: 'Não informado',
-            customerName: 'Backup local',
-            items: (sale.items || []).map(item => ({
+            paymentMethod: sale.paymentMethod || 'Não informado',
+            customerName: sale.customerName,
+            items: sale.items.map((item: any) => ({
               productId: item.productId,
-              productName: item.productName || 'Produto',
+              productName: item.product?.name || 'Produto',
               quantity: item.quantity,
-              price: item.price || 0
+              price: item.price
             }))
           }
 
-          const success = await sheetsBackup.saveSale(saleData)
+          const success = await sheetsBackup.saveSale(saleData, pointOfSale || 'default')
           if (success) successCount++
           else errorCount++
         } catch (error) {
@@ -120,7 +137,7 @@ export function useSales(pointOfSale?: string) {
         }
       }
 
-      return { successCount, errorCount, total: localSales.length }
+      return { successCount, errorCount, total: dbSales.length }
     } catch (error) {
       console.error('Erro no backup geral:', error)
       throw error

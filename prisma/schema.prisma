@@ -68,6 +68,8 @@ model Sale {
   date      DateTime @default(now())
   total     Float
   status    String @default("completed") // 'pending', 'completed', 'cancelled'
+  paymentMethod String?
+  customerName String?
   items     SaleItem[]
 }
 
