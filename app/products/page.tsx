@@ -13,7 +13,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useProducts, type Product } from "@/lib/useProducts"
 import { SidebarLayout } from "@/components/SidebarLayout"
 import { Plus, Edit, Trash2, Search, Package } from "lucide-react"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 export default function ProductsPage() {
   const { data: products = [], isLoading, refetch } = useProducts()
@@ -22,7 +21,9 @@ export default function ProductsPage() {
   const [selectedSize, setSelectedSize] = useState("all")
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null)
 
   // Form states
   const [formData, setFormData] = useState({
@@ -396,31 +397,16 @@ export default function ProductsPage() {
                             <Edit className="w-4 h-4" />
                           </Button>
 
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <Trash2 className="w-4 h-4 text-red-500" />
-                              </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                  Tem certeza que deseja excluir o produto "{product.name} {product.size}"?
-                                  Esta ação não pode ser desfeita.
-                                </AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction
-                                  onClick={() => handleDeleteProduct(product.id)}
-                                  className="bg-red-500 hover:bg-red-600"
-                                >
-                                  Excluir
-                                </AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setProductToDelete(product)
+                              setIsDeleteDialogOpen(true)
+                            }}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500" />
+                          </Button>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -444,6 +430,36 @@ export default function ProductsPage() {
               </Button>
               <Button onClick={handleEditProduct}>
                 Salvar Alterações
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Dialog de Exclusão */}
+        <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirmar exclusão</DialogTitle>
+            </DialogHeader>
+            <p>
+              Tem certeza que deseja excluir o produto "{productToDelete?.name} {productToDelete?.size}"?
+              Esta ação não pode ser desfeita.
+            </p>
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  if (productToDelete) {
+                    handleDeleteProduct(productToDelete.id)
+                    setIsDeleteDialogOpen(false)
+                    setProductToDelete(null)
+                  }
+                }}
+                className="bg-red-500 hover:bg-red-600"
+              >
+                Excluir
               </Button>
             </div>
           </DialogContent>
