@@ -8,7 +8,7 @@ import { useProducts, type Product } from "@/lib/useProducts"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { toast } from "sonner"
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -74,6 +75,9 @@ const stockStatusStyles = {
   warning: "bg-amber-100 text-amber-700",
   danger: "bg-red-100 text-red-700"
 }
+
+const COLD_ROOM_LOCATION: Location = "coldRoom"
+const QUICK_ADD_PRESETS = [6, 12, 24] as const
 
 function getStockStatus(stock: number, minStock: number) {
   if (stock === 0) {
@@ -187,7 +191,6 @@ export default function InventoryPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAddModal, setShowAddModal] = useState(false)
   const [addProductId, setAddProductId] = useState("")
-  const [addLocation, setAddLocation] = useState<Location>("coldRoom")
   const [addQuantity, setAddQuantity] = useState("")
   const [addProductSearch, setAddProductSearch] = useState("")
   const [showTransferModal, setShowTransferModal] = useState(false)
@@ -195,6 +198,34 @@ export default function InventoryPage() {
   const [transferFrom, setTransferFrom] = useState<Location>("coldRoom")
   const [transferTo, setTransferTo] = useState<Location>("house")
   const [transferQuantity, setTransferQuantity] = useState("")
+
+  const handleAddModalChange = (open: boolean) => {
+    setShowAddModal(open)
+    if (!open) {
+      setAddProductId("")
+      setAddQuantity("")
+      setAddProductSearch("")
+    }
+  }
+
+  const handleTransferModalChange = (open: boolean) => {
+    setShowTransferModal(open)
+    if (!open) {
+      setTransferProductId("")
+      setTransferQuantity("")
+      setTransferFrom(COLD_ROOM_LOCATION)
+      setTransferTo("house")
+    }
+  }
+
+  const focusAlertsSection = () => {
+    setFilterAlert("with_alert")
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        document.getElementById("inventory-alerts")?.scrollIntoView({ behavior: "smooth", block: "start" })
+      })
+    }
+  }
 
   const categories = useMemo(
     () => [
@@ -301,6 +332,44 @@ export default function InventoryPage() {
     [filteredProducts.length, lowStockAlerts.length, products.length, totalBonifications, totalInventoryValue, totalQuantity]
   )
 
+  const quickActions = [
+    {
+      title: "Entrada centralizada",
+      description: "Receba mercadorias e mantenha a câmara fria sempre atualizada.",
+      icon: Snowflake,
+      buttonIcon: Plus,
+      cta: "Registrar entrada",
+      variant: "default" as const,
+      onClick: () => setShowAddModal(true)
+    },
+    {
+      title: "Distribuir estoque",
+      description: "Use a transferência para abastecer casa e pontos de venda com controle total.",
+      icon: ArrowLeftRight,
+      buttonIcon: ArrowLeftRight,
+      cta: "Abrir transferência",
+      variant: "outline" as const,
+      onClick: () => setShowTransferModal(true)
+    },
+    {
+      title: "Zerar alertas",
+      description: "Visualize rapidamente os produtos críticos para agir antes da ruptura.",
+      icon: AlertTriangle,
+      buttonIcon: AlertTriangle,
+      cta: "Ver produtos em alerta",
+      variant: "outline" as const,
+      onClick: focusAlertsSection
+    }
+  ]
+
+  const selectedTransferProduct = useMemo(
+    () => products.find((product) => product.id === transferProductId),
+    [products, transferProductId]
+  )
+
+  const transferFromQuantity = getInventoryQuantity(selectedTransferProduct?.inventory, transferFrom)
+  const transferToQuantity = getInventoryQuantity(selectedTransferProduct?.inventory, transferTo)
+
   const startEdit = (id: string, location: Location, currentStock: number) => {
     setEditingId(id)
     setEditingLocation(location)
@@ -308,18 +377,52 @@ export default function InventoryPage() {
   }
 
   const saveEdit = async (id: string, location: Location) => {
-    const newStock = Number(editStock)
-    if (Number.isFinite(newStock) && newStock >= 0) {
-      await fetch("/api/inventory", {
+    const parsedQuantity = Number(editStock)
+    if (!Number.isFinite(parsedQuantity) || parsedQuantity < 0) {
+      toast.error("Informe uma quantidade válida.")
+      return
+    }
+
+    const product = products.find((item) => item.id === id)
+    if (!product?.inventory) {
+      toast.error("Produto não encontrado para ajuste.")
+      return
+    }
+
+    const currentQuantity = getInventoryQuantity(product.inventory, location)
+
+    if (location !== COLD_ROOM_LOCATION && parsedQuantity > currentQuantity) {
+      toast.error("Para aumentar o estoque deste local use a transferência a partir da câmara fria.")
+      return
+    }
+
+    if (parsedQuantity === currentQuantity) {
+      setEditingId(null)
+      setEditingLocation(null)
+      setEditStock("")
+      return
+    }
+
+    try {
+      const response = await fetch("/api/inventory", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: id, location, quantity: newStock })
+        body: JSON.stringify({ productId: id, location, quantity: parsedQuantity })
       })
+
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar estoque")
+      }
+
+      toast.success("Estoque atualizado com sucesso.")
       queryClient.invalidateQueries({ queryKey: ["products"] })
+      setEditingId(null)
+      setEditingLocation(null)
+      setEditStock("")
+    } catch (error) {
+      console.error(error)
+      toast.error("Não foi possível atualizar o estoque agora.")
     }
-    setEditingId(null)
-    setEditingLocation(null)
-    setEditStock("")
   }
 
   const startEditBonifications = (id: string, currentBonifications: number) => {
@@ -342,57 +445,120 @@ export default function InventoryPage() {
   }
 
   const addStock = async () => {
-    const quantity = Number(addQuantity)
-    if (quantity > 0 && addProductId) {
-      const product = products.find((p) => p.id === addProductId)
-      if (product) {
-        const currentQuantity = getInventoryQuantity(product.inventory, addLocation)
-        const newQuantity = currentQuantity + quantity
-
-        await fetch("/api/inventory", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: addProductId, location: addLocation, quantity: newQuantity })
-        })
-        queryClient.invalidateQueries({ queryKey: ["products"] })
-      }
+    if (!addProductId) {
+      toast.error("Selecione um produto para registrar a entrada.")
+      return
     }
 
-    setShowAddModal(false)
-    setAddProductId("")
-    setAddQuantity("")
-    setAddProductSearch("")
+    const quantity = Number(addQuantity)
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      toast.error("Informe uma quantidade válida.")
+      return
+    }
+
+    const product = products.find((item) => item.id === addProductId)
+    if (!product) {
+      toast.error("Produto não encontrado.")
+      return
+    }
+
+    const currentQuantity = getInventoryQuantity(product.inventory, COLD_ROOM_LOCATION)
+    const targetQuantity = currentQuantity + quantity
+
+    try {
+      const response = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: addProductId, location: COLD_ROOM_LOCATION, quantity: targetQuantity })
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao registrar entrada")
+      }
+
+      toast.success("Entrada registrada na câmara fria.")
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+      setShowAddModal(false)
+      setAddProductId("")
+      setAddQuantity("")
+      setAddProductSearch("")
+    } catch (error) {
+      console.error(error)
+      toast.error("Não foi possível registrar a entrada agora.")
+    }
   }
 
   const transferStock = async () => {
-    const quantity = Number(transferQuantity)
-    if (quantity > 0 && transferProductId && transferFrom !== transferTo) {
-      const product = products.find((p) => p.id === transferProductId)
-      if (product?.inventory) {
-        const fromQuantity = getInventoryQuantity(product.inventory, transferFrom)
-        const toQuantity = getInventoryQuantity(product.inventory, transferTo)
-
-        if (fromQuantity >= quantity) {
-          await fetch("/api/inventory", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId: transferProductId, location: transferFrom, quantity: fromQuantity - quantity })
-          })
-
-          await fetch("/api/inventory", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId: transferProductId, location: transferTo, quantity: toQuantity + quantity })
-          })
-
-          queryClient.invalidateQueries({ queryKey: ["products"] })
-        }
-      }
+    if (!transferProductId) {
+      toast.error("Selecione um produto para transferir.")
+      return
     }
 
-    setShowTransferModal(false)
-    setTransferProductId("")
-    setTransferQuantity("")
+    const quantity = Number(transferQuantity)
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      toast.error("Informe uma quantidade válida para transferir.")
+      return
+    }
+
+    if (transferFrom === transferTo) {
+      toast.error("Escolha locais diferentes para a transferência.")
+      return
+    }
+
+    const product = products.find((item) => item.id === transferProductId)
+    if (!product?.inventory) {
+      toast.error("Produto não encontrado para transferência.")
+      return
+    }
+
+    const fromQuantity = getInventoryQuantity(product.inventory, transferFrom)
+    const toQuantity = getInventoryQuantity(product.inventory, transferTo)
+
+    if (fromQuantity < quantity) {
+      toast.error("Quantidade indisponível no local de origem.")
+      return
+    }
+
+    const updatedOrigin = fromQuantity - quantity
+    const updatedDestination = toQuantity + quantity
+
+    try {
+      const decreaseResponse = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: transferProductId, location: transferFrom, quantity: updatedOrigin })
+      })
+
+      if (!decreaseResponse.ok) {
+        throw new Error("Erro ao debitar estoque de origem")
+      }
+
+      const increaseResponse = await fetch("/api/inventory", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId: transferProductId, location: transferTo, quantity: updatedDestination })
+      })
+
+      if (!increaseResponse.ok) {
+        await fetch("/api/inventory", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: transferProductId, location: transferFrom, quantity: fromQuantity })
+        })
+        throw new Error("Erro ao creditar estoque de destino")
+      }
+
+      toast.success("Transferência concluída.")
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+      setShowTransferModal(false)
+      setTransferProductId("")
+      setTransferQuantity("")
+      setTransferFrom(COLD_ROOM_LOCATION)
+      setTransferTo("house")
+    } catch (error) {
+      console.error(error)
+      toast.error("Não foi possível completar a transferência agora.")
+    }
   }
 
   const renderInventoryTable = (location: Location) => {
@@ -431,6 +597,12 @@ export default function InventoryPage() {
             </div>
           </div>
         </div>
+
+        {location !== COLD_ROOM_LOCATION && (
+          <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:text-sm">
+            Para aumentar o estoque em {locationConfig[location].label}, registre a chegada na câmara fria e em seguida realize uma transferência.
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="space-y-3 md:hidden">
@@ -769,46 +941,67 @@ export default function InventoryPage() {
       <div className="space-y-6 pb-8">
         <Card className="border-none bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-none">
           <CardHeader className="pb-4">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div className="space-y-2">
-                <Badge variant="secondary" className="bg-primary/15 text-primary">
-                  Inventário em tempo real
-                </Badge>
-                <CardTitle className="text-2xl md:text-3xl">Painel de inventário</CardTitle>
-                <p className="max-w-2xl text-sm text-muted-foreground">
-                  Acompanhe estoques, identifique alertas críticos e movimente produtos entre locais com rapidez.
-                </p>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => setShowTransferModal(true)} className="w-full sm:w-auto">
-                  <ArrowLeftRight className="size-4" />
-                  Transferir estoque
-                </Button>
-                <Button onClick={() => setShowAddModal(true)} className="w-full sm:w-auto">
-                  <Plus className="size-4" />
-                  Registrar entrada
-                </Button>
-              </div>
+            <div className="space-y-2">
+              <Badge variant="secondary" className="bg-primary/15 text-primary">
+                Inventário em tempo real
+              </Badge>
+              <CardTitle className="text-2xl md:text-3xl">Painel de inventário</CardTitle>
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                Todas as entradas chegam primeiro à câmara fria. A partir dela, distribua para casa ou pontos de venda com total visibilidade e sem atropelos.
+              </p>
             </div>
           </CardHeader>
-          <CardContent className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {heroStats.map((stat) => (
-              <div
-                key={stat.label}
-                className="flex items-center justify-between rounded-lg border border-white/40 bg-white/60 p-4 backdrop-blur-md dark:border-border dark:bg-background/40"
-              >
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-xl font-semibold tracking-tight">
-                    {typeof stat.value === "number" ? stat.value.toLocaleString("pt-BR") : stat.value}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{stat.helper}</p>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {heroStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex items-center justify-between rounded-lg border border-white/40 bg-white/60 p-4 backdrop-blur-md dark:border-border dark:bg-background/40"
+                >
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-xl font-semibold tracking-tight">
+                      {typeof stat.value === "number" ? stat.value.toLocaleString("pt-BR") : stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{stat.helper}</p>
+                  </div>
+                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <stat.icon className="size-5" />
+                  </div>
                 </div>
-                <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                  <stat.icon className="size-5" />
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {quickActions.map((action) => {
+                const Icon = action.icon
+                const ButtonIcon = action.buttonIcon
+                return (
+                  <div
+                    key={action.title}
+                    className="flex flex-col justify-between rounded-lg border border-white/40 bg-white/70 p-4 backdrop-blur dark:border-border dark:bg-background/50"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <Icon className="size-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-semibold leading-tight">{action.title}</p>
+                        <p className="text-xs text-muted-foreground">{action.description}</p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={action.variant}
+                      onClick={action.onClick}
+                      className={cn("mt-4 self-start", action.variant === "outline" && "border-dashed")}
+                    >
+                      <ButtonIcon className="mr-2 size-4" />
+                      {action.cta}
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
           </CardContent>
         </Card>
 
@@ -885,7 +1078,7 @@ export default function InventoryPage() {
         </Card>
 
         {lowStockAlerts.length > 0 && (
-          <Card className="border-amber-400/50 bg-amber-50/60 dark:bg-amber-500/10">
+          <Card id="inventory-alerts" className="border-amber-400/50 bg-amber-50/60 dark:bg-amber-500/10">
             <CardHeader className="flex flex-row items-center justify-between">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="size-5 text-amber-600" />
@@ -977,12 +1170,29 @@ export default function InventoryPage() {
         </Card>
       </div>
 
-      <Dialog open={showAddModal} onOpenChange={setShowAddModal}>
+      <Dialog open={showAddModal} onOpenChange={handleAddModalChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Registrar entrada de estoque</DialogTitle>
+            <DialogTitle>Entrada na câmara fria</DialogTitle>
+            <DialogDescription>
+              Registre novas chegadas direto no estoque central. Para abastecer os demais locais, finalize a
+              transferência após esta etapa.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-5">
+            <div className="flex items-start gap-3 rounded-lg border border-sky-500/40 bg-sky-500/10 p-3 text-sm text-sky-900 dark:text-sky-200">
+              <div className="flex size-10 items-center justify-center rounded-md bg-white/70 text-sky-600 dark:bg-sky-500/20">
+                <Snowflake className="size-5" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-semibold">
+                  Destino único: {locationConfig[COLD_ROOM_LOCATION].label}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Entradas sempre chegam à câmara fria. Use a transferência para abastecer casa ou pontos de venda.
+                </p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Buscar produto</Label>
               <Input
@@ -1012,7 +1222,7 @@ export default function InventoryPage() {
                         <div className="flex flex-col text-sm">
                           <span className="font-medium">{product.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {product.size} • Estoque atual: {getInventoryQuantity(product.inventory, addLocation)}
+                            {product.size} • Câmara fria: {getInventoryQuantity(product.inventory, COLD_ROOM_LOCATION)} un
                           </span>
                         </div>
                       </SelectItem>
@@ -1020,7 +1230,6 @@ export default function InventoryPage() {
                 </SelectContent>
               </Select>
             </div>
-            <LocationSelector value={addLocation} onChange={setAddLocation} label="Local de destino" />
             <div className="space-y-2">
               <Label>Quantidade</Label>
               <Input
@@ -1030,9 +1239,28 @@ export default function InventoryPage() {
                 onChange={(event) => setAddQuantity(event.target.value)}
                 placeholder="Informe a quantidade"
               />
+              <div className="flex flex-wrap gap-2">
+                {QUICK_ADD_PRESETS.map((preset) => (
+                  <Button
+                    key={preset}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setAddQuantity((current) => {
+                        const currentNumber = Number(current)
+                        const safeCurrent = Number.isFinite(currentNumber) ? currentNumber : 0
+                        return (safeCurrent + preset).toString()
+                      })
+                    }
+                  >
+                    +{preset}
+                  </Button>
+                ))}
+              </div>
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowAddModal(false)}>
+              <Button type="button" variant="outline" onClick={() => handleAddModalChange(false)}>
                 Cancelar
               </Button>
               <Button onClick={addStock} disabled={!addProductId || !addQuantity}>
@@ -1043,12 +1271,23 @@ export default function InventoryPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showTransferModal} onOpenChange={setShowTransferModal}>
+      <Dialog open={showTransferModal} onOpenChange={handleTransferModalChange}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>Transferir estoque entre locais</DialogTitle>
           </DialogHeader>
           <div className="space-y-5">
+            <div className="flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm text-primary dark:text-primary-foreground">
+              <div className="flex size-10 items-center justify-center rounded-md bg-white/70 text-primary dark:bg-primary/20">
+                <ArrowLeftRight className="size-5" />
+              </div>
+              <div className="space-y-1">
+                <p className="font-semibold">Movimente estoques entre locais</p>
+                <p className="text-xs text-muted-foreground">
+                  Aumente casa e pontos de venda em duas etapas: debite da origem e credite o destino sem sair desta tela.
+                </p>
+              </div>
+            </div>
             <div className="space-y-2">
               <Label>Produto</Label>
               <Select value={transferProductId || undefined} onValueChange={setTransferProductId}>
@@ -1071,6 +1310,18 @@ export default function InventoryPage() {
               <LocationSelector value={transferFrom} onChange={setTransferFrom} label="De" />
               <LocationSelector value={transferTo} onChange={setTransferTo} label="Para" />
             </div>
+            {selectedTransferProduct && (
+              <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:text-sm">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    Origem ({locationConfig[transferFrom].label}): {transferFromQuantity.toLocaleString("pt-BR")} un disponíveis
+                  </span>
+                  <span>
+                    Destino ({locationConfig[transferTo].label}): {transferToQuantity.toLocaleString("pt-BR")} un atuais
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Quantidade</Label>
               <Input
@@ -1082,7 +1333,7 @@ export default function InventoryPage() {
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowTransferModal(false)}>
+              <Button variant="outline" type="button" onClick={() => handleTransferModalChange(false)}>
                 Cancelar
               </Button>
               <Button
