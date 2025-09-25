@@ -167,6 +167,8 @@ export async function POST(request: NextRequest) {
 
       const saleData = {
         total,
+        paymentMethod: input.paymentMethod ?? null,
+        customerName: sanitizedCustomerName ?? null,
         items: {
           create: saleItems,
         },

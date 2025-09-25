@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { SidebarLayout } from "@/components/SidebarLayout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -9,255 +9,511 @@ import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { useSales } from "@/lib/useSales"
-import { SidebarLayout } from "@/components/SidebarLayout"
-import { Plus, Minus, X, ShoppingCart, CreditCard, DollarSign, Receipt, Zap, Calculator, Search } from "lucide-react"
+import { cn } from "@/lib/utils"
+import {
+  Plus,
+  Minus,
+  X,
+  ShoppingCart,
+  CreditCard,
+  DollarSign,
+  Receipt,
+  Zap,
+  Search,
+  Package,
+  CircleDollarSign
+} from "lucide-react"
+
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL"
+})
 
 export default function SalesPage() {
   const { data: products = [], isLoading: loading } = useProducts()
   const { createSale } = useSales()
+
   const [cart, setCart] = useState<Array<{ productId: string; name: string; price: number; quantity: number; stock: number }>>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSize, setSelectedSize] = useState("all")
   const [saleLoading, setSaleLoading] = useState(false)
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('cash')
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "pix">("cash")
   const [receivedAmount, setReceivedAmount] = useState("")
   const [showChange, setShowChange] = useState(false)
   const [quickSaleMode, setQuickSaleMode] = useState(false)
+  const [customerName, setCustomerName] = useState("")
 
-  // Play alert sound when products are low on stock
   useEffect(() => {
-    const hasAlerts = products.some((p: Product) => 
-      p.inventory?.coldRoomAlert || p.inventory?.houseAlert || p.inventory?.salePointAlert
+    const hasAlerts = products.some(
+      (product: Product) =>
+        product.inventory?.coldRoomAlert ||
+        product.inventory?.houseAlert ||
+        product.inventory?.salePointAlert
     )
+
     if (hasAlerts) {
-      const audio = new Audio('/alert.mp3')
-      audio.play().catch(() => {}) // Ignore errors if audio fails
+      const audio = new Audio("/alert.mp3")
+      audio.play().catch(() => {})
     }
   }, [products])
 
-  const sizes = ["all", ...Array.from(new Set(products.map((p: Product) => p.size as string)))] as string[]
-
-  const filteredProducts = products.filter((product: Product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSize = selectedSize === "all" || product.size === selectedSize
-    return matchesSearch && matchesSize && (product.inventory?.salePointQuantity ?? 0) > 0
-  })
-
-  const addToCart = (product: Product, quantity = 1) => {
-    const stock = product.inventory?.salePointQuantity ?? 0
-    const existingItem = cart.find((item) => item.productId === product.id)
-    if (existingItem) {
-      setCart(
-        cart.map((item) =>
-          item.productId === product.id ? { ...item, quantity: Math.min(item.quantity + quantity, stock) } : item,
-        ),
+  const sizes = useMemo(
+    () => [
+      "all",
+      ...Array.from(
+        new Set(
+          products
+            .map((product) => product.size)
+            .filter((size): size is string => Boolean(size))
+        )
       )
-    } else {
-      setCart([...cart, { productId: product.id, name: product.name, price: product.salePrice, quantity: Math.min(quantity, stock), stock }])
-    }
-    // Visual feedback
-    const card = document.querySelector(`[data-product-id="${product.id}"]`)
-    if (card) {
-      card.classList.add('animate-pulse')
-      setTimeout(() => card.classList.remove('animate-pulse'), 300)
-    }
-  }
+    ],
+    [products]
+  )
 
-  const updateQuantity = (productId: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      setCart(cart.filter((item) => item.productId !== productId))
-      return
-    }
-    const item = cart.find((i) => i.productId === productId)
-    if (item) {
-      setCart(cart.map((i) => (i.productId === productId ? { ...i, quantity: Math.min(newQuantity, i.stock) } : i)))
-    }
-  }
+  const filteredProducts = useMemo(() => {
+    const lowerSearch = searchTerm.trim().toLowerCase()
+    return products.filter((product: Product) => {
+      const matchesSearch =
+        lowerSearch.length === 0 ||
+        product.name.toLowerCase().includes(lowerSearch) ||
+        product.size.toLowerCase().includes(lowerSearch)
+      const matchesSize = selectedSize === "all" || product.size === selectedSize
+      return matchesSearch && matchesSize && (product.inventory?.salePointQuantity ?? 0) > 0
+    })
+  }, [products, searchTerm, selectedSize])
 
-  const removeFromCart = (productId: string) => {
-    setCart(cart.filter((item) => item.productId !== productId))
-  }
+  const addToCart = useCallback(
+    (product: Product, quantity = 1) => {
+      const stock = product.inventory?.salePointQuantity ?? 0
+      setCart((currentCart) => {
+        const existingItem = currentCart.find((item) => item.productId === product.id)
+        if (existingItem) {
+          return currentCart.map((item) =>
+            item.productId === product.id
+              ? { ...item, quantity: Math.min(item.quantity + quantity, stock) }
+              : item
+          )
+        }
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+        return [
+          ...currentCart,
+          {
+            productId: product.id,
+            name: product.name,
+            price: product.salePrice,
+            quantity: Math.min(quantity, stock),
+            stock
+          }
+        ]
+      })
+
+      const card = document.querySelector(`[data-product-id="${product.id}"]`)
+      if (card) {
+        card.classList.add("animate-pulse")
+        setTimeout(() => card.classList.remove("animate-pulse"), 300)
+      }
+    },
+    []
+  )
+
+  const updateQuantity = useCallback((productId: string, newQuantity: number) => {
+    setCart((currentCart) => {
+      if (newQuantity <= 0) {
+        return currentCart.filter((item) => item.productId !== productId)
+      }
+      return currentCart.map((item) =>
+        item.productId === productId
+          ? { ...item, quantity: Math.min(newQuantity, item.stock) }
+          : item
+      )
+    })
+  }, [])
+
+  const removeFromCart = useCallback((productId: string) => {
+    setCart((currentCart) => currentCart.filter((item) => item.productId !== productId))
+  }, [])
+
+  const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart])
+  const itemCount = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart])
   const received = Number(receivedAmount) || 0
   const change = received - total
 
-  const finalizeSale = async () => {
+  const finalizeSale = useCallback(async () => {
     if (cart.length === 0) return
     setSaleLoading(true)
     try {
-      const items = cart.map(item => ({ productId: item.productId, quantity: item.quantity }))
-      await createSale({ items, paymentMethod })
+      const items = cart.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+      await createSale({
+        items,
+        paymentMethod,
+        customerName: customerName.trim() || undefined
+      })
       setCart([])
       setReceivedAmount("")
       setShowChange(false)
-      // Success sound
-      const audio = new Audio('/alert.mp3')
+      setCustomerName("")
+
+      const audio = new Audio("/alert.mp3")
       audio.play().catch(() => {})
     } finally {
       setSaleLoading(false)
     }
-  }
+  }, [cart, createSale, customerName, paymentMethod])
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      // F1 - Modo venda rápida
-      if (event.key === 'F1') {
+      if (event.key === "F1") {
         event.preventDefault()
-        setQuickSaleMode(!quickSaleMode)
+        setQuickSaleMode((previous) => !previous)
       }
-      // F2 - Limpar carrinho
-      if (event.key === 'F2') {
+      if (event.key === "F2") {
         event.preventDefault()
         setCart([])
       }
-      // Enter - Finalizar venda
-      if (event.key === 'Enter' && cart.length > 0 && !event.shiftKey) {
+      if (event.key === "Enter" && cart.length > 0 && !event.shiftKey) {
         event.preventDefault()
         finalizeSale()
       }
-      // Escape - Limpar carrinho
-      if (event.key === 'Escape') {
+      if (event.key === "Escape") {
         event.preventDefault()
         setCart([])
       }
-      // Shift + Enter - Focar no campo de valor recebido
-      if (event.key === 'Enter' && event.shiftKey && paymentMethod === 'cash') {
+      if (event.key === "Enter" && event.shiftKey && paymentMethod === "cash") {
         event.preventDefault()
-        document.getElementById('received')?.focus()
+        document.getElementById("received")?.focus()
       }
     }
 
-    window.addEventListener('keydown', handleKeyPress)
-    return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [cart, finalizeSale, quickSaleMode, paymentMethod])
+    window.addEventListener("keydown", handleKeyPress)
+    return () => window.removeEventListener("keydown", handleKeyPress)
+  }, [cart.length, finalizeSale, paymentMethod])
 
-  if (loading) return <div>Loading...</div>
+  const totalSalePointStock = useMemo(
+    () => products.reduce((sum, product) => sum + (product.inventory?.salePointQuantity ?? 0), 0),
+    [products]
+  )
+
+  const totalSalePointValue = useMemo(
+    () =>
+      products.reduce(
+        (sum, product) => sum + product.salePrice * (product.inventory?.salePointQuantity ?? 0),
+        0
+      ),
+    [products]
+  )
+
+  const heroStats = useMemo(
+    () => [
+      {
+        label: "Produtos disponíveis",
+        value: filteredProducts.length,
+        helper: `${products.length} cadastrados`,
+        icon: Package
+      },
+      {
+        label: "Itens no carrinho",
+        value: itemCount,
+        helper: currencyFormatter.format(total),
+        icon: ShoppingCart
+      },
+      {
+        label: "Estoque no ponto de venda",
+        value: totalSalePointStock,
+        helper: currencyFormatter.format(totalSalePointValue),
+        icon: CircleDollarSign
+      }
+    ],
+    [filteredProducts.length, products.length, itemCount, total, totalSalePointStock, totalSalePointValue]
+  )
+
+  const quickActions = useMemo(
+    () => [
+      {
+        title: quickSaleMode ? "Modo normal" : "Modo venda rápida",
+        description: quickSaleMode
+          ? "Volte a visualizar cards detalhados para orientar o cliente."
+          : "Ative cartões compactos para registrar pedidos pelo tablet mais rápido.",
+        icon: Zap,
+        buttonIcon: Zap,
+        cta: quickSaleMode ? "Cards detalhados" : "Ativar modo rápido",
+        variant: quickSaleMode ? ("outline" as const) : ("default" as const),
+        onClick: () => setQuickSaleMode((previous) => !previous)
+      },
+      {
+        title: "Limpar carrinho",
+        description: "Apague a seleção atual e comece uma nova venda.",
+        icon: X,
+        buttonIcon: X,
+        cta: "Esvaziar",
+        variant: "outline" as const,
+        onClick: () => setCart([]),
+        disabled: cart.length === 0
+      },
+      {
+        title: "Finalizar venda",
+        description: "Confirme o pagamento e registre a saída no mesmo instante.",
+        icon: Receipt,
+        buttonIcon: Receipt,
+        cta: "Finalizar",
+        variant: "default" as const,
+        onClick: () => finalizeSale(),
+        disabled: cart.length === 0 || saleLoading || (paymentMethod === "cash" && !showChange)
+      }
+    ],
+    [cart.length, finalizeSale, paymentMethod, quickSaleMode, saleLoading, showChange]
+  )
+
+  if (loading) {
+    return (
+      <SidebarLayout>
+        <div className="space-y-6 pb-8">
+          <SalesPageSkeleton />
+        </div>
+      </SidebarLayout>
+    )
+  }
 
   return (
     <SidebarLayout>
-      <Tabs defaultValue="nova-venda" className="w-full">
-        <TabsList className="grid w-full grid-cols-1">
-          <TabsTrigger value="nova-venda">Nova Venda</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="nova-venda" className="mt-4">
-          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 md:gap-6 h-full">
-        {/* Produtos - 2/3 da tela */}
-        <div className="xl:col-span-2 space-y-4">
-          {/* Busca e filtros */}
-          <Card className="pos-metric-card">
-            <CardContent className="p-4">
-              <div className="flex gap-3 mb-3">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Input
-                      placeholder="Buscar produto..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+      <div className="space-y-6 pb-8">
+        <Card className="border-none bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-none">
+          <CardHeader className="pb-4">
+            <div className="space-y-2">
+              <Badge variant="secondary" className="bg-primary/15 text-primary">
+                PDV em tempo real
+              </Badge>
+              <CardTitle className="text-2xl md:text-3xl">Central de vendas</CardTitle>
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                Selecione produtos rapidamente, mantenha o carrinho visível e finalize pagamentos sem sair do tablet.
+              </p>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {heroStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex items-center justify-between rounded-lg border border-white/40 bg-white/60 p-4 backdrop-blur-md dark:border-border dark:bg-background/40"
+                >
+                  <div>
+                    <p className="text-sm text-muted-foreground">{stat.label}</p>
+                    <p className="text-xl font-semibold tracking-tight">
+                      {typeof stat.value === "number" ? stat.value.toLocaleString("pt-BR") : stat.value}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{stat.helper}</p>
+                  </div>
+                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <stat.icon className="size-5" />
                   </div>
                 </div>
+              ))}
+            </div>
+            <div className="grid gap-3 md:grid-cols-3">
+              {quickActions.map((action) => {
+                const Icon = action.icon
+                const ButtonIcon = action.buttonIcon
+                return (
+                  <div
+                    key={action.title}
+                    className="flex flex-col justify-between rounded-lg border border-white/40 bg-white/70 p-4 backdrop-blur dark:border-border dark:bg-background/50"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <Icon className="size-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-semibold leading-tight">{action.title}</p>
+                        <p className="text-xs text-muted-foreground">{action.description}</p>
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant={action.variant}
+                      onClick={action.onClick}
+                      disabled={action.disabled}
+                      className={cn("mt-4 self-start", action.variant === "outline" && "border-dashed")}
+                    >
+                      <ButtonIcon className="mr-2 size-4" />
+                      {action.cta}
+                    </Button>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Filtrar catálogo</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Buscar por nome ou tamanho"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="w-full sm:w-auto sm:min-w-[180px]">
                 <Select value={selectedSize} onValueChange={setSelectedSize}>
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os tamanhos" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Todas</SelectItem>
-                    {sizes.slice(1).map((size) => (
-                      <SelectItem key={size} value={size}>
-                        {size}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="all">Todos os tamanhos</SelectItem>
+                    {sizes
+                      .filter((size) => size !== "all")
+                      .map((size) => (
+                        <SelectItem key={size} value={size}>
+                          {size}
+                        </SelectItem>
+                      ))}
                   </SelectContent>
                 </Select>
               </div>
-
-              {/* Atalhos Rápidos */}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setQuickSaleMode(!quickSaleMode)}
-                  className={quickSaleMode ? 'bg-primary text-primary-foreground' : ''}
-                >
-                  <Zap className="w-3 h-3 mr-1" />
-                  Venda Rápida
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => setCart([])}>
-                  <X className="w-3 h-3 mr-1" />
-                  Limpar Carrinho
-                </Button>
-                <div className="text-xs text-muted-foreground ml-auto flex items-center gap-1">
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs">F1</kbd> Modo Rápido
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs ml-2">F2</kbd> Limpar
-                  <kbd className="px-1 py-0.5 bg-muted rounded text-xs ml-2">Enter</kbd> Finalizar
-                </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <kbd className="rounded bg-muted px-1 py-0.5 text-xs">F1</kbd>
+                Modo rápido
               </div>
+              <div className="flex items-center gap-1">
+                <kbd className="rounded bg-muted px-1 py-0.5 text-xs">F2</kbd>
+                Limpar carrinho
+              </div>
+              <div className="flex items-center gap-1">
+                <kbd className="rounded bg-muted px-1 py-0.5 text-xs">Enter</kbd>
+                Finalizar venda
+              </div>
+              <div className="flex items-center gap-1">
+                <kbd className="rounded bg-muted px-1 py-0.5 text-xs">Shift + Enter</kbd>
+                Digitar troco
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <div className="grid gap-4 xl:grid-cols-[2fr,1fr]">
+          <Card className="h-full">
+            <CardHeader className="flex flex-wrap items-center justify-between gap-3 pb-3">
+              <CardTitle className="text-base">Produtos disponíveis</CardTitle>
+              <Badge variant="outline" className="text-xs text-muted-foreground">
+                {filteredProducts.length} produto(s)
+              </Badge>
+            </CardHeader>
+            <CardContent>
+              {filteredProducts.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-12 text-center text-muted-foreground">
+                  <Package className="size-10" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">Nenhum produto encontrado</p>
+                    <p className="text-sm">Ajuste a busca ou exiba todos os tamanhos.</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setSearchTerm("")
+                      setSelectedSize("all")
+                    }}
+                  >
+                    Limpar filtros
+                  </Button>
+                </div>
+              ) : (
+                <div
+                  className={cn(
+                    "grid gap-3",
+                    quickSaleMode
+                      ? "grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
+                      : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                  )}
+                >
+                  {filteredProducts.map((product: Product) => {
+                    const stock = product.inventory?.salePointQuantity ?? 0
+                    const inCart = cart.find((item) => item.productId === product.id)
+                    const hasAlert =
+                      product.inventory?.coldRoomAlert ||
+                      product.inventory?.houseAlert ||
+                      product.inventory?.salePointAlert
+                    return (
+                      <Card
+                        key={product.id}
+                        data-product-id={product.id}
+                        onClick={() => addToCart(product)}
+                        className={cn(
+                          "group cursor-pointer border transition-all duration-200 hover:-translate-y-1 hover:shadow-lg",
+                          inCart ? "border-primary bg-primary/5" : "hover:bg-muted/50"
+                        )}
+                      >
+                        <CardContent className={cn("space-y-3", quickSaleMode ? "p-3" : "p-4")}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="space-y-1">
+                              <p
+                                className={cn(
+                                  "font-semibold leading-tight",
+                                  quickSaleMode ? "text-xs" : "text-sm"
+                                )}
+                              >
+                                {product.name}
+                              </p>
+                              {!quickSaleMode && (
+                                <p className="text-xs text-muted-foreground">{product.size}</p>
+                              )}
+                              {!quickSaleMode && (
+                                <Badge variant="outline" className="text-[0.65rem] uppercase tracking-tight">
+                                  {product.category || "Sem categoria"}
+                                </Badge>
+                              )}
+                            </div>
+                            <Badge variant="secondary" className="bg-muted font-mono text-xs text-foreground">
+                              {stock} un
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between gap-2">
+                            <span
+                              className={cn(
+                                "font-semibold text-primary",
+                                quickSaleMode ? "text-sm" : "text-xl"
+                              )}
+                            >
+                              {currencyFormatter.format(product.salePrice)}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {hasAlert && (
+                                <Badge variant="destructive" className="text-[0.65rem] uppercase tracking-tight">
+                                  Alerta
+                                </Badge>
+                              )}
+                              {inCart && (
+                                <Badge className="bg-primary text-primary-foreground text-[0.65rem]">
+                                  {inCart.quantity}x
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
             </CardContent>
           </Card>
 
-          {/* Grid de produtos */}
-          <div className={`grid gap-3 ${quickSaleMode ? 'grid-cols-3 md:grid-cols-4 xl:grid-cols-6' : 'grid-cols-2 md:grid-cols-3 xl:grid-cols-4'}`}>
-            {filteredProducts.map((product: Product) => {
-              const inCart = cart.find(item => item.productId === product.id)
-              return (
-                <Card
-                  key={product.id}
-                  data-product-id={product.id}
-                  className={`pos-quick-action cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg ${
-                    inCart ? 'ring-2 ring-primary bg-primary/5' : 'hover:bg-muted/50'
-                  } ${quickSaleMode ? 'p-2' : 'p-4'}`}
-                  onClick={() => addToCart(product)}
-                >
-                  <CardContent className={`${quickSaleMode ? 'p-2' : 'p-4'} space-y-2`}>
-                    <div className={`font-medium text-sm leading-tight ${quickSaleMode ? 'text-xs' : ''} truncate`}>
-                      {product.name}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className={`font-bold text-primary ${quickSaleMode ? 'text-sm' : 'text-lg'}`}>
-                        R$ {product.salePrice.toFixed(2)}
-                      </span>
-                      <div className="flex gap-1">
-                        <Badge variant="outline" className={`text-xs ${quickSaleMode ? 'px-1 py-0 text-xs' : ''}`}>
-                          {product.inventory?.salePointQuantity ?? 0}
-                        </Badge>
-                        {(product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert) && (
-                          <Badge variant="destructive" className={`text-xs ${quickSaleMode ? 'px-1 py-0 text-xs' : ''}`}>
-                            ⚠️
-                          </Badge>
-                        )}
-                        {inCart && (
-                          <Badge className={`bg-primary text-primary-foreground ${quickSaleMode ? 'px-1 py-0 text-xs' : ''}`}>
-                            {inCart.quantity}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    {!quickSaleMode && (
-                      <div className="text-xs text-muted-foreground">{product.size}</div>
-                    )}
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </div>
-
-        {/* Carrinho - 1/3 da tela */}
-        <div className="space-y-4">
-          <Card className="pos-metric-card">
+          <Card className="h-full">
             <CardHeader className="pb-3">
-              <CardTitle className="flex items-center justify-between text-lg">
+              <CardTitle className="flex items-center justify-between text-base">
                 <span className="flex items-center gap-2">
-                  <ShoppingCart className="w-5 h-5" />
+                  <ShoppingCart className="size-5" />
                   Carrinho
                 </span>
                 {itemCount > 0 && (
@@ -270,50 +526,55 @@ export default function SalesPage() {
             <CardContent className="space-y-4">
               {cart.length > 0 ? (
                 <>
-                  <div className="space-y-3 max-h-64 overflow-y-auto">
+                  <div className="max-h-[22rem] space-y-3 overflow-y-auto pr-1">
                     {cart.map((item) => (
-                      <div key={item.productId} className="flex items-center justify-between p-3 bg-secondary/50 rounded-lg hover:bg-secondary/70 transition-colors">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">{item.name}</div>
-                          <div className="text-xs text-muted-foreground">R$ {item.price.toFixed(2)} cada</div>
+                      <div
+                        key={item.productId}
+                        className="flex items-center justify-between rounded-lg border bg-muted/40 p-3 transition-colors hover:bg-muted/60"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{item.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {currencyFormatter.format(item.price)} cada
+                          </p>
                         </div>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
+                              onClick={(event) => {
+                                event.stopPropagation()
                                 updateQuantity(item.productId, item.quantity - 1)
                               }}
                               className="h-7 w-7 p-0"
                             >
-                              <Minus className="w-3 h-3" />
+                              <Minus className="size-3" />
                             </Button>
-                            <span className="w-8 text-center font-medium text-sm">{item.quantity}</span>
+                            <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
+                              onClick={(event) => {
+                                event.stopPropagation()
                                 updateQuantity(item.productId, item.quantity + 1)
                               }}
                               className="h-7 w-7 p-0"
                               disabled={item.quantity >= item.stock}
                             >
-                              <Plus className="w-3 h-3" />
+                              <Plus className="size-3" />
                             </Button>
                           </div>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation()
+                            onClick={(event) => {
+                              event.stopPropagation()
                               removeFromCart(item.productId)
                             }}
-                            className="h-7 w-7 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            className="h-7 w-7 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
                           >
-                            <X className="w-3 h-3" />
+                            <X className="size-3" />
                           </Button>
                         </div>
                       </div>
@@ -322,103 +583,120 @@ export default function SalesPage() {
 
                   <Separator />
 
-                  {/* Método de Pagamento */}
                   <div className="space-y-3">
-                    <Label className="text-sm font-medium">Método de Pagamento</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        variant={paymentMethod === 'cash' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPaymentMethod('cash')}
-                        className="flex items-center gap-2"
-                      >
-                        <DollarSign className="w-4 h-4" />
-                        Dinheiro
-                      </Button>
-                      <Button
-                        variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPaymentMethod('card')}
-                        className="flex items-center gap-2"
-                      >
-                        <CreditCard className="w-4 h-4" />
-                        Cartão
-                      </Button>
-                      <Button
-                        variant={paymentMethod === 'pix' ? 'default' : 'outline'}
-                        size="sm"
-                        onClick={() => setPaymentMethod('pix')}
-                        className="flex items-center gap-2"
-                      >
-                        <Zap className="w-4 h-4" />
-                        PIX
-                      </Button>
+                    <div className="space-y-2">
+                      <Label htmlFor="customer-name" className="text-sm font-medium">
+                        Cliente (opcional)
+                      </Label>
+                      <Input
+                        id="customer-name"
+                        value={customerName}
+                        onChange={(event) => setCustomerName(event.target.value)}
+                        placeholder="Nome do cliente"
+                        autoComplete="name"
+                        inputMode="text"
+                      />
                     </div>
-                  </div>
 
-                  {/* Cálculo de Troco (apenas para dinheiro) */}
-                  {paymentMethod === 'cash' && (
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">Subtotal:</span>
-                        <span className="text-lg font-bold">R$ {total.toFixed(2)}</span>
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Método de pagamento</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          variant={paymentMethod === "cash" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPaymentMethod("cash")}
+                          className="flex items-center gap-2"
+                        >
+                          <DollarSign className="size-4" />
+                          Dinheiro
+                        </Button>
+                        <Button
+                          variant={paymentMethod === "card" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPaymentMethod("card")}
+                          className="flex items-center gap-2"
+                        >
+                          <CreditCard className="size-4" />
+                          Cartão
+                        </Button>
+                        <Button
+                          variant={paymentMethod === "pix" ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setPaymentMethod("pix")}
+                          className="flex items-center gap-2"
+                        >
+                          <Zap className="size-4" />
+                          PIX
+                        </Button>
                       </div>
+                    </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="received" className="text-sm">Valor Recebido</Label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            id="received"
-                            type="number"
-                            step="0.01"
-                            min={total.toFixed(2)}
-                            value={receivedAmount}
-                            onChange={(e) => {
-                              setReceivedAmount(e.target.value)
-                              setShowChange(Number(e.target.value) >= total)
-                            }}
-                            placeholder="0,00"
-                            className="pl-10"
-                          />
+                    {paymentMethod === "cash" && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">Subtotal</span>
+                          <span className="text-lg font-semibold text-foreground">
+                            {currencyFormatter.format(total)}
+                          </span>
                         </div>
-                      </div>
-
-                      {showChange && received > 0 && (
-                        <div className="p-3 bg-green-50 dark:bg-green-950/20 rounded-lg border border-green-200 dark:border-green-800">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-green-800 dark:text-green-200">Troco:</span>
-                            <span className="text-lg font-bold text-green-600">R$ {change.toFixed(2)}</span>
+                        <div className="space-y-2">
+                          <Label htmlFor="received" className="text-sm font-medium">
+                            Valor recebido
+                          </Label>
+                          <div className="relative">
+                            <DollarSign className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                              id="received"
+                              type="number"
+                              step="0.01"
+                              min={total > 0 ? total.toFixed(2) : undefined}
+                              value={receivedAmount}
+                              onChange={(event) => {
+                                setReceivedAmount(event.target.value)
+                                setShowChange(Number(event.target.value) >= total)
+                              }}
+                              placeholder="0,00"
+                              className="pl-9"
+                            />
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
+                        {showChange && received > 0 && (
+                          <div className="rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-950/20">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-green-700 dark:text-green-200">Troco</span>
+                              <span className="text-lg font-semibold text-green-600">
+                                {currencyFormatter.format(change)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                  {/* Total e Ações */}
-                  <div className="space-y-3">
-                    {paymentMethod !== 'cash' && (
-                      <div className="flex justify-between items-center">
-                        <span className="font-medium">Total:</span>
-                        <span className="text-xl font-bold text-primary">R$ {total.toFixed(2)}</span>
+                    {paymentMethod !== "cash" && (
+                      <div className="flex items-center justify-between rounded-lg border border-muted bg-muted/40 px-3 py-2 text-sm font-medium">
+                        <span>Total</span>
+                        <span className="text-lg font-semibold text-primary">
+                          {currencyFormatter.format(total)}
+                        </span>
                       </div>
                     )}
 
                     <div className="grid grid-cols-2 gap-2">
                       <Button variant="outline" onClick={() => setCart([])} className="w-full">
-                        <X className="w-4 h-4 mr-2" />
+                        <X className="mr-2 size-4" />
                         Limpar
                       </Button>
                       <Button
                         onClick={finalizeSale}
-                        disabled={saleLoading || (paymentMethod === 'cash' && !showChange)}
-                        className="w-full pos-action-button"
+                        disabled={saleLoading || cart.length === 0 || (paymentMethod === "cash" && !showChange)}
+                        className="w-full"
                       >
                         {saleLoading ? (
-                          'Processando...'
+                          "Processando..."
                         ) : (
                           <>
-                            <Receipt className="w-4 h-4 mr-2" />
+                            <Receipt className="mr-2 size-4" />
                             Finalizar
                           </>
                         )}
@@ -427,18 +705,15 @@ export default function SalesPage() {
                   </div>
                 </>
               ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <ShoppingCart className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p className="font-medium">Carrinho vazio</p>
-                  <p className="text-sm">Adicione produtos para iniciar uma venda</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-3"
-                    onClick={() => setQuickSaleMode(!quickSaleMode)}
-                  >
-                    <Zap className="w-4 h-4 mr-2" />
-                    {quickSaleMode ? 'Modo Normal' : 'Modo Rápido'}
+                <div className="flex flex-col items-center gap-3 py-16 text-center text-muted-foreground">
+                  <ShoppingCart className="size-12 opacity-60" />
+                  <div className="space-y-1">
+                    <p className="font-medium text-foreground">Carrinho vazio</p>
+                    <p className="text-sm">Adicione produtos à esquerda para iniciar uma venda.</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => setQuickSaleMode((previous) => !previous)}>
+                    <Zap className="mr-2 size-4" />
+                    {quickSaleMode ? "Modo detalhado" : "Modo rápido"}
                   </Button>
                 </div>
               )}
@@ -446,8 +721,55 @@ export default function SalesPage() {
           </Card>
         </div>
       </div>
-        </TabsContent>
-      </Tabs>
     </SidebarLayout>
+  )
+}
+
+function SalesPageSkeleton() {
+  return (
+    <div className="space-y-6">
+      <Card className="border-none">
+        <CardContent className="space-y-4 pt-6">
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardContent className="space-y-3 pt-6">
+          <Skeleton className="h-10 w-full" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Skeleton className="h-9" />
+            <Skeleton className="h-9" />
+          </div>
+        </CardContent>
+      </Card>
+      <div className="grid gap-4 xl:grid-cols-[2fr,1fr]">
+        <Card>
+          <CardContent className="space-y-4 pt-6">
+            <Skeleton className="h-6 w-40" />
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+              <Skeleton className="h-24" />
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="space-y-3 pt-6">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-20" />
+            <Skeleton className="h-32" />
+          </CardContent>
+        </Card>
+      </div>
+    </div>
   )
 }
