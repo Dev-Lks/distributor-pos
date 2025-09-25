@@ -4,6 +4,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { QueryProvider } from "@/components/QueryProvider"
 import { PWAInstall } from "@/components/PWAInstall"
+import { Toaster } from "@/components/ui/sonner"
 
 export const metadata: Metadata = {
   title: "NitroBeer",
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body className={`${inter.variable} antialiased`}>
         <QueryProvider>{children}</QueryProvider>
         <PWAInstall />
+        <Toaster />
       </body>
     </html>
   )
