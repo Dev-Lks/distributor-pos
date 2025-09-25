@@ -75,13 +75,13 @@ const navSections: Array<{
       {
         label: "Produtos",
         description: "Ficha técnica e preços",
-        href: "/products",
+        href: "/dashboard/products",
         icon: Building2
       },
       {
         label: "Pontos de venda",
         description: "Configuração dos PDVs",
-        href: "/points",
+        href: "/dashboard/points",
         icon: Users2
       }
     ]

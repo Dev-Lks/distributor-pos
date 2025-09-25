@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo, AwaitedReactNode, JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal } from "react"
+import { useMemo, useState } from "react"
 import { Plus, Edit, Trash2, Package } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -36,7 +36,7 @@ export default function InventoryByPointPage() {
   const [editQuantity, setEditQuantity] = useState("")
   const [editMinStock, setEditMinStock] = useState("")
 
-  const pointsOptions = useMemo(
+  const pointsOptions = useMemo<Array<{ id: string; name: string }>>(
     () => points.map((point: PointOfSale) => ({ id: point.id, name: point.name })),
     [points]
   )
@@ -135,8 +135,8 @@ export default function InventoryByPointPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os pontos</SelectItem>
-              {pointsOptions.map((point: { id: Key | null | undefined; name: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined }) => (
-                <SelectItem key={String(point.id)} value={String(point.id)}>
+              {pointsOptions.map((point) => (
+                <SelectItem key={point.id} value={point.id}>
                   {point.name}
                 </SelectItem>
               ))}
@@ -177,8 +177,8 @@ export default function InventoryByPointPage() {
                   <SelectValue placeholder="Selecione um ponto" />
                 </SelectTrigger>
                 <SelectContent>
-                  {pointsOptions.map((point: { id: Key | null | undefined; name: string | number | bigint | boolean | ReactElement<any, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<AwaitedReactNode> | null | undefined }) => (
-                    <SelectItem key={String(point.id)} value={String(point.id)}>
+                  {pointsOptions.map((point) => (
+                    <SelectItem key={point.id} value={point.id}>
                       {point.name}
                     </SelectItem>
                   ))}

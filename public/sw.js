@@ -6,6 +6,8 @@ const urlsToCache = [
   '/dashboard/sales',
   '/dashboard/inventory',
   '/dashboard/inventory-by-point',
+  '/dashboard/products',
+  '/dashboard/points',
   '/inventory',
   '/products',
   '/manifest.json',
