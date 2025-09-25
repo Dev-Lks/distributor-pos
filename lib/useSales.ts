@@ -19,11 +19,13 @@ export interface CreateSaleParams {
   customerEmail?: string
   customerPhone?: string
   customerDocument?: string
+  customerAddress?: string
   channel?: string
   discountValue?: number
   taxValue?: number
   serviceCharge?: number
   notes?: string
+  registerCustomer?: boolean
 }
 
 interface SaleItemResponse {
@@ -55,6 +57,7 @@ export interface SaleRecord {
   customerEmail?: string | null
   customerPhone?: string | null
   customerDocument?: string | null
+  customerAddress?: string | null
   channel?: string | null
   subtotal?: number | null
   discountValue?: number | null
@@ -70,6 +73,13 @@ export interface SaleRecord {
   } | null
   payments?: SalePaymentResponse[]
   items: SaleItemResponse[]
+  customer?: {
+    id: string
+    name: string
+    phone?: string | null
+    email?: string | null
+    address?: string | null
+  } | null
 }
 
 export function useSales(pointOfSale?: string) {
@@ -93,11 +103,13 @@ export function useSales(pointOfSale?: string) {
     customerEmail,
     customerPhone,
     customerDocument,
+    customerAddress,
     channel,
     discountValue = 0,
     taxValue = 0,
     serviceCharge = 0,
-    notes
+    notes,
+    registerCustomer = false
   }: CreateSaleParams) => {
     // Enrich items with product data
     const enrichedItems = items.map(item => {
@@ -159,12 +171,14 @@ export function useSales(pointOfSale?: string) {
         customerEmail,
         customerPhone,
         customerDocument,
+        customerAddress,
         channel,
         discountValue,
         taxValue,
         serviceCharge,
         notes,
-        pointOfSaleId: pointOfSale
+        pointOfSaleId: pointOfSale,
+        registerCustomer,
       })
     })
 

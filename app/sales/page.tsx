@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo, useCallback } from "react"
+import { useState, useEffect, useMemo, useCallback, FormEvent } from "react"
 import { SidebarLayout } from "@/components/SidebarLayout"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +10,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from "@/components/ui/dialog"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { useSales } from "@/lib/useSales"
 import { cn } from "@/lib/utils"
@@ -24,7 +33,12 @@ import {
   Zap,
   Search,
   Package,
-  CircleDollarSign
+  CircleDollarSign,
+  UserPlus,
+  User,
+  UserX,
+  Phone,
+  MapPin
 } from "lucide-react"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -45,6 +59,27 @@ export default function SalesPage() {
   const [showChange, setShowChange] = useState(false)
   const [quickSaleMode, setQuickSaleMode] = useState(false)
   const [customerName, setCustomerName] = useState("")
+  const [customerPhone, setCustomerPhone] = useState("")
+  const [customerAddress, setCustomerAddress] = useState("")
+  const [shouldRegisterCustomer, setShouldRegisterCustomer] = useState(false)
+  const [customerPromptEnabled, setCustomerPromptEnabled] = useState(true)
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false)
+  const [customerDialogStep, setCustomerDialogStep] = useState<"prompt" | "form">("prompt")
+  const [customerFormError, setCustomerFormError] = useState<string | null>(null)
+  const [pendingFinalizeAfterCustomer, setPendingFinalizeAfterCustomer] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const stored = window.localStorage.getItem("nitro-customer-prompt-enabled")
+    if (stored !== null) {
+      setCustomerPromptEnabled(stored === "true")
+    }
+  }, [])
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem("nitro-customer-prompt-enabled", String(customerPromptEnabled))
+  }, [customerPromptEnabled])
 
   useEffect(() => {
     const hasAlerts = products.some(
@@ -142,27 +177,110 @@ export default function SalesPage() {
   const received = Number(receivedAmount) || 0
   const change = received - total
 
-  const finalizeSale = useCallback(async () => {
-    if (cart.length === 0) return
-    setSaleLoading(true)
-    try {
-      const items = cart.map((item) => ({ productId: item.productId, quantity: item.quantity }))
-      await createSale({
-        items,
-        paymentMethod,
-        customerName: customerName.trim() || undefined
-      })
-      setCart([])
-      setReceivedAmount("")
-      setShowChange(false)
-      setCustomerName("")
-
-      const audio = new Audio("/alert.mp3")
-      audio.play().catch(() => {})
-    } finally {
-      setSaleLoading(false)
+  const handleDialogOpenChange = useCallback((open: boolean) => {
+    setCustomerDialogOpen(open)
+    if (!open) {
+      setCustomerDialogStep("prompt")
+      setCustomerFormError(null)
+      setPendingFinalizeAfterCustomer(false)
     }
-  }, [cart, createSale, customerName, paymentMethod])
+  }, [])
+
+  const handleOpenCustomerForm = useCallback(() => {
+    setPendingFinalizeAfterCustomer(false)
+    setCustomerDialogStep("form")
+    setCustomerFormError(null)
+    setCustomerDialogOpen(true)
+  }, [])
+
+  const clearCustomerDetails = useCallback(() => {
+    setCustomerName("")
+    setCustomerPhone("")
+    setCustomerAddress("")
+    setShouldRegisterCustomer(false)
+    setCustomerFormError(null)
+    setPendingFinalizeAfterCustomer(false)
+  }, [])
+
+  const finalizeSale = useCallback(
+    async (options?: { registerCustomer?: boolean }) => {
+      if (cart.length === 0) return
+      const registerCustomer = options?.registerCustomer ?? shouldRegisterCustomer
+
+      if (registerCustomer && customerName.trim().length === 0) {
+        setCustomerFormError("Informe o nome do cliente para concluir o cadastro.")
+        setCustomerDialogStep("form")
+        setCustomerDialogOpen(true)
+        return
+      }
+
+      setSaleLoading(true)
+      try {
+        const items = cart.map((item) => ({ productId: item.productId, quantity: item.quantity }))
+        await createSale({
+          items,
+          paymentMethod,
+          customerName: customerName.trim() || undefined,
+          customerPhone: customerPhone.trim() || undefined,
+          customerAddress: customerAddress.trim() || undefined,
+          registerCustomer
+        })
+        setCart([])
+        setReceivedAmount("")
+        setShowChange(false)
+        clearCustomerDetails()
+        setCustomerFormError(null)
+        setPendingFinalizeAfterCustomer(false)
+
+        const audio = new Audio("/alert.mp3")
+        audio.play().catch(() => {})
+      } finally {
+        setSaleLoading(false)
+      }
+    },
+    [cart, shouldRegisterCustomer, customerName, customerPhone, customerAddress, createSale, paymentMethod, clearCustomerDetails]
+  )
+
+  const handleFinalizeAttempt = useCallback(() => {
+    if (cart.length === 0 || saleLoading) return
+    if (paymentMethod === "cash" && !showChange) return
+
+    if (customerPromptEnabled && !shouldRegisterCustomer) {
+      setPendingFinalizeAfterCustomer(true)
+      setCustomerDialogStep("prompt")
+      setCustomerFormError(null)
+      setCustomerDialogOpen(true)
+      return
+    }
+
+    void finalizeSale({ registerCustomer: shouldRegisterCustomer })
+  }, [cart.length, saleLoading, paymentMethod, showChange, customerPromptEnabled, shouldRegisterCustomer, finalizeSale])
+
+  const finalizeWithoutCustomer = useCallback(() => {
+    handleDialogOpenChange(false)
+    setPendingFinalizeAfterCustomer(false)
+    void finalizeSale({ registerCustomer: false })
+  }, [finalizeSale, handleDialogOpenChange])
+
+  const handleCustomerFormSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+      const trimmedName = customerName.trim()
+      if (!trimmedName) {
+        setCustomerFormError("Informe o nome do cliente.")
+        return
+      }
+
+      setShouldRegisterCustomer(true)
+      setCustomerFormError(null)
+      handleDialogOpenChange(false)
+
+      if (pendingFinalizeAfterCustomer) {
+        void finalizeSale({ registerCustomer: true })
+      }
+    },
+    [customerName, finalizeSale, handleDialogOpenChange, pendingFinalizeAfterCustomer]
+  )
 
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
@@ -176,7 +294,7 @@ export default function SalesPage() {
       }
       if (event.key === "Enter" && cart.length > 0 && !event.shiftKey) {
         event.preventDefault()
-        finalizeSale()
+        handleFinalizeAttempt()
       }
       if (event.key === "Escape") {
         event.preventDefault()
@@ -190,7 +308,7 @@ export default function SalesPage() {
 
     window.addEventListener("keydown", handleKeyPress)
     return () => window.removeEventListener("keydown", handleKeyPress)
-  }, [cart.length, finalizeSale, paymentMethod])
+  }, [cart.length, handleFinalizeAttempt, paymentMethod])
 
   const totalSalePointStock = useMemo(
     () => products.reduce((sum, product) => sum + (product.inventory?.salePointQuantity ?? 0), 0),
@@ -260,11 +378,11 @@ export default function SalesPage() {
         buttonIcon: Receipt,
         cta: "Finalizar",
         variant: "default" as const,
-        onClick: () => finalizeSale(),
+        onClick: () => handleFinalizeAttempt(),
         disabled: cart.length === 0 || saleLoading || (paymentMethod === "cash" && !showChange)
       }
     ],
-    [cart.length, finalizeSale, paymentMethod, quickSaleMode, saleLoading, showChange]
+    [cart.length, handleFinalizeAttempt, paymentMethod, quickSaleMode, saleLoading, showChange]
   )
 
   if (loading) {
@@ -343,6 +461,22 @@ export default function SalesPage() {
                   </div>
                 )
               })}
+            </div>
+            <div className="rounded-lg border border-white/40 bg-white/70 p-4 backdrop-blur dark:border-border dark:bg-background/50">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div className="space-y-1">
+                  <p className="font-semibold leading-tight">Perguntar cadastro do cliente</p>
+                  <p className="text-xs text-muted-foreground">
+                    {customerPromptEnabled
+                      ? "Ao finalizar uma venda, vamos perguntar se deseja registrar os dados do cliente. Ideal para um atendimento atencioso pelo tablet."
+                      : "As vendas serão registradas sem solicitar os dados do cliente. Ótimo para momentos de grande fluxo."}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{customerPromptEnabled ? "Ativado" : "Desativado"}</span>
+                  <Switch checked={customerPromptEnabled} onCheckedChange={setCustomerPromptEnabled} className="h-7 w-14" />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -584,18 +718,65 @@ export default function SalesPage() {
                   <Separator />
 
                   <div className="space-y-3">
-                    <div className="space-y-2">
-                      <Label htmlFor="customer-name" className="text-sm font-medium">
-                        Cliente (opcional)
-                      </Label>
-                      <Input
-                        id="customer-name"
-                        value={customerName}
-                        onChange={(event) => setCustomerName(event.target.value)}
-                        placeholder="Nome do cliente"
-                        autoComplete="name"
-                        inputMode="text"
-                      />
+                    <div className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                            <User className="size-4" />
+                            Cliente na venda
+                          </div>
+                          {shouldRegisterCustomer && (customerName || customerPhone || customerAddress) ? (
+                            <div className="mt-2 space-y-1 text-sm">
+                              {customerName && <p className="font-medium leading-tight">{customerName}</p>}
+                              {customerPhone && (
+                                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <Phone className="size-3" />
+                                  {customerPhone}
+                                </p>
+                              )}
+                              {customerAddress && (
+                                <p className="flex items-start gap-2 text-xs text-muted-foreground">
+                                  <MapPin className="size-3 mt-0.5" />
+                                  <span className="leading-snug">{customerAddress}</span>
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              Nenhum cliente vinculado. Vamos perguntar no fechamento se deseja cadastrar.
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2 sm:items-end">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="w-full sm:w-auto"
+                            onClick={handleOpenCustomerForm}
+                          >
+                            <UserPlus className="mr-2 size-4" />
+                            {shouldRegisterCustomer ? "Editar cadastro" : "Cadastrar cliente"}
+                          </Button>
+                          {shouldRegisterCustomer && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="w-full sm:w-auto text-destructive hover:bg-destructive/10 hover:text-destructive"
+                              onClick={clearCustomerDetails}
+                            >
+                              <UserX className="mr-2 size-4" />
+                              Remover cliente
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {!shouldRegisterCustomer && (
+                        <p className="mt-2 text-[0.7rem] text-muted-foreground">
+                          Precisa agilidade? Basta manter o cadastro desativado e finalizar normalmente.
+                        </p>
+                      )}
                     </div>
 
                     <div className="space-y-2">
@@ -688,7 +869,7 @@ export default function SalesPage() {
                         Limpar
                       </Button>
                       <Button
-                        onClick={finalizeSale}
+                        onClick={handleFinalizeAttempt}
                         disabled={saleLoading || cart.length === 0 || (paymentMethod === "cash" && !showChange)}
                         className="w-full"
                       >
@@ -721,6 +902,115 @@ export default function SalesPage() {
           </Card>
         </div>
       </div>
+      <Dialog open={customerDialogOpen} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="max-w-xl space-y-6 sm:max-w-lg md:max-w-2xl">
+          {customerDialogStep === "prompt" ? (
+            <div className="space-y-6">
+              <DialogHeader className="space-y-3 text-left">
+                <DialogTitle className="text-2xl font-semibold">
+                  Registrar o cliente desta venda?
+                </DialogTitle>
+                <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+                  Salvar o nome, telefone e endereço ajuda a acompanhar pedidos, oferecer fidelização
+                  e agilizar próximos atendimentos.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  className="h-auto justify-start gap-3 rounded-xl border border-primary/40 bg-primary/90 px-4 py-3 text-left text-base font-semibold text-primary-foreground shadow-md hover:bg-primary"
+                  onClick={() => {
+                    setPendingFinalizeAfterCustomer(true)
+                    setCustomerDialogStep("form")
+                    setCustomerFormError(null)
+                  }}
+                >
+                  <UserPlus className="size-5" />
+                  Quero cadastrar agora
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-auto justify-start gap-3 rounded-xl border-muted-foreground/30 px-4 py-3 text-left text-base"
+                  onClick={finalizeWithoutCustomer}
+                  disabled={saleLoading}
+                >
+                  <Receipt className="size-5" />
+                  Finalizar sem cadastro
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Precisa de velocidade? Você pode desativar essa pergunta nas ações rápidas acima e reativá-la quando quiser.
+              </p>
+            </div>
+          ) : (
+            <form className="space-y-6" onSubmit={handleCustomerFormSubmit}>
+              <DialogHeader className="space-y-3 text-left">
+                <DialogTitle className="text-2xl font-semibold">Cadastrar cliente</DialogTitle>
+                <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+                  Digite os dados que deseja registrar. Só o nome é obrigatório, mas telefone e endereço
+                  ajudam no pós-venda.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="customer-dialog-name" className="text-sm font-medium">
+                    Nome completo
+                  </Label>
+                  <Input
+                    id="customer-dialog-name"
+                    value={customerName}
+                    onChange={(event) => setCustomerName(event.target.value)}
+                    placeholder="Ex.: Ana Souza"
+                    autoComplete="name"
+                    inputMode="text"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="customer-dialog-phone" className="text-sm font-medium">
+                    Telefone
+                  </Label>
+                  <Input
+                    id="customer-dialog-phone"
+                    value={customerPhone}
+                    onChange={(event) => setCustomerPhone(event.target.value)}
+                    placeholder="(11) 90000-0000"
+                    autoComplete="tel"
+                    inputMode="tel"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="customer-dialog-address" className="text-sm font-medium">
+                    Endereço
+                  </Label>
+                  <Input
+                    id="customer-dialog-address"
+                    value={customerAddress}
+                    onChange={(event) => setCustomerAddress(event.target.value)}
+                    placeholder="Rua, número, complemento"
+                    autoComplete="street-address"
+                  />
+                </div>
+              </div>
+              {customerFormError && <p className="text-sm font-medium text-destructive">{customerFormError}</p>}
+              <DialogFooter className="gap-2 sm:gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleDialogOpenChange(false)}
+                  className="h-11"
+                >
+                  Cancelar
+                </Button>
+                <Button type="submit" className="h-11" disabled={saleLoading}>
+                  {pendingFinalizeAfterCustomer ? "Salvar e finalizar" : "Salvar"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </SidebarLayout>
   )
 }

@@ -15,12 +15,14 @@ const createSaleSchema = z.object({
   customerEmail: z.string().email('E-mail inválido').optional(),
   customerPhone: z.string().optional(),
   customerDocument: z.string().optional(),
+  customerAddress: z.string().optional(),
   channel: z.string().optional(),
   discountValue: z.number().nonnegative().optional(),
   taxValue: z.number().nonnegative().optional(),
   serviceCharge: z.number().optional(),
   notes: z.string().optional(),
   pointOfSaleId: z.string().optional(),
+  registerCustomer: z.boolean().optional(),
   payments: z.array(
     z.object({
       method: z.string().min(1),
@@ -43,6 +45,7 @@ export async function GET() {
         },
         pointOfSale: true,
         payments: true,
+        customer: true,
       } as any,
       orderBy: {
         date: 'desc',
@@ -76,6 +79,7 @@ export async function POST(request: NextRequest) {
   const sanitizedCustomerEmail = input.customerEmail?.trim() || undefined
   const sanitizedCustomerPhone = input.customerPhone?.trim() || undefined
   const sanitizedCustomerDocument = input.customerDocument?.trim() || undefined
+  const sanitizedCustomerAddress = input.customerAddress?.trim() || undefined
   const sanitizedChannel = input.channel?.trim() || undefined
   const sanitizedNotes = input.notes?.trim() || undefined
   const pointOfSaleId = input.pointOfSaleId?.trim() || undefined
@@ -83,6 +87,16 @@ export async function POST(request: NextRequest) {
   const taxValue = Math.max(input.taxValue ?? 0, 0)
   const serviceCharge = input.serviceCharge ?? 0
   const paymentsPayload = input.payments?.filter((payment) => payment.amount >= 0) ?? []
+  const shouldRegisterCustomer = input.registerCustomer ?? false
+
+  if (shouldRegisterCustomer && !sanitizedCustomerName) {
+    return NextResponse.json(
+      {
+        error: 'Nome do cliente é obrigatório para cadastro',
+      },
+      { status: 400 }
+    )
+  }
 
     const aggregatedItemsMap = new Map<string, { productId: string; quantity: number }>()
     input.items.forEach((item) => {
@@ -119,10 +133,16 @@ export async function POST(request: NextRequest) {
       create: (args: unknown) => Promise<unknown>
     }
 
+      type CustomerDelegate = {
+        upsert: (args: unknown) => Promise<{ id: string }>
+        create: (args: unknown) => Promise<{ id: string }>
+      }
+
     type PrismaWithProductPoints = typeof prisma & {
       productPointOfSale: ProductPointOfSaleDelegate
       inventoryMovement: InventoryMovementDelegate
       salePayment: SalePaymentDelegate
+        customer: CustomerDelegate
     }
 
     const prismaWithPoints = prisma as PrismaWithProductPoints
@@ -222,6 +242,36 @@ export async function POST(request: NextRequest) {
     const sale = await prisma.$transaction(async (tx) => {
       const transactionalClient = tx as PrismaWithProductPoints
 
+      let customerRecord: { id: string } | null = null
+
+      if (shouldRegisterCustomer && sanitizedCustomerName) {
+        if (sanitizedCustomerPhone) {
+          customerRecord = await transactionalClient.customer.upsert({
+            where: { phone: sanitizedCustomerPhone },
+            create: {
+              name: sanitizedCustomerName,
+              phone: sanitizedCustomerPhone,
+              email: sanitizedCustomerEmail,
+              address: sanitizedCustomerAddress,
+            },
+            update: {
+              name: sanitizedCustomerName,
+              email: sanitizedCustomerEmail,
+              address: sanitizedCustomerAddress,
+            },
+          })
+        } else {
+          customerRecord = await transactionalClient.customer.create({
+            data: {
+              name: sanitizedCustomerName,
+              email: sanitizedCustomerEmail,
+              address: sanitizedCustomerAddress,
+              phone: sanitizedCustomerPhone,
+            },
+          })
+        }
+      }
+
       const saleData = {
         total: netTotal,
         paymentMethod: input.paymentMethod ?? null,
@@ -229,6 +279,7 @@ export async function POST(request: NextRequest) {
         customerEmail: sanitizedCustomerEmail ?? null,
         customerPhone: sanitizedCustomerPhone ?? null,
         customerDocument: sanitizedCustomerDocument ?? null,
+        customerAddress: sanitizedCustomerAddress ?? null,
         channel: sanitizedChannel ?? null,
         subtotal,
         discountValue,
@@ -251,6 +302,7 @@ export async function POST(request: NextRequest) {
             discount: saleItems.length > 0 ? discountValue / saleItems.length : 0,
           })),
         },
+        customer: customerRecord ? { connect: { id: customerRecord.id } } : undefined,
       } as any
 
       const createdSale = await tx.sale.create({
@@ -263,6 +315,7 @@ export async function POST(request: NextRequest) {
           },
           pointOfSale: true,
           payments: true,
+          customer: true,
         } as any,
       })
 

@@ -95,6 +95,8 @@ model Sale {
   customerEmail String?
   customerPhone String?
   customerDocument String?
+  customerAddress String?
+  customerId String?
   channel   String?
   subtotal  Float?
   discountValue Float @default(0)
@@ -107,7 +109,23 @@ model Sale {
   items     SaleItem[]
   payments  SalePayment[]
   pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
   inventoryMovements InventoryMovement[]
+
+  @@index([customerId])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?  @unique
+  email     String?
+  address   String?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales Sale[]
 }
 
 model SaleItem {
