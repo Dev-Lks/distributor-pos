@@ -4,8 +4,6 @@ import type { FormEvent } from "react"
 import { useMemo, useState } from "react"
 import { AlertTriangle, Activity, DollarSign, Package, ShoppingCart, Users } from "lucide-react"
 
-import { SidebarLayout } from "@/components/SidebarLayout"
-import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -436,7 +434,7 @@ export default function DashboardPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="space-y-4 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-2xl">
@@ -476,10 +474,5 @@ export default function DashboardPage() {
     )
   }
 
-  return (
-    <SidebarLayout>
-      <OverviewDashboard />
-      <PWAInstallPrompt />
-    </SidebarLayout>
-  )
+  return <OverviewDashboard />
 }

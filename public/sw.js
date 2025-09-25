@@ -3,7 +3,9 @@ const CACHE_NAME = 'nitrobeer-pos-v1';
 const urlsToCache = [
   '/',
   '/dashboard',
-  '/sales',
+  '/dashboard/sales',
+  '/dashboard/inventory',
+  '/dashboard/inventory-by-point',
   '/inventory',
   '/products',
   '/manifest.json',

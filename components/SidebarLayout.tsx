@@ -1,219 +1,288 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import type { ComponentType, ReactNode } from "react"
+import { useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ThemeToggle } from "./ThemeToggle"
 import {
   BarChart3,
-  ShoppingCart,
-  Package,
+  Building2,
+  ChevronsLeft,
+  ChevronsRight,
   Menu,
-  X,
-  Home,
-  TrendingUp,
-  Users,
-  Settings
+  Package2,
+  Settings,
+  ShoppingCart,
+  Store,
+  Users2,
+  X
 } from "lucide-react"
 
-interface SidebarProps {
-  children: React.ReactNode
+import { cn } from "@/lib/utils"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { ThemeToggle } from "./ThemeToggle"
+
+interface SidebarLayoutProps {
+  children: ReactNode
 }
 
-const navigation = [
+interface NavItem {
+  label: string
+  description?: string
+  href: string
+  icon: ComponentType<{ className?: string }>
+  tag?: string
+}
+
+const navSections: Array<{
+  heading: string
+  items: NavItem[]
+}> = [
   {
-    name: "Dashboard",
-    href: "/dashboard",
-    icon: Home,
-    description: "Visão geral"
+    heading: "Principal",
+    items: [
+      {
+        label: "Visão geral",
+        description: "Indicadores consolidados",
+        href: "/dashboard",
+        icon: BarChart3
+      },
+      {
+        label: "Ponto de venda",
+        description: "Registrador rápido",
+        href: "/dashboard/sales",
+        icon: ShoppingCart,
+        tag: "Live"
+      }
+    ]
   },
   {
-    name: "Vendas",
-    href: "/sales",
-    icon: ShoppingCart,
-    description: "Ponto de venda"
+    heading: "Operações",
+    items: [
+      {
+        label: "Estoque geral",
+        description: "Controle de lotes e saldos",
+        href: "/dashboard/inventory",
+        icon: Package2
+      },
+      {
+        label: "Estoque por ponto",
+        description: "Distribuição por unidade",
+        href: "/dashboard/inventory-by-point",
+        icon: Store
+      },
+      {
+        label: "Produtos",
+        description: "Ficha técnica e preços",
+        href: "/products",
+        icon: Building2
+      },
+      {
+        label: "Pontos de venda",
+        description: "Configuração dos PDVs",
+        href: "/points",
+        icon: Users2
+      }
+    ]
   },
   {
-    name: "Inventário",
-    href: "/inventory",
-    icon: Package,
-    description: "Controle de estoque"
-  },
-  {
-    name: "Produtos",
-    href: "/products",
-    icon: Package,
-    description: "Gerenciar produtos"
-  },
-  {
-    name: "Estoque por Ponto",
-    href: "/inventory-by-point",
-    icon: Package,
-    description: "Estoque específico por ponto"
-  },
-  {
-    name: "Pontos de Venda",
-    href: "/points",
-    icon: Settings,
-    description: "Configurar pontos"
+    heading: "Sistema",
+    items: [
+      {
+        label: "Configurações",
+        description: "Preferências e integrações",
+        href: "/dashboard/settings",
+        icon: Settings
+      }
+    ]
   }
 ]
 
-export function SidebarLayout({ children }: SidebarProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false) // Temporariamente revertido
+export function SidebarLayout({ children }: SidebarLayoutProps) {
   const pathname = usePathname()
+  const [isCollapsed, setIsCollapsed] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
+
+  const flatNav = useMemo(() => navSections.flatMap((section) => section.items), [])
+
+  const activeItem = useMemo(
+    () =>
+      flatNav.find((item) => {
+        if (pathname === item.href) return true
+        if (item.href === "/dashboard") {
+          return pathname === "/dashboard"
+        }
+        return pathname.startsWith(`${item.href}/`)
+      }) ?? flatNav[0],
+    [flatNav, pathname]
+  )
+
+  const activeSection = useMemo(
+    () => navSections.find((section) => section.items.some((item) => item === activeItem)) ?? navSections[0],
+    [activeItem]
+  )
+
+  const closeMobile = () => setIsMobileOpen(false)
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Mobile sidebar overlay */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
-          onClick={() => setSidebarOpen(false)}
+    <div className="min-h-screen bg-gradient-to-br from-muted/40 via-background to-background text-foreground">
+      {isMobileOpen && (
+        <button
+          type="button"
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden"
+          onClick={closeMobile}
         />
       )}
 
-      {/* Sidebar */}
-      <div
+      <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col bg-card border-r transition-all duration-300 ease-in-out",
-          sidebarCollapsed ? "w-12 md:w-16" : "w-48 md:w-64",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+          "fixed inset-y-0 left-0 z-50 flex h-screen flex-col border-r border-border/70 bg-card/95 backdrop-blur transition-[width,transform] duration-300",
+          isCollapsed ? "w-20" : "w-72",
+          isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         )}
       >
-        {/* Header */}
-        <div className="flex h-12 md:h-16 items-center justify-between px-2 md:px-4 border-b">
-          {!sidebarCollapsed && (
-            <div className="flex items-center gap-2 md:gap-3">
-              <div className="w-6 h-6 md:w-8 md:h-8 bg-primary/20 rounded-lg flex items-center justify-center">
-                🍺
+        <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 text-2xl">🍺</div>
+            {!isCollapsed && (
+              <div>
+                <p className="text-sm font-semibold tracking-tight">NitroBeer POS</p>
+                <p className="text-xs text-muted-foreground">Operações em tempo real</p>
               </div>
-              <div className="hidden md:block">
-                <h1 className="text-sm md:text-lg font-bold">NitroBeer</h1>
-                <p className="text-xs text-muted-foreground">POS System</p>
-              </div>
-            </div>
-          )}
-          {sidebarCollapsed && (
-            <div className="w-6 h-6 md:w-8 md:h-8 bg-primary/20 rounded-lg flex items-center justify-center mx-auto">
-              🍺
-            </div>
-          )}
-
-          {/* Desktop collapse button */}
+            )}
+          </div>
           <Button
-            variant="ghost"
-            size="sm"
-            className="hidden md:flex h-6 w-6 md:h-8 md:w-8 p-0"
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+            type="button"
+            size="icon"
+            variant="outline"
+            className="hidden h-10 w-10 md:flex"
+            onClick={() => setIsCollapsed((state) => !state)}
           >
-            <Menu className="h-3 w-3 md:h-4 md:w-4" />
+            {isCollapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+            <span className="sr-only">Alternar largura do menu</span>
           </Button>
-
-          {/* Mobile close button */}
           <Button
+            type="button"
+            size="icon"
             variant="ghost"
-            size="sm"
-            className="md:hidden h-6 w-6 md:h-8 md:w-8 p-0"
-            onClick={() => setSidebarOpen(false)}
+            className="h-9 w-9 text-muted-foreground md:hidden"
+            onClick={closeMobile}
           >
-            <X className="h-3 w-3 md:h-4 md:w-4" />
+            <X className="h-5 w-5" />
+            <span className="sr-only">Fechar menu</span>
           </Button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-2 md:px-3 py-2 md:py-4 space-y-1 md:space-y-2">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-2 md:gap-3 px-2 md:px-3 py-2 rounded-lg text-xs md:text-sm font-medium transition-colors",
-                  "hover:bg-accent hover:text-accent-foreground",
-                  isActive
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground",
-                  sidebarCollapsed && "justify-center px-1 md:px-2"
-                )}
-                onClick={() => setSidebarOpen(false)}
-              >
-                <item.icon className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0" />
-                {!sidebarCollapsed && (
-                  <div className="flex-1 min-w-0 hidden md:block">
-                    <div className="truncate">{item.name}</div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {item.description}
-                    </div>
-                  </div>
-                )}
-              </Link>
-            )
-          })}
+        <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-6">
+          {navSections.map((section) => (
+            <div key={section.heading} className="space-y-2">
+              {!isCollapsed && (
+                <p className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  {section.heading}
+                </p>
+              )}
+              <div className="space-y-1.5">
+                {section.items.map((item) => {
+                  const isActive = activeItem === item
+                  const Icon = item.icon
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={closeMobile}
+                      className={cn(
+                        "group relative flex items-center gap-3 overflow-hidden rounded-xl border border-transparent px-3 py-3 text-sm font-medium transition-all",
+                        isActive
+                          ? "border-amber-500/40 bg-amber-500/10 text-foreground shadow-inner"
+                          : "text-muted-foreground hover:border-border/60 hover:bg-muted/60 hover:text-foreground",
+                        isCollapsed && "justify-center px-2"
+                      )}
+                    >
+                      <Icon className="h-5 w-5 shrink-0" />
+                      {!isCollapsed && (
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="truncate">{item.label}</span>
+                            {item.tag && (
+                              <Badge variant="secondary" className="h-5 rounded-full px-2 text-[11px]">
+                                {item.tag}
+                              </Badge>
+                            )}
+                          </div>
+                          {item.description && (
+                            <p className="truncate text-xs text-muted-foreground/80">{item.description}</p>
+                          )}
+                        </div>
+                      )}
+                      {isActive && (
+                        <div className="absolute inset-y-2 right-2 w-1 rounded-full bg-amber-500/80" aria-hidden />
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
-        {/* Footer */}
-        <div className="p-2 md:p-3 border-t">
-          {!sidebarCollapsed && (
-            <div className="text-xs text-muted-foreground text-center hidden md:block">
-              Versão 2.0
-            </div>
+        <div className="border-t border-border/70 px-3 py-4">
+          <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-3">
+            {!isCollapsed && (
+              <div>
+                <p className="text-sm font-semibold">Modo escuro</p>
+                <p className="text-xs text-muted-foreground">Personalize a interface</p>
+              </div>
+            )}
+            <ThemeToggle />
+          </div>
+          {!isCollapsed && (
+            <p className="mt-3 text-center text-[11px] text-muted-foreground">
+              NitroBeer • Versão 2.5
+            </p>
           )}
         </div>
-      </div>
+      </aside>
 
-      {/* Main content */}
       <div
         className={cn(
-          "transition-all duration-300 ease-in-out",
-          sidebarCollapsed ? "md:ml-12 lg:ml-16" : "md:ml-48 lg:ml-64"
+          "flex min-h-screen flex-col transition-all duration-300",
+          isCollapsed ? "md:pl-20" : "md:pl-72"
         )}
       >
-        {/* Top bar */}
-        <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur">
-          <div className="flex h-12 md:h-16 items-center justify-between px-2 md:px-4 lg:px-6">
-            {/* Mobile menu button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="md:hidden h-6 w-6 md:h-8 md:w-8 p-0"
-              onClick={() => setSidebarOpen(true)}
-            >
-              <Menu className="h-3 w-3 md:h-5 md:w-5" />
-            </Button>
-
-            {/* Desktop collapse button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              className="hidden md:flex h-6 w-6 md:h-8 md:w-8 p-0"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            >
-              <Menu className="h-3 w-3 md:h-4 md:w-4" />
-            </Button>
-
-            {/* Right side */}
-            <div className="flex items-center gap-2 md:gap-4 ml-auto">
-              <ThemeToggle />
-              <Badge variant="outline" className="hidden sm:flex text-xs">
-                Online
-              </Badge>
-              <div className="hidden md:block text-xs md:text-sm text-muted-foreground">
-                {new Date().toLocaleDateString('pt-BR')}
+        <header className="sticky top-0 z-30 border-b border-border/70 bg-background/80 backdrop-blur">
+          <div className="flex h-16 items-center justify-between gap-4 px-4 md:px-6">
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-9 w-9 md:hidden"
+                onClick={() => setIsMobileOpen(true)}
+              >
+                <Menu className="h-5 w-5" />
+                <span className="sr-only">Abrir navegação</span>
+              </Button>
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">{activeSection.heading}</p>
+                <h1 className="text-xl font-semibold leading-tight">{activeItem.label}</h1>
               </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="hidden text-xs md:inline-flex">
+                Sessão segura
+              </Badge>
+              <Button asChild size="sm" className="hidden md:inline-flex">
+                <Link href="/dashboard/sales">Nova venda</Link>
+              </Button>
             </div>
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="flex-1 p-2 md:p-4 lg:p-6 max-w-full md:max-w-7xl mx-auto">
-          {children}
+        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+          <div className="mx-auto w-full max-w-7xl space-y-6">
+            {children}
+          </div>
         </main>
       </div>
     </div>

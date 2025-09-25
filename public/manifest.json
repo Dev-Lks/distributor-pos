@@ -22,7 +22,7 @@
       "name": "Nova Venda",
       "short_name": "Vender",
       "description": "Iniciar nova venda",
-      "url": "/sales",
+      "url": "/dashboard/sales",
       "icons": [{ "src": "/icon-venda.svg", "sizes": "96x96" }]
     },
     {
