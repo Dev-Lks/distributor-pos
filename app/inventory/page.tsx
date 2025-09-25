@@ -52,6 +52,18 @@ function getStockStatus(stock: number, minStock: number) {
   }
 }
 
+type ProductInventory = NonNullable<Product["inventory"]>
+
+const getInventoryQuantity = (inventory: ProductInventory | undefined, location: Location): number => {
+  if (!inventory) {
+    return 0
+  }
+
+  const key = `${location}Quantity` as keyof ProductInventory
+  const value = inventory[key]
+  return typeof value === "number" ? value : 0
+}
+
 function LocationSelector({ value, onChange, label }: { value: Location | null, onChange: (location: Location) => void, label: string }) {
   return (
     <div>
@@ -178,7 +190,7 @@ export default function InventoryPage() {
       // Buscar estoque atual
       const product = products.find((p: Product) => p.id === addProductId)
       if (product) {
-        const currentQuantity = product.inventory?.[`${addLocation}Quantity` as keyof Product['inventory']] as number || 0
+        const currentQuantity = getInventoryQuantity(product.inventory, addLocation)
         const newQuantity = currentQuantity + quantity
 
         await fetch("/api/inventory", {
@@ -200,8 +212,8 @@ export default function InventoryPage() {
     if (quantity > 0 && transferProductId && transferFrom !== transferTo) {
       const product = products.find((p: Product) => p.id === transferProductId)
       if (product?.inventory) {
-        const fromQuantity = product.inventory[`${transferFrom}Quantity` as keyof Product['inventory']] as number || 0
-        const toQuantity = product.inventory[`${transferTo}Quantity` as keyof Product['inventory']] as number || 0
+        const fromQuantity = getInventoryQuantity(product.inventory, transferFrom)
+        const toQuantity = getInventoryQuantity(product.inventory, transferTo)
 
         if (fromQuantity >= quantity) {
           // Atualizar origem (diminuir)

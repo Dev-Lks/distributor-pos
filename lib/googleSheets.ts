@@ -17,6 +17,28 @@ export interface SaleData {
   }>;
 }
 
+interface SheetsSaleRecord {
+  id: string
+  date: string
+  total: number
+  paymentMethod?: string
+  customerName?: string
+  items: Array<{
+    productId: string
+    productName: string
+    quantity: number
+    price: number
+  }>
+}
+
+interface SheetsResponse {
+  sales?: SheetsSaleRecord[]
+  totalSales?: number
+  totalRevenue?: number
+  todaySales?: number
+  todayRevenue?: number
+}
+
 export class GoogleSheetsBackup {
   async saveSale(sale: SaleData, pointOfSale: string = 'default'): Promise<boolean> {
     try {
@@ -47,7 +69,7 @@ export class GoogleSheetsBackup {
     }
   }
 
-  async getAllSales(pointOfSale: string = 'all'): Promise<any[]> {
+  async getAllSales(pointOfSale: string = 'all'): Promise<SheetsSaleRecord[]> {
     try {
       const response = await fetch(`${API_BASE}/api/sheets?pointOfSale=${encodeURIComponent(pointOfSale)}`);
 
@@ -56,8 +78,8 @@ export class GoogleSheetsBackup {
         return [];
       }
 
-      const data = await response.json();
-      return data.sales || [];
+      const data = (await response.json()) as SheetsResponse;
+      return data.sales ?? [];
     } catch (error) {
       console.error('Erro ao buscar vendas do Google Sheets:', error);
       return [];
@@ -78,7 +100,7 @@ export class GoogleSheetsBackup {
         return { totalSales: 0, totalRevenue: 0, todaySales: 0, todayRevenue: 0 };
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as SheetsResponse;
       return {
         totalSales: data.totalSales || 0,
         totalRevenue: data.totalRevenue || 0,

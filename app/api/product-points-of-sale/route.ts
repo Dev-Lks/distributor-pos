@@ -1,16 +1,25 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+const prismaProductPoints = (prisma as unknown as {
+  productPointOfSale: {
+    findMany: (args?: unknown) => Promise<unknown>
+    create: (args: unknown) => Promise<unknown>
+    update: (args: unknown) => Promise<unknown>
+    delete: (args: unknown) => Promise<unknown>
+  }
+}).productPointOfSale
 
 export async function GET() {
   try {
-    const productPointsOfSale = await (prisma as any).productPointOfSale.findMany({
+    const productPointsOfSale = await prismaProductPoints.findMany({
       include: {
         product: true,
         pointOfSale: true
       }
-    })
+  }) as unknown[]
     return NextResponse.json(productPointsOfSale)
   } catch (error) {
+    console.error('Failed to fetch product points of sale:', error)
     return NextResponse.json({ error: 'Failed to fetch product points of sale' }, { status: 500 })
   }
 }
@@ -18,22 +27,32 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { productId, pointOfSaleId, quantity, minStock } = body
+    const { productId, pointOfSaleId, quantity = 0, minStock = 2 } = body as {
+      productId?: string
+      pointOfSaleId?: string
+      quantity?: number
+      minStock?: number
+    }
 
-    const productPointOfSale = await (prisma as any).productPointOfSale.create({
+    if (!productId || !pointOfSaleId) {
+      return NextResponse.json({ error: 'productId and pointOfSaleId are required' }, { status: 400 })
+    }
+
+    const productPointOfSale = await prismaProductPoints.create({
       data: {
         productId,
         pointOfSaleId,
-        quantity: quantity || 0,
-        minStock: minStock || 2
+        quantity,
+        minStock
       },
       include: {
         product: true,
         pointOfSale: true
       }
-    })
+  }) as Record<string, unknown>
     return NextResponse.json(productPointOfSale, { status: 201 })
   } catch (error) {
+    console.error('Failed to create product point of sale:', error)
     return NextResponse.json({ error: 'Failed to create product point of sale' }, { status: 500 })
   }
 }
@@ -41,9 +60,17 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, quantity, minStock } = body
+    const { id, quantity, minStock } = body as {
+      id?: string
+      quantity?: number
+      minStock?: number
+    }
 
-    const productPointOfSale = await (prisma as any).productPointOfSale.update({
+    if (!id) {
+      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
+    }
+
+    const productPointOfSale = await prismaProductPoints.update({
       where: { id },
       data: {
         quantity,
@@ -53,9 +80,10 @@ export async function PATCH(request: NextRequest) {
         product: true,
         pointOfSale: true
       }
-    })
+  }) as Record<string, unknown>
     return NextResponse.json(productPointOfSale)
   } catch (error) {
+    console.error('Failed to update product point of sale:', error)
     return NextResponse.json({ error: 'Failed to update product point of sale' }, { status: 500 })
   }
 }
@@ -69,11 +97,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID required' }, { status: 400 })
     }
 
-    await (prisma as any).productPointOfSale.delete({
+  await prismaProductPoints.delete({
       where: { id }
     })
     return NextResponse.json({ success: true })
   } catch (error) {
+    console.error('Failed to delete product point of sale:', error)
     return NextResponse.json({ error: 'Failed to delete product point of sale' }, { status: 500 })
   }
 }

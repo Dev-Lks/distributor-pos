@@ -24,12 +24,28 @@ export interface Product {
     salePointAlert?: boolean
     totalQuantity?: number
   }
+  productPointsOfSale?: Array<{
+    id: string
+    productId: string
+    pointOfSaleId: string
+    quantity: number
+    minStock: number
+    pointOfSale?: {
+      id: string
+      name: string
+      isActive: boolean
+    }
+  }>
 }
 
 export function useProducts() {
-  return useQuery({
+  return useQuery<Product[]>({
     queryKey: ['products'],
-    queryFn: () => fetch('/api/products').then(res => res.json()),
+    queryFn: async () => {
+      const response = await fetch('/api/products')
+      if (!response.ok) throw new Error('Failed to fetch products')
+      return (await response.json()) as Product[]
+    },
     staleTime: 0, // Always refetch for instant updates
   })
 }

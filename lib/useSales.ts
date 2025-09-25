@@ -16,16 +16,35 @@ export interface CreateSaleParams {
   customerName?: string
 }
 
+interface SaleItemResponse {
+  productId: string
+  quantity: number
+  price: number
+  product?: {
+    id: string
+    name: string
+  } | null
+}
+
+export interface SaleRecord {
+  id: string
+  date: string
+  total: number
+  paymentMethod?: string | null
+  customerName?: string | null
+  items: SaleItemResponse[]
+}
+
 export function useSales(pointOfSale?: string) {
   const queryClient = useQueryClient()
   const { data: products = [] } = useProducts()
 
-  const { data: sales = [], isLoading: salesLoading, refetch: refetchSales } = useQuery({
+  const { data: sales = [], isLoading: salesLoading, refetch: refetchSales } = useQuery<SaleRecord[]>({
     queryKey: ['sales'],
     queryFn: async () => {
       const response = await fetch('/api/sales')
       if (!response.ok) throw new Error('Failed to fetch sales')
-      return response.json()
+      return (await response.json()) as SaleRecord[]
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
   })
@@ -50,8 +69,8 @@ export function useSales(pointOfSale?: string) {
       let availableStock = 0
 
       // Find the point of sale by ID and get the stock for this product
-      const productPointOfSale = product?.productPointsOfSale?.find(
-        (pps: any) => pps.pointOfSale.id === pointOfSale
+      const productPointOfSale = (product?.productPointsOfSale ?? []).find(
+        (pps) => pps.pointOfSale?.id === pointOfSale
       )
 
       if (productPointOfSale) {
@@ -108,6 +127,7 @@ export function useSales(pointOfSale?: string) {
     }
 
     // Invalidate caches
+    queryClient.invalidateQueries({ queryKey: ['sales'] })
     queryClient.invalidateQueries({ queryKey: ['products'] })
     queryClient.invalidateQueries({ queryKey: ['sales-metrics'] })
 
@@ -118,7 +138,7 @@ export function useSales(pointOfSale?: string) {
     try {
       const response = await fetch('/api/sales')
       if (!response.ok) throw new Error('Failed to fetch sales')
-      const dbSales = await response.json()
+      const dbSales = (await response.json()) as SaleRecord[]
       let successCount = 0
       let errorCount = 0
 
@@ -129,8 +149,8 @@ export function useSales(pointOfSale?: string) {
             date: new Date(sale.date),
             total: sale.total,
             paymentMethod: sale.paymentMethod || 'Não informado',
-            customerName: sale.customerName,
-            items: sale.items.map((item: any) => ({
+            customerName: sale.customerName ?? undefined,
+            items: sale.items.map((item) => ({
               productId: item.productId,
               productName: item.product?.name || 'Produto',
               quantity: item.quantity,
@@ -193,7 +213,7 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
       // Fetch sales from database API
       const response = await fetch('/api/sales')
       if (!response.ok) throw new Error('Failed to fetch sales')
-      const sales = await response.json()
+      const sales = (await response.json()) as SaleRecord[]
 
       // Calculate date range based on period
       const now = new Date()
@@ -225,11 +245,11 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
       }
 
       // Filter sales by period
-      const periodSales = sales.filter((sale: any) => new Date(sale.date) >= startDate)
-      const totalToday = periodSales.reduce((sum: number, sale: any) => sum + sale.total, 0)
+  const periodSales = sales.filter((sale) => new Date(sale.date) >= startDate)
+  const totalToday = periodSales.reduce((sum, sale) => sum + sale.total, 0)
 
       // Sales by hour (last 24 hours for today, or aggregated for longer periods)
-      const hourlyData = []
+      const hourlyData: Array<{ hour: number; sales: number; revenue: number }> = []
       if (period === 'today') {
         for (let i = 23; i >= 0; i--) {
           const hour = new Date()
@@ -237,7 +257,7 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
           const hourEnd = new Date(hour)
           hourEnd.setHours(hour.getHours() + 1)
 
-          const hourSales = sales.filter((sale: any) => {
+          const hourSales = sales.filter((sale) => {
             const saleDate = new Date(sale.date)
             return saleDate >= hour && saleDate < hourEnd
           })
@@ -245,7 +265,7 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
           hourlyData.push({
             hour: hour.getHours(),
             sales: hourSales.length,
-            revenue: hourSales.reduce((sum: number, sale: any) => sum + sale.total, 0)
+            revenue: hourSales.reduce((sum, sale) => sum + sale.total, 0)
           })
         }
       } else {
@@ -258,7 +278,7 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
           const dayEnd = new Date(day)
           dayEnd.setDate(day.getDate() + 1)
 
-          const daySales = periodSales.filter((sale: any) => {
+          const daySales = periodSales.filter((sale) => {
             const saleDate = new Date(sale.date)
             return saleDate >= day && saleDate < dayEnd
           })
@@ -266,15 +286,15 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
           hourlyData.push({
             hour: day.getDate(), // Use day for x-axis
             sales: daySales.length,
-            revenue: daySales.reduce((sum: number, sale: any) => sum + sale.total, 0)
+            revenue: daySales.reduce((sum, sale) => sum + sale.total, 0)
           })
         }
       }
 
       // Top products
-      const productCount: { [key: string]: { name: string; count: number; revenue: number } } = {}
-      periodSales.forEach((sale: any) => {
-        sale.items.forEach((item: any) => {
+      const productCount: Record<string, { name: string; count: number; revenue: number }> = {}
+      periodSales.forEach((sale) => {
+        sale.items.forEach((item) => {
           if (!productCount[item.productId]) {
             productCount[item.productId] = {
               name: item.product?.name || 'Unknown',
@@ -288,7 +308,7 @@ export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 't
       })
 
       const topProducts = Object.values(productCount)
-        .sort((a: any, b: any) => b.count - a.count)
+        .sort((a, b) => b.count - a.count)
         .slice(0, 5)
 
       return {

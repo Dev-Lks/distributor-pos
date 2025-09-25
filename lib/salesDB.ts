@@ -1,4 +1,4 @@
-import { openDB, type IDBPDatabase } from 'idb';
+import { openDB, type IDBPDatabase, type DBSchema } from 'idb';
 import * as XLSX from 'xlsx';
 
 interface Sale {
@@ -15,11 +15,21 @@ interface SaleItem {
   price?: number;
 }
 
-let dbPromise: Promise<IDBPDatabase<any>>;
+interface SalesDBSchema extends DBSchema {
+  sales: {
+    key: number;
+    value: Sale;
+    indexes: {
+      date: Date;
+    };
+  };
+}
 
-function initDB() {
+let dbPromise: Promise<IDBPDatabase<SalesDBSchema>> | undefined;
+
+function initDB(): Promise<IDBPDatabase<SalesDBSchema>> {
   if (!dbPromise) {
-    dbPromise = openDB('SalesDB', 1, {
+    dbPromise = openDB<SalesDBSchema>('SalesDB', 1, {
       upgrade(db) {
         if (!db.objectStoreNames.contains('sales')) {
           const store = db.createObjectStore('sales', { keyPath: 'id', autoIncrement: true });

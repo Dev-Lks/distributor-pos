@@ -1,6 +1,6 @@
 'use client'
 
-import { Instagram, Facebook, Phone, MapPin, ExternalLink, BarChart3, Package, TrendingUp, Users } from "lucide-react"
+import { Instagram, Facebook, Phone, MapPin, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
