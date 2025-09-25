@@ -372,21 +372,24 @@ const buildInventoryData = (inventory: InventorySeed) => {
 async function seedPointsOfSale() {
   console.log('📍 Sincronizando pontos de venda...')
   const records = await Promise.all(
-    pointsOfSaleSeed.map((point) =>
-      prisma.pointOfSale.upsert({
-        where: { name: point.name },
-        update: point,
-        create: point,
+    pointsOfSaleSeed.map((point) => {
+      const { name, isActive = true } = point
+      const pointData = { name, isActive }
+      return prisma.pointOfSale.upsert({
+        where: { name },
+        update: pointData,
+        create: pointData,
       })
-    )
+    })
   )
 
   const map = new Map<string, (typeof records)[number]>()
   records.forEach((record, index) => {
     const seed = pointsOfSaleSeed[index]
-    map.set(seed.name, record)
+    const storedRecord = { ...record, name: seed.name }
+    map.set(seed.name, storedRecord)
     if (seed.code) {
-      map.set(seed.code, record)
+      map.set(seed.code, storedRecord)
     }
   })
   console.log(`✅ ${records.length} pontos de venda sincronizados.`)
