@@ -109,7 +109,7 @@ function LocationSelector({
   return (
     <div className={cn("space-y-3", className)}>
       <Label className="text-sm font-semibold text-muted-foreground">{label}</Label>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3">
         {(Object.keys(locationConfig) as Location[]).map((location) => {
           const { label: locationLabel, description, icon: Icon } = locationConfig[location]
           const isSelected = value === location
