@@ -1,7 +1,7 @@
 ﻿"use client"
 
 import type React from "react"
-import { useMemo, useState } from "react"
+import { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { Badge } from "@/components/ui/badge"
@@ -29,8 +29,12 @@ import {
   Snowflake,
   Home,
   Store,
+  Upload,
+  FileDown,
+  Loader2,
   X
 } from "lucide-react"
+import type { InventoryImportResponse, InventoryImportSummary } from "@/lib/inventoryImport"
 
 type Location = "coldRoom" | "house" | "salePoint"
 
@@ -197,6 +201,11 @@ export default function InventoryPage() {
   const [transferFrom, setTransferFrom] = useState<Location>("coldRoom")
   const [transferTo, setTransferTo] = useState<Location>("house")
   const [transferQuantity, setTransferQuantity] = useState("")
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
+  const [importSummary, setImportSummary] = useState<InventoryImportSummary | null>(null)
+  const importInputRef = useRef<HTMLInputElement | null>(null)
 
   const handleAddModalChange = (open: boolean) => {
     setShowAddModal(open)
@@ -214,6 +223,83 @@ export default function InventoryPage() {
       setTransferQuantity("")
       setTransferFrom(COLD_ROOM_LOCATION)
       setTransferTo("house")
+    }
+  }
+
+  const handleImportModalChange = (open: boolean) => {
+    setShowImportModal(open)
+    if (!open) {
+      setImportFile(null)
+      setImportSummary(null)
+      if (importInputRef.current) {
+        importInputRef.current.value = ""
+      }
+    }
+  }
+
+  const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { files } = event.target
+    if (!files || !files.length) {
+      setImportFile(null)
+      return
+    }
+    setImportFile(files[0])
+  }
+
+  const handleTemplateDownload = () => {
+    window.open('/api/inventory/import', '_blank')
+  }
+
+  const handleImportSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+
+    if (!importFile) {
+      toast.error('Selecione um arquivo XLSX para continuar.')
+      return
+    }
+
+    setImporting(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', importFile)
+
+      const response = await fetch('/api/inventory/import', {
+        method: 'POST',
+        body: formData
+      })
+
+      const data = (await response.json()) as Partial<InventoryImportResponse> & { error?: string }
+      if (data.summary) {
+        setImportSummary(data.summary)
+      }
+
+      if (!response.ok) {
+        const summary = data.summary
+        const errorMessage =
+          data.error ??
+          (summary && (summary.errors.length > 0 || summary.warnings.length > 0)
+            ? 'Importação interrompida. Revise os erros e avisos listados para continuar.'
+            : 'Não foi possível importar a planilha. Tente novamente.')
+        toast.error(errorMessage)
+        return
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ['products'] })
+      toast.success(
+        data.summary
+          ? `Importação concluída! ${data.summary.processedCount} produtos atualizados.`
+          : 'Inventário atualizado com sucesso.'
+      )
+
+      setImportFile(null)
+      if (importInputRef.current) {
+        importInputRef.current.value = ""
+      }
+    } catch (error) {
+      console.error('Import inventory: client error', error)
+      toast.error('Erro inesperado ao enviar a planilha. Tente novamente.')
+    } finally {
+      setImporting(false)
     }
   }
 
@@ -332,6 +418,15 @@ export default function InventoryPage() {
   )
 
   const quickActions = [
+    {
+      title: "Importar planilha",
+      description: "Atualize o estoque em massa com uma planilha Excel no modelo padrão.",
+      icon: Upload,
+      buttonIcon: Upload,
+      cta: "Importar XLSX",
+      variant: "outline" as const,
+      onClick: () => setShowImportModal(true)
+    },
     {
       title: "Entrada centralizada",
       description: "Receba mercadorias e mantenha a câmara fria sempre atualizada.",
@@ -1169,7 +1264,131 @@ export default function InventoryPage() {
         </Card>
   </div>
 
-  <Dialog open={showAddModal} onOpenChange={handleAddModalChange}>
+      <Dialog open={showImportModal} onOpenChange={handleImportModalChange}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Importar inventário via planilha</DialogTitle>
+            <DialogDescription>
+              Utilize o modelo sugerido para atualizar quantidades, mínimos e reservas de vários produtos de uma só vez.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleImportSubmit} className="space-y-5">
+            <div className="flex items-start gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary dark:text-primary-foreground">
+              <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary dark:bg-primary/20">
+                <Upload className="size-5" />
+              </div>
+              <div className="space-y-1 text-left">
+                <p className="font-semibold">Atualize o estoque em lote</p>
+                <p className="text-xs text-muted-foreground">
+                  Cada linha deve conter o SKU ou Nome do produto e as quantidades desejadas. Campos não informados permanecem inalterados.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="inventory-import-file">Arquivo XLSX</Label>
+                <Input
+                  id="inventory-import-file"
+                  ref={importInputRef}
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleImportFileChange}
+                  disabled={importing}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Colunas reconhecidas: SKU, Nome, Câmara fria, Casa, Pontos de venda, Estoque mínimo (por local), Reservado, Avariado, Em trânsito, Estoque de segurança.
+                </p>
+              </div>
+
+              {importSummary && (
+                <div className="space-y-4 rounded-lg border border-muted-foreground/30 bg-muted/20 p-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {[{
+                      label: 'Linhas na planilha',
+                      value: importSummary.totalRows
+                    }, {
+                      label: 'Processadas',
+                      value: importSummary.processedCount
+                    }, {
+                      label: 'Atualizadas',
+                      value: importSummary.updatedCount
+                    }, {
+                      label: 'Criadas',
+                      value: importSummary.createdCount
+                    }, {
+                      label: 'Ignoradas',
+                      value: importSummary.ignoredCount
+                    }].map((item) => (
+                      <div key={item.label} className="rounded-md bg-background/60 p-3 shadow-sm">
+                        <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
+                        <p className="text-lg font-semibold">{item.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {importSummary.errors.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-destructive">Erros</p>
+                      <ul className="list-disc space-y-1 pl-5 text-xs text-destructive/80">
+                        {importSummary.errors.slice(0, 5).map((error) => (
+                          <li key={`${error.row}-${error.message}`}>
+                            Linha {error.row}: {error.message}
+                          </li>
+                        ))}
+                      </ul>
+                      {importSummary.errors.length > 5 && (
+                        <p className="text-xs text-muted-foreground">
+                          ... e mais {importSummary.errors.length - 5} erro(s).
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {importSummary.warnings.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">Avisos</p>
+                      <ul className="list-disc space-y-1 pl-5 text-xs text-amber-600/80 dark:text-amber-400/80">
+                        {importSummary.warnings.slice(0, 5).map((warning, index) => (
+                          <li key={`${index}-${warning}`}>{warning}</li>
+                        ))}
+                      </ul>
+                      {importSummary.warnings.length > 5 && (
+                        <p className="text-xs text-muted-foreground">
+                          ... e mais {importSummary.warnings.length - 5} aviso(s).
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <Button
+                type="button"
+                variant="ghost"
+                className="pl-0"
+                onClick={handleTemplateDownload}
+                disabled={importing}
+              >
+                <FileDown className="mr-2 size-4" /> Baixar modelo XLSX
+              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => handleImportModalChange(false)} disabled={importing}>
+                  Cancelar
+                </Button>
+                <Button type="submit" disabled={!importFile || importing}>
+                  {importing && <Loader2 className="mr-2 size-4 animate-spin" />}
+                  Importar planilha
+                </Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddModal} onOpenChange={handleAddModalChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Entrada na câmara fria</DialogTitle>
