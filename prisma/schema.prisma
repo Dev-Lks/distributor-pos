@@ -25,12 +25,25 @@ model Product {
   supplier  String? // Fornecedor
   isActive  Boolean @default(true) // Para desativar produtos sem deletar
   sku       String? @unique // Código único para identificação
+  brand     String?
+  origin    String?
+  packaging String?
+  abv       Float?
+  ibu       Float?
+  shelfLifeDays Int?
+  tags      String[] @default([])
+  lastPurchaseCost Float?
+  lastPurchaseAt DateTime?
+  avgCost   Float?
+  priceLastUpdatedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   inventory Inventory?
   productPointsOfSale ProductPointOfSale[]
   saleItems SaleItem[]
+  priceHistories ProductPriceHistory[]
+  inventoryMovements InventoryMovement[]
 }
 
 model Inventory {
@@ -44,6 +57,15 @@ model Inventory {
   coldRoomMinStock  Int @default(10)
   houseMinStock     Int @default(5)
   salePointMinStock Int @default(2)
+  reservedQuantity  Int @default(0)
+  damagedQuantity   Int @default(0)
+  inTransitQuantity Int @default(0)
+  safetyStock       Int?
+  reorderLeadTimeDays Int?
+  lastRestockedAt   DateTime?
+  lastAuditedAt     DateTime?
+  averageDailyConsumption Float?
+  turnoverDays      Float?
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
@@ -70,7 +92,22 @@ model Sale {
   status    String @default("completed") // 'pending', 'completed', 'cancelled'
   paymentMethod String?
   customerName String?
+  customerEmail String?
+  customerPhone String?
+  customerDocument String?
+  channel   String?
+  subtotal  Float?
+  discountValue Float @default(0)
+  taxValue  Float @default(0)
+  serviceCharge Float @default(0)
+  costOfGoods Float @default(0)
+  grossMargin Float @default(0)
+  pointOfSaleId String?
+  notes     String?
   items     SaleItem[]
+  payments  SalePayment[]
+  pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  inventoryMovements InventoryMovement[]
 }
 
 model SaleItem {
@@ -79,6 +116,8 @@ model SaleItem {
   productId String
   quantity  Int
   price     Float
+  unitCost  Float?
+  discount  Float? @default(0)
   sale      Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
 
@@ -90,8 +129,85 @@ model PointOfSale {
   id        String @id @default(cuid())
   name      String @unique
   isActive  Boolean @default(true)
+  code      String? @unique
+  channel   String?
+  managerName String?
+  address   String?
+  city      String?
+  state     String?
+  country   String?
+  timezone  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   productPointsOfSale ProductPointOfSale[]
+  sales     Sale[]
+  inventoryMovements InventoryMovement[]
+}
+
+model SalePayment {
+  id        String @id @default(cuid())
+  saleId    String
+  method    String
+  amount    Float
+  receivedAt DateTime?
+  reference String?
+  notes     String?
+  sale      Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+
+  @@index([saleId])
+}
+
+model ProductPriceHistory {
+  id        String @id @default(cuid())
+  productId String
+  cost      Float
+  salePrice Float
+  effectiveAt DateTime @default(now())
+  source    String?
+  notes     String?
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId, effectiveAt])
+}
+
+model InventoryMovement {
+  id        String @id @default(cuid())
+  productId String
+  saleId    String?
+  pointOfSaleId String?
+  type      InventoryMovementType
+  quantity  Int
+  unitCost  Float?
+  fromLocation InventoryLocation?
+  toLocation   InventoryLocation?
+  adjustmentReason String?
+  notes     String?
+  performedBy String?
+  occurredAt DateTime @default(now())
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sale      Sale? @relation(fields: [saleId], references: [id])
+  pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+
+  @@index([productId, occurredAt])
+  @@index([saleId])
+  @@index([pointOfSaleId])
+}
+
+enum InventoryMovementType {
+  RECEIPT
+  TRANSFER
+  SALE
+  ADJUSTMENT
+  LOSS
+  RETURN
+}
+
+enum InventoryLocation {
+  COLD_ROOM
+  HOUSE
+  SALE_POINT
+  SUPPLIER
+  TRANSIT
+  EVENT
 }

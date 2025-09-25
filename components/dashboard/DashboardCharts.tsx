@@ -1,6 +1,6 @@
 "use client"
 
-import { Activity, Package, TrendingUp } from "lucide-react"
+import { Activity, Package, PieChart as PieChartIcon, TrendingUp } from "lucide-react"
 import {
   Area,
   AreaChart,
@@ -41,15 +41,37 @@ interface PerformanceHighlight {
   tone?: "positive" | "neutral" | "warning"
 }
 
+interface PaymentMixEntry {
+  method: string
+  amount: number
+  share: number
+}
+
+interface ChannelBreakdownEntry {
+  channel: string
+  revenue: number
+  orders: number
+}
+
+interface PointOfSaleBreakdownEntry {
+  id: string
+  name: string
+  revenue: number
+  orders: number
+}
+
 interface DashboardChartsProps {
   period: DashboardPeriod
   activeTab: "resumo" | "produtos" | "tendencias"
   onTabChange: (tab: "resumo" | "produtos" | "tendencias") => void
-  hourlyData: Array<{ hour: number; sales: number; revenue: number }>
-  topProducts: Array<{ name: string; count: number; revenue: number }>
+  hourlyData: Array<{ hour: number; sales: number; revenue: number; margin: number }>
+  topProducts: Array<{ name: string; count: number; revenue: number; margin?: number }>
   stockDistribution: StockDistributionSlice[]
   categorySummary: CategorySummaryItem[]
   performanceHighlights: PerformanceHighlight[]
+  paymentMix: PaymentMixEntry[]
+  channelBreakdown: ChannelBreakdownEntry[]
+  pointOfSaleBreakdown: PointOfSaleBreakdownEntry[]
 }
 
 const tabConfig = [
@@ -75,7 +97,10 @@ export function DashboardCharts({
   topProducts,
   stockDistribution,
   categorySummary,
-  performanceHighlights
+  performanceHighlights,
+  paymentMix,
+  channelBreakdown,
+  pointOfSaleBreakdown
 }: DashboardChartsProps) {
   return (
     <Tabs value={activeTab} onValueChange={(value) => onTabChange(value as typeof activeTab)} className="space-y-4">
@@ -96,8 +121,8 @@ export function DashboardCharts({
       </TabsList>
 
       <TabsContent value="resumo" className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <Card>
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <Activity className="h-5 w-5" />
@@ -179,6 +204,61 @@ export function DashboardCharts({
               )}
             </CardContent>
           </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <PieChartIcon className="h-5 w-5" />
+                Mix de pagamentos
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {paymentMix.length === 0 ? (
+                <div className="flex h-[260px] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
+                  <PieChartIcon className="h-10 w-10 opacity-40" />
+                  <p>Sem registros de pagamento no período.</p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-[1.5fr_1fr]">
+                  <ResponsiveContainer width="100%" height={220}>
+                    <PieChart>
+                      <Pie
+                        data={paymentMix}
+                        dataKey="amount"
+                        nameKey="method"
+                        innerRadius={50}
+                        outerRadius={90}
+                        paddingAngle={4}
+                        labelLine={false}
+                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                      >
+                        {paymentMix.map((entry, index) => (
+                          <Cell key={entry.method} fill={pieColors[index % pieColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value: unknown, name) => [`R$ ${(value as number).toFixed(2)}`, name]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="space-y-2 text-sm">
+                    {paymentMix.map((entry, index) => (
+                      <div key={entry.method} className="flex items-center justify-between rounded-md border border-muted/60 px-3 py-2">
+                        <span className="font-medium">
+                          <span
+                            className="mr-2 inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: pieColors[index % pieColors.length] }}
+                          />
+                          {entry.method}
+                        </span>
+                        <span className="text-xs text-muted-foreground">{(entry.share * 100).toFixed(1)}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
 
@@ -247,6 +327,31 @@ export function DashboardCharts({
               )}
             </CardContent>
           </Card>
+
+          <Card className="xl:col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Performance por ponto de venda</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {pointOfSaleBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma venda registrada por ponto de venda.</p>
+              ) : (
+                <div className="grid gap-2 md:grid-cols-2">
+                  {pointOfSaleBreakdown.map((pos) => (
+                    <div key={pos.id} className="rounded-lg border border-muted bg-muted/20 p-3 text-sm">
+                      <p className="font-semibold leading-tight">{pos.name}</p>
+                      <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{pos.orders} venda{pos.orders === 1 ? '' : 's'}</span>
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-300">
+                          R$ {pos.revenue.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
       </TabsContent>
 
@@ -256,7 +361,7 @@ export function DashboardCharts({
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base">
                 <TrendingUp className="h-5 w-5" />
-                Receita acumulada
+                Receita vs margem
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -272,47 +377,75 @@ export function DashboardCharts({
                   />
                   <YAxis fontSize={12} tickLine={false} axisLine={false} />
                   <Tooltip
-                    formatter={(value: unknown) => [`R$ ${(value as number).toFixed(2)}`, "Receita"]}
+                    formatter={(value: unknown, name) => [`R$ ${(value as number).toFixed(2)}`, name === 'revenue' ? 'Receita' : 'Margem']}
                     labelFormatter={(value) => (period === "today" ? `Hora ${value}h` : `Dia ${value}`)}
                     contentStyle={{ fontSize: 12 }}
                   />
-                  <Line type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={3} dot={false} />
+                  <Line type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={3} dot={false} name="Receita" />
+                  <Line type="monotone" dataKey="margin" stroke="#10b981" strokeWidth={3} dot={false} name="Margem" />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Indicadores de performance</CardTitle>
+              <CardTitle className="text-base">Canais de venda</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {performanceHighlights.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between rounded-lg border border-muted bg-muted/20 p-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{item.label}</p>
-                    {item.description && (
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    )}
-                  </div>
-                  <span
-                    className={
-                      item.tone === "positive"
-                        ? "text-emerald-600 dark:text-emerald-300"
-                        : item.tone === "warning"
-                          ? "text-amber-600 dark:text-amber-300"
-                          : "text-foreground"
-                    }
-                  >
-                    {item.value}
-                  </span>
-                </div>
-              ))}
+            <CardContent>
+              {channelBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum canal com vendas no período selecionado.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={260}>
+                  <BarChart data={channelBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.2} />
+                    <XAxis dataKey="channel" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip
+                      formatter={(value: unknown, name) =>
+                        name === "orders"
+                          ? [`${value as number} vendas`, "Pedidos"]
+                          : [`R$ ${(value as number).toFixed(2)}`, "Receita"]
+                      }
+                      contentStyle={{ fontSize: 12 }}
+                    />
+                    <Bar dataKey="revenue" radius={[6, 6, 0, 0]} fill="#6366f1" name="Receita" />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Indicadores de performance</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {performanceHighlights.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center justify-between rounded-lg border border-muted bg-muted/20 p-3"
+              >
+                <div>
+                  <p className="text-sm font-medium">{item.label}</p>
+                  {item.description && (
+                    <p className="text-xs text-muted-foreground">{item.description}</p>
+                  )}
+                </div>
+                <span
+                  className={
+                    item.tone === "positive"
+                      ? "text-emerald-600 dark:text-emerald-300"
+                      : item.tone === "warning"
+                        ? "text-amber-600 dark:text-amber-300"
+                        : "text-foreground"
+                  }
+                >
+                  {item.value}
+                </span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       </TabsContent>
     </Tabs>
   )

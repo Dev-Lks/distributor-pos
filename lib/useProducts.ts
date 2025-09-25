@@ -12,6 +12,17 @@ export interface Product {
   supplier?: string
   isActive: boolean
   sku?: string
+  brand?: string
+  origin?: string
+  packaging?: string
+  abv?: number
+  ibu?: number
+  shelfLifeDays?: number
+  tags?: string[]
+  lastPurchaseCost?: number | null
+  lastPurchaseAt?: string | null
+  avgCost?: number | null
+  priceLastUpdatedAt?: string | null
   inventory?: {
     coldRoomQuantity: number
     houseQuantity: number
@@ -23,6 +34,15 @@ export interface Product {
     houseAlert?: boolean
     salePointAlert?: boolean
     totalQuantity?: number
+    reservedQuantity?: number
+    damagedQuantity?: number
+    inTransitQuantity?: number
+    safetyStock?: number | null
+    reorderLeadTimeDays?: number | null
+    lastRestockedAt?: string | null
+    lastAuditedAt?: string | null
+    averageDailyConsumption?: number | null
+    turnoverDays?: number | null
   }
   productPointsOfSale?: Array<{
     id: string

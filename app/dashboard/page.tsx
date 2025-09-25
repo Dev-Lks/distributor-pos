@@ -71,10 +71,24 @@ function OverviewDashboard() {
 
   const safeMetrics = useMemo(
     () => ({
-      totalRevenue: metrics?.totalToday ?? 0,
+      netRevenue: metrics?.netRevenue ?? 0,
+      grossRevenue: metrics?.grossRevenue ?? 0,
       salesCount: metrics?.salesCount ?? 0,
       hourlyData: metrics?.hourlyData ?? [],
-      topProducts: metrics?.topProducts ?? []
+      topProducts: metrics?.topProducts ?? [],
+      discounts: metrics?.discounts ?? 0,
+      taxes: metrics?.taxes ?? 0,
+      serviceCharges: metrics?.serviceCharges ?? 0,
+      costOfGoods: metrics?.costOfGoods ?? 0,
+      grossMarginValue: metrics?.grossMarginValue ?? 0,
+      grossMarginPercent: metrics?.grossMarginPercent ?? 0,
+      averageTicket: metrics?.averageTicket ?? 0,
+      averageItemsPerSale: metrics?.averageItemsPerSale ?? 0,
+      paymentMix: metrics?.paymentMix ?? [],
+      channelBreakdown: metrics?.channelBreakdown ?? [],
+      pointOfSaleBreakdown: metrics?.pointOfSaleBreakdown ?? [],
+      customerLeaders: metrics?.customerLeaders ?? [],
+      repeatCustomerRate: metrics?.repeatCustomerRate ?? 0
     }),
     [metrics]
   )
@@ -82,6 +96,9 @@ function OverviewDashboard() {
   const inventorySummary = useMemo(() => {
     const totalProducts = products.length
     const totalQuantity = products.reduce((sum, product) => sum + (product.inventory?.totalQuantity ?? 0), 0)
+    const reservedQuantity = products.reduce((sum, product) => sum + (product.inventory?.reservedQuantity ?? 0), 0)
+    const damagedQuantity = products.reduce((sum, product) => sum + (product.inventory?.damagedQuantity ?? 0), 0)
+    const inTransitQuantity = products.reduce((sum, product) => sum + (product.inventory?.inTransitQuantity ?? 0), 0)
     const lowStock = products.filter((product) => {
       const quantity = product.inventory?.totalQuantity ?? 0
       return quantity > 0 && quantity <= 10
@@ -93,21 +110,39 @@ function OverviewDashboard() {
     }, 0)
     const bonifications = products.reduce((sum, product) => sum + (product.bonifications ?? 0), 0)
     const activeProducts = products.filter((product) => (product.inventory?.totalQuantity ?? 0) > 0).length
+    const averageDailyConsumptionValues = products
+      .map((product) => product.inventory?.averageDailyConsumption ?? null)
+      .filter((value): value is number => value !== null && !Number.isNaN(value))
+    const avgDailyConsumption = averageDailyConsumptionValues.length > 0
+      ? averageDailyConsumptionValues.reduce((sum, value) => sum + value, 0) / averageDailyConsumptionValues.length
+      : null
+    const availableQuantity = Math.max(totalQuantity - reservedQuantity - damagedQuantity, 0)
+    const coverageDays = avgDailyConsumption && avgDailyConsumption > 0
+      ? availableQuantity / avgDailyConsumption
+      : null
 
     return {
       totalProducts,
       totalQuantity,
+      reservedQuantity,
+      damagedQuantity,
+      inTransitQuantity,
       lowStock,
       outOfStock,
       inventoryValue,
       bonifications,
-      activeProducts
+      activeProducts,
+      availableQuantity,
+      coverageDays
     }
   }, [products])
 
   const averageTicket = useMemo(() => {
-    return safeMetrics.salesCount > 0 ? safeMetrics.totalRevenue / safeMetrics.salesCount : 0
-  }, [safeMetrics])
+    if (metrics?.averageTicket !== undefined) {
+      return metrics.averageTicket
+    }
+    return safeMetrics.salesCount > 0 ? safeMetrics.netRevenue / safeMetrics.salesCount : 0
+  }, [metrics, safeMetrics])
 
   const filteredSales = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -161,25 +196,25 @@ function OverviewDashboard() {
     () =>
       [
         {
-          id: "sales-count",
-          label: "Vendas registradas",
-          value: `${safeMetrics.salesCount}`,
-          description: `No período selecionado (${periodFriendlyLabel[period]})`,
-          tone: safeMetrics.salesCount > 0 ? "positive" : "neutral"
+          id: "gross-margin",
+          label: "Margem bruta",
+          value: `${(safeMetrics.grossMarginPercent * 100).toFixed(1)}%`,
+          description: `Rendimento de ${formatCurrency(safeMetrics.grossMarginValue)} no período`,
+          tone: safeMetrics.grossMarginPercent >= 0.3 ? "positive" : safeMetrics.grossMarginPercent >= 0.15 ? "neutral" : "warning"
         },
         {
-          id: "average-ticket",
-          label: "Ticket médio",
-          value: formatCurrency(averageTicket),
-          description: "Em pedidos concluídos",
-          tone: "neutral"
+          id: "discounts",
+          label: "Descontos concedidos",
+          value: formatCurrency(safeMetrics.discounts),
+          description: "Impacto direto na receita líquida",
+          tone: safeMetrics.discounts > 0 ? "warning" : "neutral"
         },
         {
-          id: "active-products",
-          label: "Produtos ativos",
-          value: `${inventorySummary.activeProducts}`,
-          description: "Com estoque disponível",
-          tone: inventorySummary.activeProducts === 0 ? "warning" : "positive"
+          id: "repeat-customers",
+          label: "Clientes recorrentes",
+          value: `${(safeMetrics.repeatCustomerRate * 100).toFixed(0)}%`,
+          description: "Entre clientes identificados",
+          tone: safeMetrics.repeatCustomerRate >= 0.4 ? "positive" : safeMetrics.repeatCustomerRate >= 0.2 ? "neutral" : "warning"
         }
       ] satisfies Array<{
         id: string
@@ -195,16 +230,18 @@ function OverviewDashboard() {
     () =>
       safeMetrics.topProducts.map((productMetric) => {
         const productData = products.find((product) => product.name === productMetric.name)
-        const margin =
-          productData && productData.salePrice > 0
-            ? ((productData.salePrice - (productData.cost ?? 0)) / productData.salePrice) * 100
-            : null
+        const marginPercent =
+          productMetric.margin != null && productMetric.revenue > 0
+            ? (productMetric.margin / productMetric.revenue) * 100
+            : productData && productData.salePrice > 0
+              ? ((productData.salePrice - (productData.cost ?? 0)) / productData.salePrice) * 100
+              : null
 
         return {
           name: productMetric.name,
           unitsSold: productMetric.count,
           revenue: productMetric.revenue,
-          margin
+          margin: marginPercent
         }
       }),
     [products, safeMetrics.topProducts]
@@ -213,9 +250,9 @@ function OverviewDashboard() {
   const kpiItems = useMemo<DashboardKpiItem[]>(
     () => [
       {
-        id: "period-revenue",
-        label: `Receita ${periodFriendlyLabel[period]}`,
-        value: formatCurrency(safeMetrics.totalRevenue),
+        id: "net-revenue",
+        label: `Receita líquida ${periodFriendlyLabel[period]}`,
+        value: formatCurrency(safeMetrics.netRevenue),
         icon: DollarSign,
         tone: "emerald",
         status:
@@ -224,65 +261,61 @@ function OverviewDashboard() {
             : { label: "Sem vendas", intent: "neutral" }
       },
       {
-        id: "sales-count",
-        label: "Vendas registradas",
-        value: `${safeMetrics.salesCount}`,
-        icon: ShoppingCart,
-        tone: "blue",
-        hint: period === "today" ? "Atualiza a cada 5 minutos" : "Total do período"
+        id: "gross-margin",
+        label: "Margem bruta",
+        value: `${formatCurrency(safeMetrics.grossMarginValue)} (${(safeMetrics.grossMarginPercent * 100).toFixed(1)}%)`,
+        icon: Activity,
+        tone: "violet",
+        description: "Receita menos custo dos produtos"
       },
       {
         id: "average-ticket",
         label: "Ticket médio",
         value: formatCurrency(averageTicket),
-        icon: Activity,
-        tone: "violet",
-        description: "Valor médio por pedido"
+        icon: ShoppingCart,
+        tone: "blue",
+        hint: period === "today" ? "Atualiza a cada 5 minutos" : "Total do período"
       },
       {
-        id: "inventory-value",
-        label: "Valor em estoque",
-        value: formatCompactCurrency(inventorySummary.inventoryValue),
+        id: "items-per-sale",
+        label: "Itens por venda",
+        value: safeMetrics.averageItemsPerSale.toFixed(1),
         icon: Package,
         tone: "orange",
-        description: `${formatNumber(inventorySummary.totalQuantity)} unidades disponíveis`
+        description: "Quantidade média por pedido"
       }
     ],
-    [averageTicket, inventorySummary.inventoryValue, inventorySummary.totalQuantity, period, safeMetrics]
+    [averageTicket, period, safeMetrics]
   )
 
   const operationalKpis = useMemo<DashboardKpiItem[]>(
     () => [
       {
-        id: "total-products",
-        label: "Produtos cadastrados",
-        value: `${inventorySummary.totalProducts}`,
+        id: "inventory-value",
+        label: "Valor em estoque",
+        value: formatCompactCurrency(inventorySummary.inventoryValue),
         icon: Package,
         tone: "slate",
-        description: `${formatNumber(inventorySummary.totalQuantity)} unidades em estoque`
+        description: `${formatNumber(inventorySummary.availableQuantity)} unidades disponíveis`
       },
       {
-        id: "low-stock",
+        id: "stock-health",
         label: "Estoque crítico",
         value: `${inventorySummary.lowStock}`,
         icon: AlertTriangle,
         tone: "orange",
         status:
           inventorySummary.lowStock > 0
-            ? { label: "Repor em breve", intent: "negative" }
-            : { label: "Sem alertas", intent: "positive" },
-        hint:
-          inventorySummary.outOfStock > 0
-            ? `${inventorySummary.outOfStock} esgotado${inventorySummary.outOfStock === 1 ? "" : "s"}`
-            : undefined
+            ? { label: `${inventorySummary.outOfStock} esgotado${inventorySummary.outOfStock === 1 ? "" : "s"}`, intent: "negative" }
+            : { label: "Sem alertas", intent: "positive" }
       },
       {
-        id: "bonifications",
-        label: "Bonificações",
-        value: `${inventorySummary.bonifications}`,
-        icon: Users,
+        id: "coverage",
+        label: "Cobertura de estoque",
+        value: inventorySummary.coverageDays ? `${inventorySummary.coverageDays.toFixed(1)} dias` : "-",
+        icon: Activity,
         tone: "blue",
-        description: "Disponíveis para fidelizar clientes"
+        hint: inventorySummary.coverageDays ? "Estimativa com base no consumo médio diário" : "Cadastre consumo para estimar"
       }
     ],
     [inventorySummary]
@@ -329,6 +362,9 @@ function OverviewDashboard() {
             stockDistribution={stockDistribution}
             categorySummary={categorySummary}
             performanceHighlights={performanceHighlights}
+            paymentMix={safeMetrics.paymentMix}
+            channelBreakdown={safeMetrics.channelBreakdown}
+            pointOfSaleBreakdown={safeMetrics.pointOfSaleBreakdown}
           />
         </>
       )}
@@ -340,6 +376,35 @@ function OverviewDashboard() {
       />
 
       <TopProductsTable products={topProductsWithMargin} />
+
+      {safeMetrics.customerLeaders.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Users className="h-5 w-5" />
+              Clientes que mais compram
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {safeMetrics.customerLeaders.map((customer) => (
+              <div
+                key={customer.name}
+                className="flex flex-col justify-between gap-2 rounded-lg border border-muted/60 bg-muted/20 p-3 text-sm md:flex-row md:items-center"
+              >
+                <div>
+                  <p className="font-semibold leading-tight">{customer.name}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {customer.orders} pedido{customer.orders === 1 ? "" : "s"} registrados
+                  </p>
+                </div>
+                <div className="text-sm font-semibold text-emerald-600 dark:text-emerald-300">
+                  {formatCurrency(customer.revenue)}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <SupportActions
         onExportCsv={exportSalesToCSV}

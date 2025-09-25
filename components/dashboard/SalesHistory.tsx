@@ -25,6 +25,11 @@ interface SalesHistoryProps {
   onCancel: (saleId: string) => Promise<unknown>
 }
 
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL"
+})
+
 const paymentLabels: Record<string, string> = {
   cash: "Dinheiro",
   card: "Cartão",
@@ -59,7 +64,7 @@ export function SalesHistory({ sales, isLoading, onCancel }: SalesHistoryProps) 
 
   const totalSales = useMemo(() => sales.length, [sales])
   const totalRevenue = useMemo(
-    () => sales.reduce((sum, sale) => sum + sale.total, 0),
+    () => sales.reduce((sum, sale) => sum + (sale.total ?? 0), 0),
     [sales]
   )
 
@@ -105,8 +110,8 @@ export function SalesHistory({ sales, isLoading, onCancel }: SalesHistoryProps) 
             Histórico de vendas
           </CardTitle>
           <p className="text-xs text-muted-foreground md:text-sm">
-            {totalSales} venda{totalSales !== 1 ? "s" : ""} registradas • Receita acumulada de
-            <span className="font-semibold"> R$ {totalRevenue.toFixed(2)}</span>
+            {totalSales} venda{totalSales !== 1 ? "s" : ""} registradas • Receita líquida de
+            <span className="font-semibold"> {currencyFormatter.format(totalRevenue)}</span>
           </p>
         </div>
       </CardHeader>
@@ -144,7 +149,7 @@ export function SalesHistory({ sales, isLoading, onCancel }: SalesHistoryProps) 
                     <TableCell>
                       <PaymentBadge method={sale.paymentMethod ?? undefined} />
                     </TableCell>
-                    <TableCell className="font-semibold">R$ {sale.total.toFixed(2)}</TableCell>
+                    <TableCell className="font-semibold">{currencyFormatter.format(sale.total ?? 0)}</TableCell>
                     <TableCell>
                       <span className="block max-w-[12rem] truncate">
                         {sale.items.map((item) => `${item.quantity}x ${item.product?.name ?? "Produto"}`).join(", ")}
@@ -206,7 +211,7 @@ export function SalesHistory({ sales, isLoading, onCancel }: SalesHistoryProps) 
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Total</p>
-                    <p className="font-semibold">R$ {selectedSale.total.toFixed(2)}</p>
+                    <p className="font-semibold">{currencyFormatter.format(selectedSale.total ?? 0)}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Itens</p>
@@ -222,13 +227,66 @@ export function SalesHistory({ sales, isLoading, onCancel }: SalesHistoryProps) 
                         <div className="text-right">
                           <p>{item.quantity}x</p>
                           <p className="text-xs text-muted-foreground">
-                            R$ {(item.price * item.quantity).toFixed(2)}
+                            {currencyFormatter.format(item.price * item.quantity)}
                           </p>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Subtotal</p>
+                    <p className="font-medium">
+                      {currencyFormatter.format(selectedSale.subtotal ?? selectedSale.total ?? 0)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Descontos</p>
+                    <p className="font-medium">{currencyFormatter.format(selectedSale.discountValue ?? 0)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Impostos</p>
+                    <p className="font-medium">{currencyFormatter.format(selectedSale.taxValue ?? 0)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Serviço</p>
+                    <p className="font-medium">{currencyFormatter.format(selectedSale.serviceCharge ?? 0)}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Margem estimada</p>
+                    <p className="font-medium">
+                      {currencyFormatter.format(
+                        selectedSale.grossMargin ?? ((selectedSale.total ?? 0) - (selectedSale.costOfGoods ?? 0))
+                      )}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Canal</p>
+                    <p className="font-medium">{selectedSale.channel ?? "POS"}</p>
+                  </div>
+                </div>
+                {selectedSale.notes && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Observações</p>
+                    <p className="text-sm">{selectedSale.notes}</p>
+                  </div>
+                )}
+                {selectedSale.payments && selectedSale.payments.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium uppercase text-muted-foreground">Pagamentos</p>
+                    <div className="space-y-2 rounded-md border border-dashed border-muted p-3">
+                      {selectedSale.payments.map((payment) => (
+                        <div key={payment.id} className="flex items-center justify-between text-sm">
+                          <span className="font-medium">{payment.method}</span>
+                          <span className="text-muted-foreground">
+                            {currencyFormatter.format(payment.amount)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
               <DialogFooter className="flex-col gap-2 sm:flex-row sm:justify-between">
                 <Button variant="outline" onClick={() => setIsDialogOpen(false)} className="w-full sm:w-auto">

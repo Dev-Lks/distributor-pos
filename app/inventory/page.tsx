@@ -71,9 +71,9 @@ const locationConfig: Record<Location, LocationConfig> = {
 }
 
 const stockStatusStyles = {
-  ok: "bg-emerald-100 text-emerald-700",
-  warning: "bg-amber-100 text-amber-700",
-  danger: "bg-red-100 text-red-700"
+  ok: "border-emerald-200 bg-emerald-100 text-emerald-700 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-50",
+  warning: "border-amber-200 bg-amber-100 text-amber-700 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-50",
+  danger: "border-red-200 bg-red-100 text-red-700 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-50"
 }
 
 const COLD_ROOM_LOCATION: Location = "coldRoom"
@@ -786,8 +786,8 @@ export default function InventoryPage() {
                           key={`${product.id}-${location}`}
                           className={cn(
                             "transition-colors",
-                            product.inventory?.[alertField] && "bg-amber-50/60",
-                            product.bonifications > 0 && !isEditingBonifications && "bg-primary/5"
+                            product.inventory?.[alertField] && "bg-amber-50/60 dark:bg-amber-500/15",
+                            product.bonifications > 0 && !isEditingBonifications && "bg-primary/5 dark:bg-primary/20"
                           )}
                         >
                           <TableCell>
@@ -876,7 +876,9 @@ export default function InventoryPage() {
                               <span
                                 className={cn(
                                   "font-mono text-lg",
-                                  stock <= minStock ? "text-red-600" : "text-emerald-600"
+                                  stock <= minStock
+                                    ? "text-red-600 dark:text-red-300"
+                                    : "text-emerald-600 dark:text-emerald-300"
                                 )}
                               >
                                 {stock}

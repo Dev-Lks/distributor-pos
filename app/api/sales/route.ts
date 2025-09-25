@@ -12,7 +12,24 @@ const createSaleSchema = z.object({
   items: z.array(saleItemSchema).min(1, 'At least one item is required'),
   paymentMethod: z.enum(['cash', 'card', 'pix', 'other']).optional(),
   customerName: z.string().optional(),
+  customerEmail: z.string().email('E-mail inválido').optional(),
+  customerPhone: z.string().optional(),
+  customerDocument: z.string().optional(),
+  channel: z.string().optional(),
+  discountValue: z.number().nonnegative().optional(),
+  taxValue: z.number().nonnegative().optional(),
+  serviceCharge: z.number().optional(),
+  notes: z.string().optional(),
   pointOfSaleId: z.string().optional(),
+  payments: z.array(
+    z.object({
+      method: z.string().min(1),
+      amount: z.number().nonnegative(),
+      receivedAt: z.coerce.date().optional(),
+      reference: z.string().optional(),
+      notes: z.string().optional(),
+    })
+  ).optional(),
 })
 
 export async function GET() {
@@ -24,12 +41,14 @@ export async function GET() {
             product: true,
           },
         },
-      },
+        pointOfSale: true,
+        payments: true,
+      } as any,
       orderBy: {
         date: 'desc',
       },
     })
-    return NextResponse.json(sales)
+    return NextResponse.json(sales as any)
   } catch (error) {
     console.error('Failed to fetch sales:', error)
     return NextResponse.json({ error: 'Failed to fetch sales' }, { status: 500 })
@@ -53,8 +72,17 @@ export async function POST(request: NextRequest) {
     }
 
     const input = parsedPayload.data
-    const sanitizedCustomerName = input.customerName?.trim() || undefined
-    const pointOfSaleId = input.pointOfSaleId?.trim() || undefined
+  const sanitizedCustomerName = input.customerName?.trim() || undefined
+  const sanitizedCustomerEmail = input.customerEmail?.trim() || undefined
+  const sanitizedCustomerPhone = input.customerPhone?.trim() || undefined
+  const sanitizedCustomerDocument = input.customerDocument?.trim() || undefined
+  const sanitizedChannel = input.channel?.trim() || undefined
+  const sanitizedNotes = input.notes?.trim() || undefined
+  const pointOfSaleId = input.pointOfSaleId?.trim() || undefined
+  const discountValue = Math.max(input.discountValue ?? 0, 0)
+  const taxValue = Math.max(input.taxValue ?? 0, 0)
+  const serviceCharge = input.serviceCharge ?? 0
+  const paymentsPayload = input.payments?.filter((payment) => payment.amount >= 0) ?? []
 
     const aggregatedItemsMap = new Map<string, { productId: string; quantity: number }>()
     input.items.forEach((item) => {
@@ -83,8 +111,18 @@ export async function POST(request: NextRequest) {
       update: (args: unknown) => Promise<unknown>
     }
 
+    type InventoryMovementDelegate = {
+      create: (args: unknown) => Promise<unknown>
+    }
+
+    type SalePaymentDelegate = {
+      create: (args: unknown) => Promise<unknown>
+    }
+
     type PrismaWithProductPoints = typeof prisma & {
       productPointOfSale: ProductPointOfSaleDelegate
+      inventoryMovement: InventoryMovementDelegate
+      salePayment: SalePaymentDelegate
     }
 
     const prismaWithPoints = prisma as PrismaWithProductPoints
@@ -130,8 +168,15 @@ export async function POST(request: NextRequest) {
       new Map()
     )
 
-    let total = 0
-    const saleItems: Array<{ productId: string; quantity: number; price: number }> = []
+    let subtotal = 0
+    let costOfGoods = 0
+    const saleItems: Array<{ productId: string; quantity: number; price: number; unitCost: number }> = []
+    const movementDrafts: Array<{
+      productId: string
+      quantity: number
+      unitCost: number
+      fromLocation: string | null
+    }> = []
     for (const item of aggregatedItems) {
       const product = productMap.get(item.productId)!
       const pointStocks = pointStockByProductId.get(item.productId) ?? []
@@ -153,26 +198,60 @@ export async function POST(request: NextRequest) {
         )
       }
 
+      const fromLocation = pointOfSaleId ? 'SALE_POINT' : 'HOUSE'
       const price = product.salePrice
-      total += price * item.quantity
+      subtotal += price * item.quantity
+      costOfGoods += (product.cost ?? 0) * item.quantity
       saleItems.push({
         productId: item.productId,
         quantity: item.quantity,
         price,
+        unitCost: product.cost ?? 0,
+      })
+      movementDrafts.push({
+        productId: item.productId,
+        quantity: item.quantity,
+        unitCost: product.cost ?? 0,
+        fromLocation,
       })
     }
+
+    const netTotal = subtotal - discountValue + taxValue + serviceCharge
+    const grossMarginValue = netTotal - costOfGoods
 
     const sale = await prisma.$transaction(async (tx) => {
       const transactionalClient = tx as PrismaWithProductPoints
 
       const saleData = {
-        total,
+        total: netTotal,
         paymentMethod: input.paymentMethod ?? null,
         customerName: sanitizedCustomerName ?? null,
+        customerEmail: sanitizedCustomerEmail ?? null,
+        customerPhone: sanitizedCustomerPhone ?? null,
+        customerDocument: sanitizedCustomerDocument ?? null,
+        channel: sanitizedChannel ?? null,
+        subtotal,
+        discountValue,
+        taxValue,
+        serviceCharge,
+        costOfGoods,
+        grossMargin: grossMarginValue,
+        notes: sanitizedNotes ?? null,
+        pointOfSale: pointOfSaleId ? { connect: { id: pointOfSaleId } } : undefined,
         items: {
-          create: saleItems,
+          create: saleItems.map((item) => ({
+            product: {
+              connect: {
+                id: item.productId,
+              },
+            },
+            quantity: item.quantity,
+            price: item.price,
+            unitCost: item.unitCost,
+            discount: saleItems.length > 0 ? discountValue / saleItems.length : 0,
+          })),
         },
-      } satisfies Prisma.SaleCreateInput
+      } as any
 
       const createdSale = await tx.sale.create({
         data: saleData,
@@ -182,7 +261,9 @@ export async function POST(request: NextRequest) {
               product: true,
             },
           },
-        },
+          pointOfSale: true,
+          payments: true,
+        } as any,
       })
 
       for (const item of aggregatedItems) {
@@ -240,6 +321,56 @@ export async function POST(request: NextRequest) {
             },
           },
         })
+      }
+
+      if (movementDrafts.length > 0) {
+        await Promise.all(
+          movementDrafts.map((movement) =>
+            transactionalClient.inventoryMovement.create({
+              data: {
+                productId: movement.productId,
+                saleId: createdSale.id,
+                pointOfSaleId,
+                type: 'SALE',
+                quantity: movement.quantity,
+                unitCost: movement.unitCost,
+                fromLocation: movement.fromLocation,
+                notes: sanitizedNotes ?? 'Venda registrada',
+                performedBy: 'dashboard-pos',
+                occurredAt: new Date(),
+              } as any,
+            })
+          )
+        )
+      }
+
+      const paymentsToPersist = paymentsPayload.length
+        ? paymentsPayload
+        : (input.paymentMethod
+            ? [
+                {
+                  method: input.paymentMethod,
+                  amount: netTotal,
+                  receivedAt: new Date(),
+                },
+              ]
+            : [])
+
+      if (paymentsToPersist.length > 0) {
+        await Promise.all(
+          paymentsToPersist.map((payment) =>
+            transactionalClient.salePayment.create({
+              data: {
+                saleId: createdSale.id,
+                method: payment.method,
+                amount: payment.amount,
+                receivedAt: payment.receivedAt ?? new Date(),
+                reference: payment.reference,
+                notes: payment.notes,
+              } as any,
+            })
+          )
+        )
       }
 
       return createdSale
