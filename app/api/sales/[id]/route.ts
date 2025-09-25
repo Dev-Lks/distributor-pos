@@ -14,13 +14,21 @@ export async function DELETE(
       where: { id: saleId },
       include: {
         items: true,
-        pointOfSale: true,
-      } as any,
+      },
     })
 
     if (!sale) {
       return NextResponse.json({ error: 'Sale not found' }, { status: 404 })
     }
+
+    const saleWithRelations = sale as unknown as {
+      items: Array<{ productId: string; quantity: number; unitCost: number | null }>
+      pointOfSale?: { id?: string | null } | null
+      pointOfSaleId?: string | null
+    }
+
+    const saleItems = saleWithRelations.items ?? []
+    const pointOfSaleId = saleWithRelations.pointOfSaleId ?? saleWithRelations.pointOfSale?.id ?? undefined
 
     type ProductPointOfSaleDelegate = {
       findUnique: (args: unknown) => Promise<{ quantity: number } | null>
@@ -36,14 +44,11 @@ export async function DELETE(
       inventoryMovement: InventoryMovementDelegate
     }
 
-  const prismaWithDelegates = prisma as PrismaWithDelegates
-  const pointOfSaleId = (sale as any).pointOfSale?.id as string | undefined
-
     // Use transaction to ensure data consistency
     await prisma.$transaction(async (tx) => {
       const transactionalClient = tx as PrismaWithDelegates
       // Restore inventory for each item
-      for (const item of sale.items) {
+      for (const item of saleItems) {
         // Update point of sale inventory when applicable
         if (pointOfSaleId) {
           const pointStock = await transactionalClient.productPointOfSale.findUnique({
@@ -89,12 +94,12 @@ export async function DELETE(
             pointOfSaleId,
             type: 'RETURN',
             quantity: item.quantity,
-            unitCost: (item as any).unitCost ?? 0,
+            unitCost: item.unitCost ?? 0,
             toLocation: pointOfSaleId ? 'SALE_POINT' : 'HOUSE',
             notes: 'Venda cancelada',
             performedBy: 'dashboard-pos',
             occurredAt: new Date(),
-          } as any,
+          },
         })
       }
 
