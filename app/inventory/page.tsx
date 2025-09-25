@@ -98,16 +98,18 @@ const getInventoryQuantity = (inventory: ProductInventory | undefined, location:
 function LocationSelector({
   value,
   onChange,
-  label
+  label,
+  className
 }: {
   value: Location | null
   onChange: (location: Location) => void
   label: string
+  className?: string
 }) {
   return (
-    <div className="space-y-3">
+    <div className={cn("space-y-3", className)}>
       <Label className="text-sm font-semibold text-muted-foreground">{label}</Label>
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {(Object.keys(locationConfig) as Location[]).map((location) => {
           const { label: locationLabel, description, icon: Icon } = locationConfig[location]
           const isSelected = value === location
@@ -118,7 +120,7 @@ function LocationSelector({
               type="button"
               onClick={() => onChange(location)}
               className={cn(
-                "group flex h-full flex-col items-start gap-3 rounded-lg border p-4 text-left transition-all",
+                "group flex h-full w-full flex-col items-start gap-3 rounded-lg border p-4 text-left transition-all",
                 "hover:border-primary/60 hover:bg-primary/5",
                 isSelected && "border-primary bg-primary/10 shadow-sm"
               )}
