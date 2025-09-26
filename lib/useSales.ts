@@ -52,6 +52,7 @@ export interface SaleRecord {
   id: string
   date: string
   total: number
+  status?: string | null
   paymentMethod?: string | null
   customerName?: string | null
   customerEmail?: string | null
@@ -80,6 +81,19 @@ export interface SaleRecord {
     email?: string | null
     address?: string | null
   } | null
+}
+
+export interface UpdateSalePayload {
+  status?: 'completed' | 'pending' | 'processing' | 'flagged'
+  paymentMethod?: 'cash' | 'card' | 'pix' | 'other' | null
+  customerName?: string | null
+  customerEmail?: string | null
+  customerPhone?: string | null
+  customerDocument?: string | null
+  customerAddress?: string | null
+  channel?: string | null
+  notes?: string | null
+  syncCustomer?: boolean
 }
 
 export function useSales(pointOfSale?: string) {
@@ -278,7 +292,31 @@ export function useSales(pointOfSale?: string) {
     }
   }
 
-  return { createSale, backupAllSales, getSheetsSummary, cancelSale, sales, salesLoading, refetchSales }
+  const updateSale = async (saleId: string, updates: UpdateSalePayload) => {
+    const response = await fetch(`/api/sales/${saleId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      throw new Error(`Failed to update sale: ${error}`)
+    }
+
+    const updatedSale = await response.json() as SaleRecord
+
+    queryClient.setQueryData<SaleRecord[]>(['sales'], (current) => {
+      if (!current) return current
+      return current.map((sale) => (sale.id === saleId ? updatedSale : sale))
+    })
+
+    queryClient.invalidateQueries({ queryKey: ['sales-metrics'] })
+
+    return updatedSale
+  }
+
+  return { createSale, backupAllSales, getSheetsSummary, cancelSale, updateSale, sales, salesLoading, refetchSales }
 }
 
 export function useSalesMetrics(period: 'today' | 'week' | 'month' | 'year' = 'today', pointOfSale: string = 'all') {

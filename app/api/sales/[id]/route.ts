@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
+import { z } from 'zod'
+
+const updateSaleSchema = z.object({
+  status: z.enum(['completed', 'pending', 'processing', 'flagged']).optional(),
+  paymentMethod: z.enum(['cash', 'card', 'pix', 'other']).nullish(),
+  customerName: z.string().nullish(),
+  customerEmail: z.string().email('E-mail inválido').nullish(),
+  customerPhone: z.string().nullish(),
+  customerDocument: z.string().nullish(),
+  customerAddress: z.string().nullish(),
+  channel: z.string().nullish(),
+  notes: z.string().nullish(),
+  syncCustomer: z.boolean().optional(),
+})
 
 export async function DELETE(
   request: NextRequest,
@@ -113,5 +127,120 @@ export async function DELETE(
   } catch (error) {
     console.error('Error cancelling sale:', error)
     return NextResponse.json({ error: 'Failed to cancel sale' }, { status: 500 })
+  }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const saleId = params.id
+    const payload = await request.json()
+    const parsed = updateSaleSchema.safeParse(payload)
+
+    if (!parsed.success) {
+      const issue = parsed.error.issues.at(0)
+      return NextResponse.json(
+        {
+          error: 'Invalid payload',
+          details: issue?.message,
+        },
+        { status: 400 }
+      )
+    }
+
+    const sale = await prisma.sale.findUnique({
+      where: { id: saleId },
+      include: {
+        customer: true,
+      },
+    })
+
+    if (!sale) {
+      return NextResponse.json({ error: 'Sale not found' }, { status: 404 })
+    }
+
+    const data = parsed.data
+
+    const sanitize = (value: string | null | undefined) => {
+      if (value === undefined) return undefined
+      if (value === null) return null
+      const trimmed = value.trim()
+      return trimmed.length > 0 ? trimmed : null
+    }
+
+    const updateData: Prisma.SaleUpdateInput = {}
+
+    if (data.status) {
+      updateData.status = data.status
+    }
+
+    if (data.paymentMethod !== undefined) {
+      updateData.paymentMethod = data.paymentMethod ?? null
+    }
+
+    const customerName = sanitize(data.customerName)
+    if (customerName !== undefined) updateData.customerName = customerName
+
+    const customerEmail = sanitize(data.customerEmail)
+    if (customerEmail !== undefined) updateData.customerEmail = customerEmail
+
+    const customerPhone = sanitize(data.customerPhone)
+    if (customerPhone !== undefined) updateData.customerPhone = customerPhone
+
+    const customerDocument = sanitize(data.customerDocument)
+    if (customerDocument !== undefined) updateData.customerDocument = customerDocument
+
+    const customerAddress = sanitize(data.customerAddress)
+    if (customerAddress !== undefined) updateData.customerAddress = customerAddress
+
+    const channel = sanitize(data.channel)
+    if (channel !== undefined) updateData.channel = channel
+
+    if (data.notes !== undefined) {
+      const notes = data.notes === null ? null : data.notes.trim()
+      updateData.notes = notes && notes.length > 0 ? notes : null
+    }
+
+    const updatedSale = await prisma.sale.update({
+      where: { id: saleId },
+      data: updateData,
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+        pointOfSale: true,
+        payments: true,
+        customer: true,
+      } as any,
+    })
+
+    if (data.syncCustomer && sale.customerId) {
+      const customerUpdate: Prisma.CustomerUpdateInput = {}
+
+      if (customerName !== undefined && customerName !== null) {
+        customerUpdate.name = customerName
+      }
+      if (customerEmail !== undefined) customerUpdate.email = customerEmail
+      if (customerPhone !== undefined) customerUpdate.phone = customerPhone
+      if (customerAddress !== undefined) customerUpdate.address = customerAddress
+
+      const hasCustomerChanges = Object.keys(customerUpdate).length > 0
+
+      if (hasCustomerChanges) {
+        await prisma.customer.update({
+          where: { id: sale.customerId },
+          data: customerUpdate,
+        })
+      }
+    }
+
+    return NextResponse.json(updatedSale as any)
+  } catch (error) {
+    console.error('Failed to update sale:', error)
+    return NextResponse.json({ error: 'Failed to update sale' }, { status: 500 })
   }
 }

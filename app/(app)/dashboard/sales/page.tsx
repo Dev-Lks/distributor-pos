@@ -37,7 +37,8 @@ import {
   User,
   UserX,
   Phone,
-  MapPin
+  MapPin,
+  History
 } from "lucide-react"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -379,6 +380,19 @@ export default function SalesPage() {
         variant: "default" as const,
         onClick: () => handleFinalizeAttempt(),
         disabled: cart.length === 0 || saleLoading || (paymentMethod === "cash" && !showChange)
+      },
+      {
+        title: "Livro de vendas",
+        description: "Abra a tabela completa para revisar, editar ou cancelar registros.",
+        icon: History,
+        buttonIcon: History,
+        cta: "Abrir painel",
+        variant: "outline" as const,
+        onClick: () => {
+          if (typeof window !== "undefined") {
+            window.location.href = "/dashboard/sales/ledger"
+          }
+        }
       }
     ],
     [cart.length, handleFinalizeAttempt, paymentMethod, quickSaleMode, saleLoading, showChange]

@@ -9,6 +9,7 @@ import {
   Building2,
   ChevronsLeft,
   ChevronsRight,
+  ListChecks,
   Menu,
   Package2,
   Settings,
@@ -54,6 +55,12 @@ const navSections: Array<{
         href: "/dashboard/sales",
         icon: ShoppingCart,
         tag: "Live"
+      },
+      {
+        label: "Livro de vendas",
+        description: "Tabela e edição avançada",
+        href: "/dashboard/sales/ledger",
+        icon: ListChecks
       }
     ]
   },
