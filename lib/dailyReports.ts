@@ -1,11 +1,11 @@
 import { addDays, format, startOfDay } from "date-fns"
-import { utcToZonedTime, zonedTimeToUtc } from "date-fns-tz"
+import { fromZonedTime, toZonedTime } from "date-fns-tz"
 import PDFDocument from "pdfkit"
 
 import { prisma } from "@/lib/prisma"
 import { saveReportFile, readReportFile } from "@/lib/reportStorage"
 import { resolveDailyReportRecipients, sendMail } from "@/lib/mailer"
-import { DailyReportStatus, PaymentStatus } from "@prisma/client"
+import { DailyReportStatus, PaymentStatus, Prisma } from "@prisma/client"
 
 const DEFAULT_TIMEZONE = process.env.REPORTS_TIMEZONE || "America/Sao_Paulo"
 
@@ -42,6 +42,10 @@ type ReportComputation = {
   paymentSummaries: PaymentSummary[]
 }
 
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+}
+
 function resolveDate(input?: Date | string): Date {
   if (!input) {
     return new Date()
@@ -55,9 +59,9 @@ function resolveDate(input?: Date | string): Date {
 }
 
 function resolvePeriod(date: Date, timezone: string) {
-  const tzDate = utcToZonedTime(date, timezone)
-  const start = zonedTimeToUtc(startOfDay(tzDate), timezone)
-  const end = zonedTimeToUtc(addDays(startOfDay(tzDate), 1), timezone)
+  const tzDate = toZonedTime(date, timezone)
+  const start = fromZonedTime(startOfDay(tzDate), timezone)
+  const end = fromZonedTime(addDays(startOfDay(tzDate), 1), timezone)
 
   return { periodStart: start, periodEnd: end }
 }
@@ -166,17 +170,17 @@ async function buildPdfBuffer(params: {
   const chunks: Buffer[] = []
 
   return await new Promise<Buffer>((resolve, reject) => {
-    doc.on("data", (chunk) => {
+    doc.on("data", (chunk: string | Buffer) => {
       chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk)
     })
 
-    doc.on("error", (error) => reject(error))
+    doc.on("error", (error: unknown) => reject(error))
 
     doc.on("end", () => {
       resolve(Buffer.concat(chunks))
     })
 
-    const formattedDate = format(utcToZonedTime(params.reportDate, params.timezone), "dd/MM/yyyy")
+  const formattedDate = format(toZonedTime(params.reportDate, params.timezone), "dd/MM/yyyy")
 
     doc.fontSize(18).text("Relatório Z - Fechamento Diário", { align: "center" })
     doc.moveDown(0.5)
@@ -220,7 +224,7 @@ function buildCsvBuffer(params: {
   pointOfSaleName?: string | null
   computation: ReportComputation
 }): Buffer {
-  const formattedDate = format(utcToZonedTime(params.reportDate, params.timezone), "yyyy-MM-dd")
+  const formattedDate = format(toZonedTime(params.reportDate, params.timezone), "yyyy-MM-dd")
   const headerLines = [
     ["Relatorio", "Z"],
     ["Data", formattedDate],
@@ -257,7 +261,7 @@ function buildReportFilename(baseName: string, extension: string) {
 }
 
 function buildBaseFilename(reportDate: Date, timezone: string, pointOfSaleCode?: string | null) {
-  const formattedDate = format(utcToZonedTime(reportDate, timezone), "yyyy-MM-dd")
+  const formattedDate = format(toZonedTime(reportDate, timezone), "yyyy-MM-dd")
   return ["relatorio-z", formattedDate, pointOfSaleCode?.toLowerCase()]
     .filter(Boolean)
     .join("-")
@@ -362,7 +366,9 @@ export async function sendDailyReportEmail(reportId: string, options: { recipien
     throw new Error("REPORT_NOT_FOUND")
   }
 
-  const timezone = options.timezone ?? (typeof report.metadata === "object" && report.metadata?.timezone ? String(report.metadata.timezone) : DEFAULT_TIMEZONE)
+  const metadata = isJsonObject(report.metadata) ? report.metadata : undefined
+  const metadataTimezone = typeof metadata?.timezone === "string" ? metadata.timezone : undefined
+  const timezone = options.timezone ?? metadataTimezone ?? DEFAULT_TIMEZONE
 
   const recipients = resolveDailyReportRecipients(options.recipients)
 
@@ -371,10 +377,15 @@ export async function sendDailyReportEmail(reportId: string, options: { recipien
     return report
   }
 
+  if (!report.storageKey) {
+    throw new Error("REPORT_FILE_MISSING")
+  }
+
   const [pdfFile, csvFile, pointOfSale] = await Promise.all([
     readReportFile(report.storageKey),
     (async () => {
-      const csvStorageKey = typeof report.metadata === "object" && report.metadata?.csv?.storageKey
+      const csvMetadataCandidate = metadata && isJsonObject(metadata.csv) ? metadata.csv : undefined
+      const csvStorageKey = typeof csvMetadataCandidate?.storageKey === "string" ? csvMetadataCandidate.storageKey : null
       if (!csvStorageKey) return null
       try {
         return await readReportFile(String(csvStorageKey))
@@ -386,7 +397,7 @@ export async function sendDailyReportEmail(reportId: string, options: { recipien
     report.pointOfSaleId ? prisma.pointOfSale.findUnique({ where: { id: report.pointOfSaleId } }) : null,
   ])
 
-  const formattedDate = format(utcToZonedTime(report.reportDate, timezone), "dd/MM/yyyy")
+  const formattedDate = format(toZonedTime(report.reportDate, timezone), "dd/MM/yyyy")
   const subject = `Relatório Z · ${formattedDate}${pointOfSale ? ` · ${pointOfSale.name}` : ""}`
 
   const text = [
@@ -446,9 +457,9 @@ export async function resendDailyReport(input: DailyReportResendInput) {
     throw new Error("REPORT_NOT_FOUND")
   }
 
-  const timezone = typeof report.metadata === "object" && report.metadata?.timezone
-    ? String(report.metadata.timezone)
-    : DEFAULT_TIMEZONE
+  const metadata = isJsonObject(report.metadata) ? report.metadata : undefined
+  const metadataTimezone = typeof metadata?.timezone === "string" ? metadata.timezone : undefined
+  const timezone = metadataTimezone ?? DEFAULT_TIMEZONE
 
   return sendDailyReportEmail(report.id, {
     recipients: input.recipients,
@@ -464,7 +475,7 @@ export async function listDailyReports(params: {
   take?: number
   skip?: number
 }) {
-  const where: Parameters<typeof prisma.dailyReport.findMany>[0]["where"] = {}
+  const where: Prisma.DailyReportWhereInput = {}
 
   if (params.from || params.to) {
     where.reportDate = {

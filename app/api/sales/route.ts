@@ -74,6 +74,21 @@ type NormalizedPayment = {
   cashSessionId: string | null
 }
 
+type ExistingCustomerSummary = Prisma.CustomerGetPayload<{
+  select: {
+    id: true
+    name: true
+    creditLimit: true
+    creditUsed: true
+    isBlocked: true
+    totalOrders: true
+    totalSpend: true
+    email: true
+    phone: true
+    address: true
+  }
+}>
+
 function normalizePayments(params: {
   payments: SalePaymentInputPayload[]
   fallbackMethod?: string
@@ -245,7 +260,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  let existingCustomerRecord: (Awaited<ReturnType<typeof prisma.customer.findUnique>>) | null = null
+  let existingCustomerRecord: ExistingCustomerSummary | null = null
   if (sanitizedCustomerId) {
     existingCustomerRecord = await prisma.customer.findUnique({
       where: { id: sanitizedCustomerId },
