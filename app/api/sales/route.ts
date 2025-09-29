@@ -467,6 +467,27 @@ export async function POST(request: NextRequest) {
 
       let customerRecordId = sanitizedCustomerId ?? null
 
+      if (!customerRecordId && shouldRegisterCustomer) {
+        const uniqueFilters = [
+          sanitizedCustomerDocument ? { document: sanitizedCustomerDocument } : null,
+          sanitizedCustomerPhone ? { phone: sanitizedCustomerPhone } : null,
+          sanitizedCustomerEmail ? { email: sanitizedCustomerEmail } : null,
+        ].filter(Boolean) as Prisma.CustomerWhereInput[]
+
+        if (uniqueFilters.length > 0) {
+          const existingCustomerByUnique = await transactionalClient.customer.findFirst({
+            where: {
+              OR: uniqueFilters,
+            },
+            select: { id: true },
+          })
+
+          if (existingCustomerByUnique) {
+            customerRecordId = existingCustomerByUnique.id
+          }
+        }
+      }
+
       if (customerRecordId) {
         await transactionalClient.customer.update({
           where: { id: customerRecordId },
