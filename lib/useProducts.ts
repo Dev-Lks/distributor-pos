@@ -58,14 +58,18 @@ export interface Product {
   }>
 }
 
+export const PRODUCTS_QUERY_KEY = ['products'] as const
+
+export async function fetchProducts(): Promise<Product[]> {
+  const response = await fetch('/api/products')
+  if (!response.ok) throw new Error('Failed to fetch products')
+  return (await response.json()) as Product[]
+}
+
 export function useProducts() {
   return useQuery<Product[]>({
-    queryKey: ['products'],
-    queryFn: async () => {
-      const response = await fetch('/api/products')
-      if (!response.ok) throw new Error('Failed to fetch products')
-      return (await response.json()) as Product[]
-    },
+    queryKey: PRODUCTS_QUERY_KEY,
+    queryFn: fetchProducts,
     staleTime: 1000 * 60 * 2, // Cache for 2 minutes to avoid redundant refetches
     refetchOnWindowFocus: false,
   })

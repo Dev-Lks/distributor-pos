@@ -1,6 +1,5 @@
 import { useQueryClient, useQuery } from '@tanstack/react-query'
-import { useProducts } from './useProducts'
-import type { Product } from './useProducts'
+import { fetchProducts, PRODUCTS_QUERY_KEY } from './useProducts'
 import { sheetsBackup, type SaleData } from './googleSheets'
 
 const SALES_QUERY_KEY = ['sales'] as const
@@ -122,7 +121,6 @@ export interface UpdateSalePayload {
 
 export function useSales(pointOfSale?: string) {
   const queryClient = useQueryClient()
-  const { data: products = [] } = useProducts()
 
   const { data: sales = [], isLoading: salesLoading, refetch: refetchSales } = useQuery<SaleRecord[]>({
     queryKey: SALES_QUERY_KEY,
@@ -148,9 +146,15 @@ export function useSales(pointOfSale?: string) {
     pendingCartId,
     payments,
   }: CreateSaleParams) => {
+  // Ensure we are using up-to-date product data before checking stock
+    const products = await queryClient.fetchQuery({
+      queryKey: PRODUCTS_QUERY_KEY,
+      queryFn: fetchProducts,
+    })
+
     // Enrich items with product data
     const enrichedItems = items.map(item => {
-      const product = products.find((p: Product) => p.id === item.productId)
+      const product = products.find((p) => p.id === item.productId)
       return {
         ...item,
         productName: product?.name || 'Unknown',
@@ -167,7 +171,7 @@ export function useSales(pointOfSale?: string) {
 
     // Check stock (client-side validation)
     for (const item of enrichedItems) {
-      const product = products.find((p: Product) => p.id === item.productId)
+  const product = products.find((p) => p.id === item.productId)
       let availableStock = 0
 
       // Find the point of sale by ID and get the stock for this product
@@ -243,7 +247,7 @@ export function useSales(pointOfSale?: string) {
 
     // Invalidate caches
   queryClient.invalidateQueries({ queryKey: SALES_QUERY_KEY })
-    queryClient.invalidateQueries({ queryKey: ['products'] })
+  queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY })
     queryClient.invalidateQueries({ queryKey: ['sales-metrics'] })
 
     return newSale
@@ -301,7 +305,7 @@ export function useSales(pointOfSale?: string) {
       // Invalidate caches
   queryClient.invalidateQueries({ queryKey: SALES_QUERY_KEY })
       queryClient.invalidateQueries({ queryKey: ['sales-metrics'] })
-      queryClient.invalidateQueries({ queryKey: ['products'] })
+  queryClient.invalidateQueries({ queryKey: PRODUCTS_QUERY_KEY })
       return true
     } catch (error) {
       console.error('Error canceling sale:', error)
