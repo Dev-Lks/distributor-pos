@@ -492,27 +492,35 @@ export async function listDailyReports(params: {
     where.pointOfSaleId = params.pointOfSaleId
   }
 
-  const [reports, total] = await Promise.all([
-    prisma.dailyReport.findMany({
-      where,
-      take: params.take ?? 50,
-      skip: params.skip ?? 0,
-      include: {
-        pointOfSale: true,
-        cashSession: {
-          select: {
-            id: true,
-            openedAt: true,
-            closedAt: true,
+  try {
+    const [reports, total] = await Promise.all([
+      prisma.dailyReport.findMany({
+        where,
+        take: params.take ?? 50,
+        skip: params.skip ?? 0,
+        include: {
+          pointOfSale: true,
+          cashSession: {
+            select: {
+              id: true,
+              openedAt: true,
+              closedAt: true,
+            },
           },
         },
-      },
-      orderBy: {
-        reportDate: "desc",
-      },
-    }),
-    prisma.dailyReport.count({ where }),
-  ])
+        orderBy: {
+          reportDate: "desc",
+        },
+      }),
+      prisma.dailyReport.count({ where }),
+    ])
 
-  return { reports, total }
+    return { reports, total }
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") {
+      console.warn("DailyReport table not found; returning empty dataset during build.")
+      return { reports: [], total: 0 }
+    }
+    throw error
+  }
 }
