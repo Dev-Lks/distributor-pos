@@ -3,6 +3,8 @@ import { useProducts } from './useProducts'
 import type { Product } from './useProducts'
 import { sheetsBackup, type SaleData } from './googleSheets'
 
+type PaymentStatusLiteral = 'PENDING' | 'PARTIAL' | 'PAID' | 'OVERDUE' | 'CANCELLED'
+
 export interface SaleItem {
   productId: string
   quantity: number
@@ -20,12 +22,26 @@ export interface CreateSaleParams {
   customerPhone?: string
   customerDocument?: string
   customerAddress?: string
+  customerId?: string
   channel?: string
   discountValue?: number
   taxValue?: number
   serviceCharge?: number
   notes?: string
   registerCustomer?: boolean
+  pendingCartId?: string
+  payments?: Array<{
+    method: string
+    amount: number
+    dueDate?: string
+    receivedAt?: string
+    status?: PaymentStatusLiteral
+    paidAmount?: number
+    reference?: string
+    notes?: string
+    installmentNumber?: number
+    installmentsTotal?: number
+  }>
 }
 
 interface SaleItemResponse {
@@ -118,12 +134,15 @@ export function useSales(pointOfSale?: string) {
     customerPhone,
     customerDocument,
     customerAddress,
+    customerId,
     channel,
     discountValue = 0,
     taxValue = 0,
     serviceCharge = 0,
     notes,
-    registerCustomer = false
+    registerCustomer = false,
+    pendingCartId,
+    payments,
   }: CreateSaleParams) => {
     // Enrich items with product data
     const enrichedItems = items.map(item => {
@@ -186,6 +205,7 @@ export function useSales(pointOfSale?: string) {
         customerPhone,
         customerDocument,
         customerAddress,
+        customerId,
         channel,
         discountValue,
         taxValue,
@@ -193,6 +213,8 @@ export function useSales(pointOfSale?: string) {
         notes,
         pointOfSaleId: pointOfSale,
         registerCustomer,
+        pendingCartId,
+        payments,
       })
     })
 

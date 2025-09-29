@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma"
+import { generateDailyReport } from "@/lib/dailyReports"
 import {
   CashSessionStatus,
   CashTransactionType,
@@ -287,6 +288,16 @@ export async function closeCashSession(params: {
       notes: notes ?? snapshot.notes,
     },
   })
+
+  try {
+    await generateDailyReport({
+      date: updated.closedAt ?? new Date(),
+      pointOfSaleId: updated.pointOfSaleId ?? undefined,
+      cashSessionId: updated.id,
+    })
+  } catch (error) {
+    console.error("Failed to generate daily report after closing session", error)
+  }
 
   return buildSessionSnapshot(updated.id)
 }

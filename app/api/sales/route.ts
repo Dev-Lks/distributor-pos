@@ -5,7 +5,9 @@ import type { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/lib/auth'
-import { CashSessionStatus } from '@prisma/client'
+import { CashSessionStatus, PaymentStatus, PendingCartStatus, PersonType } from '@prisma/client'
+import { detectPersonType, sanitizeDocument, validateCpfCnpj } from '@/lib/documents'
+import { markPendingCartConverted } from '@/lib/pendingCarts'
 
 const saleItemSchema = z.object({
   productId: z.string().min(1, 'Product ID is required'),
@@ -20,23 +22,102 @@ const createSaleSchema = z.object({
   customerPhone: z.string().optional(),
   customerDocument: z.string().optional(),
   customerAddress: z.string().optional(),
+  customerId: z.string().optional(),
   channel: z.string().optional(),
   discountValue: z.number().nonnegative().optional(),
   taxValue: z.number().nonnegative().optional(),
   serviceCharge: z.number().optional(),
   notes: z.string().optional(),
   pointOfSaleId: z.string().optional(),
+  pendingCartId: z.string().optional(),
   registerCustomer: z.boolean().optional(),
   payments: z.array(
     z.object({
       method: z.string().min(1),
       amount: z.number().nonnegative(),
       receivedAt: z.coerce.date().optional(),
+      dueDate: z.coerce.date().optional(),
+      status: z.nativeEnum(PaymentStatus).optional(),
+      paidAmount: z.number().nonnegative().optional(),
       reference: z.string().optional(),
       notes: z.string().optional(),
+      installmentNumber: z.number().int().positive().optional(),
+      installmentsTotal: z.number().int().positive().optional(),
     })
   ).optional(),
 })
+
+type SalePaymentInputPayload = {
+  method: string
+  amount: number
+  receivedAt?: Date
+  dueDate?: Date
+  status?: PaymentStatus
+  paidAmount?: number
+  reference?: string
+  notes?: string
+  installmentNumber?: number
+  installmentsTotal?: number
+}
+
+type NormalizedPayment = {
+  method: string
+  amount: number
+  status: PaymentStatus
+  paidAmount: number
+  dueDate: Date | null
+  receivedAt: Date | null
+  reference?: string | null
+  notes?: string | null
+  installmentNumber?: number | null
+  installmentsTotal?: number | null
+  cashSessionId: string | null
+}
+
+function normalizePayments(params: {
+  payments: SalePaymentInputPayload[]
+  fallbackMethod?: string
+  netTotal: number
+  cashSessionId: string
+}): NormalizedPayment[] {
+  const basePayments = params.payments.length > 0
+    ? params.payments
+    : (params.fallbackMethod
+        ? [
+            {
+              method: params.fallbackMethod,
+              amount: params.netTotal,
+              status: PaymentStatus.PAID,
+              receivedAt: new Date(),
+              paidAmount: params.netTotal,
+            } as SalePaymentInputPayload,
+          ]
+        : [])
+
+  return basePayments.map((payment) => {
+    const status = payment.status ?? (payment.dueDate ? PaymentStatus.PENDING : PaymentStatus.PAID)
+    const paidAmount = Math.min(
+      payment.paidAmount ?? (status === PaymentStatus.PAID ? payment.amount : 0),
+      payment.amount,
+    )
+    const dueDate = payment.dueDate ?? (status === PaymentStatus.PAID ? (payment.receivedAt ?? new Date()) : null)
+    const receivedAt = paidAmount > 0 ? (payment.receivedAt ?? new Date()) : null
+
+    return {
+      method: payment.method,
+      amount: payment.amount,
+      status,
+      paidAmount,
+      dueDate,
+      receivedAt,
+      reference: payment.reference,
+      notes: payment.notes,
+      installmentNumber: payment.installmentNumber ?? null,
+      installmentsTotal: payment.installmentsTotal ?? null,
+      cashSessionId: paidAmount > 0 ? params.cashSessionId : null,
+    }
+  })
+}
 
 export async function GET() {
   try {
@@ -118,16 +199,78 @@ export async function POST(request: NextRequest) {
   const sanitizedCustomerName = input.customerName?.trim() || undefined
   const sanitizedCustomerEmail = input.customerEmail?.trim() || undefined
   const sanitizedCustomerPhone = input.customerPhone?.trim() || undefined
-  const sanitizedCustomerDocument = input.customerDocument?.trim() || undefined
+  const sanitizedCustomerDocument = sanitizeDocument(input.customerDocument) || undefined
+  if (!validateCpfCnpj(sanitizedCustomerDocument)) {
+    return NextResponse.json({ error: 'Documento do cliente inválido' }, { status: 400 })
+  }
+  const customerPersonType = detectPersonType(sanitizedCustomerDocument)
   const sanitizedCustomerAddress = input.customerAddress?.trim() || undefined
+  const sanitizedCustomerId = input.customerId?.trim() || undefined
   const sanitizedChannel = input.channel?.trim() || undefined
   const sanitizedNotes = input.notes?.trim() || undefined
   const pointOfSaleId = pointOfSaleIdFromPayload || activeCashSession.pointOfSaleId || undefined
   const discountValue = Math.max(input.discountValue ?? 0, 0)
   const taxValue = Math.max(input.taxValue ?? 0, 0)
   const serviceCharge = input.serviceCharge ?? 0
-  const paymentsPayload = input.payments?.filter((payment) => payment.amount >= 0) ?? []
+  const paymentsPayload: SalePaymentInputPayload[] = []
+  for (const payment of (input.payments ?? []) as SalePaymentInputPayload[]) {
+    if (payment.amount >= 0) {
+      paymentsPayload.push(payment)
+    }
+  }
   const shouldRegisterCustomer = input.registerCustomer ?? false
+  const pendingCartId = input.pendingCartId?.trim() || undefined
+
+  let pendingCartRecord: { id: string; status: PendingCartStatus; pointOfSaleId: string | null } | null = null
+  if (pendingCartId) {
+    pendingCartRecord = await prisma.pendingCart.findUnique({
+      where: { id: pendingCartId },
+      select: {
+        id: true,
+        status: true,
+        pointOfSaleId: true,
+      },
+    })
+
+    if (!pendingCartRecord) {
+      return NextResponse.json({ error: 'Carrinho em espera não encontrado' }, { status: 404 })
+    }
+
+    if (pendingCartRecord.status !== PendingCartStatus.ACTIVE) {
+      return NextResponse.json({ error: 'Carrinho não está mais disponível para conversão' }, { status: 409 })
+    }
+
+    if (pendingCartRecord.pointOfSaleId && pointOfSaleId && pendingCartRecord.pointOfSaleId !== pointOfSaleId) {
+      return NextResponse.json({ error: 'Carrinho pertence a outro ponto de venda' }, { status: 409 })
+    }
+  }
+
+  let existingCustomerRecord: (Awaited<ReturnType<typeof prisma.customer.findUnique>>) | null = null
+  if (sanitizedCustomerId) {
+    existingCustomerRecord = await prisma.customer.findUnique({
+      where: { id: sanitizedCustomerId },
+      select: {
+        id: true,
+        name: true,
+        creditLimit: true,
+        creditUsed: true,
+        isBlocked: true,
+        totalOrders: true,
+        totalSpend: true,
+        email: true,
+        phone: true,
+        address: true,
+      },
+    })
+
+    if (!existingCustomerRecord) {
+      return NextResponse.json({ error: 'Cliente informado não encontrado' }, { status: 404 })
+    }
+
+    if (existingCustomerRecord.isBlocked) {
+      return NextResponse.json({ error: 'Cliente bloqueado para compras' }, { status: 403 })
+    }
+  }
 
   if (shouldRegisterCustomer && !sanitizedCustomerName) {
     return NextResponse.json(
@@ -173,16 +316,22 @@ export async function POST(request: NextRequest) {
       create: (args: unknown) => Promise<unknown>
     }
 
-      type CustomerDelegate = {
-        upsert: (args: unknown) => Promise<{ id: string }>
-        create: (args: unknown) => Promise<{ id: string }>
-      }
+    type CustomerDelegate = {
+      upsert: (args: unknown) => Promise<{ id: string }>
+      create: (args: unknown) => Promise<{ id: string }>
+      update: (args: unknown) => Promise<any>
+    }
+
+    type PendingCartDelegate = {
+      update: (args: unknown) => Promise<unknown>
+    }
 
     type PrismaWithProductPoints = typeof prisma & {
       productPointOfSale: ProductPointOfSaleDelegate
       inventoryMovement: InventoryMovementDelegate
       salePayment: SalePaymentDelegate
-        customer: CustomerDelegate
+      customer: CustomerDelegate
+      pendingCart: PendingCartDelegate
     }
 
     const prismaWithPoints = prisma as PrismaWithProductPoints
@@ -278,38 +427,66 @@ export async function POST(request: NextRequest) {
 
     const netTotal = subtotal - discountValue + taxValue + serviceCharge
     const grossMarginValue = netTotal - costOfGoods
+    const normalizedPayments = normalizePayments({
+      payments: paymentsPayload,
+      fallbackMethod: input.paymentMethod ?? undefined,
+      netTotal,
+      cashSessionId: activeCashSession.id,
+    })
+    const openCreditAmount = normalizedPayments.reduce((sum, payment) => sum + Math.max(payment.amount - payment.paidAmount, 0), 0)
+
+    if (existingCustomerRecord?.creditLimit != null) {
+      const projectedCredit = (existingCustomerRecord.creditUsed ?? 0) + openCreditAmount
+      if (projectedCredit > existingCustomerRecord.creditLimit) {
+        return NextResponse.json(
+          {
+            error: 'Limite de crédito ultrapassado para este cliente',
+          },
+          { status: 409 },
+        )
+      }
+    }
 
     const sale = await prisma.$transaction(async (tx) => {
       const transactionalClient = tx as PrismaWithProductPoints
 
-      let customerRecord: { id: string } | null = null
+      let customerRecordId = sanitizedCustomerId ?? null
 
-      if (shouldRegisterCustomer && sanitizedCustomerName) {
-        if (sanitizedCustomerPhone) {
-          customerRecord = await transactionalClient.customer.upsert({
-            where: { phone: sanitizedCustomerPhone },
-            create: {
-              name: sanitizedCustomerName,
-              phone: sanitizedCustomerPhone,
-              email: sanitizedCustomerEmail,
-              address: sanitizedCustomerAddress,
+      if (customerRecordId) {
+        await transactionalClient.customer.update({
+          where: { id: customerRecordId },
+          data: {
+            ...(sanitizedCustomerName ? { name: sanitizedCustomerName } : {}),
+            ...(sanitizedCustomerEmail ? { email: sanitizedCustomerEmail } : {}),
+            ...(sanitizedCustomerPhone ? { phone: sanitizedCustomerPhone } : {}),
+            ...(sanitizedCustomerAddress ? { address: sanitizedCustomerAddress } : {}),
+            ...(sanitizedCustomerDocument ? { document: sanitizedCustomerDocument } : {}),
+            type: customerPersonType,
+            isActive: true,
+          },
+        })
+      } else if (shouldRegisterCustomer && sanitizedCustomerName) {
+        const createdCustomer = await transactionalClient.customer.create({
+          data: {
+            name: sanitizedCustomerName,
+            email: sanitizedCustomerEmail,
+            phone: sanitizedCustomerPhone,
+            document: sanitizedCustomerDocument ?? null,
+            type: customerPersonType,
+            address: sanitizedCustomerAddress,
+            notes: sanitizedNotes,
+            totalSpend: netTotal,
+            totalOrders: 1,
+            averageTicket: netTotal,
+            lastPurchaseAt: new Date(),
+            creditUsed: openCreditAmount,
+            isActive: true,
+            metadata: {
+              createdFrom: 'POS',
             },
-            update: {
-              name: sanitizedCustomerName,
-              email: sanitizedCustomerEmail,
-              address: sanitizedCustomerAddress,
-            },
-          })
-        } else {
-          customerRecord = await transactionalClient.customer.create({
-            data: {
-              name: sanitizedCustomerName,
-              email: sanitizedCustomerEmail,
-              address: sanitizedCustomerAddress,
-              phone: sanitizedCustomerPhone,
-            },
-          })
-        }
+          },
+        })
+        customerRecordId = createdCustomer.id
       }
 
       const saleData = {
@@ -330,6 +507,7 @@ export async function POST(request: NextRequest) {
         notes: sanitizedNotes ?? null,
   pointOfSale: pointOfSaleId ? { connect: { id: pointOfSaleId } } : undefined,
   cashSession: { connect: { id: activeCashSession.id } },
+        pendingCart: pendingCartId ? { connect: { id: pendingCartId } } : undefined,
         items: {
           create: saleItems.map((item) => ({
             product: {
@@ -343,7 +521,17 @@ export async function POST(request: NextRequest) {
             discount: saleItems.length > 0 ? discountValue / saleItems.length : 0,
           })),
         },
-        customer: customerRecord ? { connect: { id: customerRecord.id } } : undefined,
+        customer: customerRecordId ? { connect: { id: customerRecordId } } : undefined,
+        metadata: {
+          pendingCartId,
+          customerId: customerRecordId,
+          payments: normalizedPayments.map((payment) => ({
+            method: payment.method,
+            status: payment.status,
+            amount: payment.amount,
+            paidAmount: payment.paidAmount,
+          })),
+        },
       } as any
 
       const createdSale = await tx.sale.create({
@@ -438,34 +626,67 @@ export async function POST(request: NextRequest) {
         )
       }
 
-      const paymentsToPersist = paymentsPayload.length
-        ? paymentsPayload
-        : (input.paymentMethod
-            ? [
-                {
-                  method: input.paymentMethod,
-                  amount: netTotal,
-                  receivedAt: new Date(),
-                },
-              ]
-            : [])
-
-      if (paymentsToPersist.length > 0) {
+      if (normalizedPayments.length > 0) {
         await Promise.all(
-          paymentsToPersist.map((payment) =>
+          normalizedPayments.map((payment) =>
             transactionalClient.salePayment.create({
               data: {
                 saleId: createdSale.id,
                 method: payment.method,
                 amount: payment.amount,
-                receivedAt: payment.receivedAt ?? new Date(),
+                status: payment.status,
+                paidAmount: payment.paidAmount,
+                dueDate: payment.dueDate,
+                receivedAt: payment.receivedAt,
                 reference: payment.reference,
                 notes: payment.notes,
-                cashSessionId: activeCashSession.id,
-              } as any,
+                cashSessionId: payment.cashSessionId ?? undefined,
+                installmentNumber: payment.installmentNumber ?? undefined,
+                installmentsTotal: payment.installmentsTotal ?? undefined,
+                customerId: customerRecordId ?? undefined,
+              },
             })
           )
         )
+      }
+
+      if (pendingCartId) {
+        await transactionalClient.pendingCart.update({
+          where: { id: pendingCartId },
+          data: {
+            status: PendingCartStatus.CONVERTED,
+            sale: {
+              connect: { id: createdSale.id },
+            },
+            metadata: {
+              convertedAt: new Date().toISOString(),
+            },
+          },
+        })
+      }
+
+      if (customerRecordId) {
+        const updated = await transactionalClient.customer.update({
+          where: { id: customerRecordId },
+          data: {
+            totalSpend: { increment: netTotal },
+            totalOrders: { increment: 1 },
+            lastPurchaseAt: new Date(),
+            ...(openCreditAmount > 0 ? { creditUsed: { increment: openCreditAmount } } : {}),
+            isDelinquent: false,
+          },
+          select: {
+            totalSpend: true,
+            totalOrders: true,
+          },
+        })
+
+        await transactionalClient.customer.update({
+          where: { id: customerRecordId },
+          data: {
+            averageTicket: updated.totalOrders > 0 ? updated.totalSpend / updated.totalOrders : updated.totalSpend,
+          },
+        })
       }
 
       return createdSale

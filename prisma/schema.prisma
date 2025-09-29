@@ -19,6 +19,34 @@ enum Role {
   CASHIER
 }
 
+enum PersonType {
+  INDIVIDUAL
+  COMPANY
+}
+
+enum PaymentStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum PendingCartStatus {
+  ACTIVE
+  CONVERTED
+  CANCELLED
+  EXPIRED
+}
+
+enum DailyReportStatus {
+  PENDING
+  GENERATED
+  SENT
+  RESENT
+  FAILED
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String?
@@ -30,6 +58,7 @@ model User {
   updatedAt DateTime @updatedAt
   cashSessions CashSession[]
   cashTransactions CashTransaction[] @relation("UserCashTransactions")
+  pendingCarts PendingCart[] @relation("UserPendingCarts")
 }
 
 model Product {
@@ -63,6 +92,7 @@ model Product {
   saleItems SaleItem[]
   priceHistories ProductPriceHistory[]
   inventoryMovements InventoryMovement[]
+  pendingCartItems PendingCartItem[]
 }
 
 model Inventory {
@@ -126,11 +156,14 @@ model Sale {
   pointOfSaleId String?
   cashSessionId String?
   notes     String?
+  pendingCartId String? @unique
+  metadata Json?
   items     SaleItem[]
   payments  SalePayment[]
   pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
   customer Customer? @relation(fields: [customerId], references: [id])
   cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
+  pendingCart PendingCart? @relation("SalePendingCart", fields: [pendingCartId], references: [id])
   inventoryMovements InventoryMovement[]
 
   @@index([customerId])
@@ -140,14 +173,42 @@ model Sale {
 model Customer {
   id        String   @id @default(cuid())
   name      String
+  type      PersonType @default(INDIVIDUAL)
+  document  String?  @unique
   phone     String?  @unique
+  secondaryPhone String?
   email     String?
+  whatsapp  String?
   address   String?
+  addressNumber String?
+  addressComplement String?
+  district  String?
+  city      String?
+  state     String?
+  postalCode String?
+  country   String?
+  preferredPaymentMethod String?
+  paymentTerms String?
+  creditLimit Float?
+  creditUsed Float @default(0)
+  isBlocked Boolean @default(false)
+  blockedReason String?
   notes     String?
+  tags      String[] @default([])
+  birthDate DateTime?
+  isActive  Boolean @default(true)
+  isDelinquent Boolean @default(false)
+  lastPurchaseAt DateTime?
+  averageTicket Float?
+  totalSpend Float @default(0)
+  totalOrders Int @default(0)
+  metadata Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   sales Sale[]
+  pendingCarts PendingCart[]
+  payments SalePayment[]
 }
 
 model SaleItem {
@@ -184,6 +245,8 @@ model PointOfSale {
   sales     Sale[]
   inventoryMovements InventoryMovement[]
   cashSessions CashSession[]
+  pendingCarts PendingCart[]
+  dailyReports DailyReport[]
 }
 
 model SalePayment {
@@ -191,15 +254,26 @@ model SalePayment {
   saleId    String
   method    String
   amount    Float
+  dueDate   DateTime?
+  status    PaymentStatus @default(PENDING)
   receivedAt DateTime?
+  paidAmount Float @default(0)
   reference String?
   notes     String?
   cashSessionId String?
+  installmentNumber Int?
+  installmentsTotal Int?
+  customerId String?
+  overdueNotifiedAt DateTime?
+  externalReference String?
+  metadata Json?
   sale      Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
   cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
 
   @@index([saleId])
   @@index([cashSessionId])
+  @@index([customerId, status])
 }
 
 model ProductPriceHistory {
@@ -213,6 +287,84 @@ model ProductPriceHistory {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId, effectiveAt])
+}
+
+model PendingCart {
+  id             String            @id @default(cuid())
+  status         PendingCartStatus @default(ACTIVE)
+  pointOfSaleId  String?
+  createdById    String
+  customerId     String?
+  expiresAt      DateTime?
+  resumedAt      DateTime?
+  discountValue  Float @default(0)
+  serviceCharge  Float @default(0)
+  subtotal       Float @default(0)
+  total          Float @default(0)
+  notes          String?
+  metadata       Json?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  pointOfSale    PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  createdBy      User @relation("UserPendingCarts", fields: [createdById], references: [id])
+  customer       Customer? @relation(fields: [customerId], references: [id])
+  sale           Sale? @relation("SalePendingCart")
+  items          PendingCartItem[]
+
+  @@index([pointOfSaleId, status])
+  @@index([customerId])
+  @@index([createdById])
+}
+
+model PendingCartItem {
+  id        String @id @default(cuid())
+  cartId    String
+  productId String
+  quantity  Int
+  price     Float
+  discount  Float @default(0)
+  notes     String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  cart      PendingCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@index([cartId])
+  @@index([productId])
+}
+
+model DailyReport {
+  id                 String            @id @default(cuid())
+  reportDate         DateTime
+  periodStart        DateTime
+  periodEnd          DateTime
+  status             DailyReportStatus @default(PENDING)
+  pointOfSaleId      String?
+  cashSessionId      String?
+  totalsByMethod     Json
+  subtotal           Float @default(0)
+  discountTotal      Float @default(0)
+  taxTotal           Float @default(0)
+  serviceChargeTotal Float @default(0)
+  grossTotal         Float @default(0)
+  netTotal           Float @default(0)
+  fileUrl            String?
+  fileType           String?
+  storageKey         String?
+  sentAt             DateTime?
+  resentCount        Int @default(0)
+  lastResentAt       DateTime?
+  deliveryMetadata   Json?
+  metadata           Json?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  pointOfSale        PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  cashSession        CashSession? @relation(fields: [cashSessionId], references: [id])
+
+  @@unique([reportDate, pointOfSaleId])
+  @@index([cashSessionId])
+  @@index([status])
 }
 
 model InventoryMovement {
@@ -289,6 +441,7 @@ model CashSession {
   transactions           CashTransaction[]
   sales                  Sale[]
   payments               SalePayment[]
+  dailyReports           DailyReport[]
 
   @@index([userId, status])
   @@index([pointOfSaleId, status])

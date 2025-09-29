@@ -12,6 +12,7 @@ import {
   ListChecks,
   Menu,
   Package2,
+  FileText,
   Settings,
   ShoppingCart,
   Store,
@@ -62,6 +63,13 @@ const navSections: Array<{
         description: "Tabela e edição avançada",
         href: "/dashboard/sales/ledger",
         icon: ListChecks
+      },
+      {
+        label: "Relatórios Z",
+        description: "Fechamentos diários",
+        href: "/dashboard/reports/daily",
+        icon: FileText,
+        tag: "Novo"
       }
     ]
   },
