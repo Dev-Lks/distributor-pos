@@ -28,6 +28,8 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  cashSessions CashSession[]
+  cashTransactions CashTransaction[] @relation("UserCashTransactions")
 }
 
 model Product {
@@ -122,14 +124,17 @@ model Sale {
   costOfGoods Float @default(0)
   grossMargin Float @default(0)
   pointOfSaleId String?
+  cashSessionId String?
   notes     String?
   items     SaleItem[]
   payments  SalePayment[]
   pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
   customer Customer? @relation(fields: [customerId], references: [id])
+  cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
   inventoryMovements InventoryMovement[]
 
   @@index([customerId])
+  @@index([cashSessionId])
 }
 
 model Customer {
@@ -178,6 +183,7 @@ model PointOfSale {
   productPointsOfSale ProductPointOfSale[]
   sales     Sale[]
   inventoryMovements InventoryMovement[]
+  cashSessions CashSession[]
 }
 
 model SalePayment {
@@ -188,9 +194,12 @@ model SalePayment {
   receivedAt DateTime?
   reference String?
   notes     String?
+  cashSessionId String?
   sale      Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
 
   @@index([saleId])
+  @@index([cashSessionId])
 }
 
 model ProductPriceHistory {
@@ -245,4 +254,60 @@ enum InventoryLocation {
   SUPPLIER
   TRANSIT
   EVENT
+}
+
+enum CashSessionStatus {
+  OPEN
+  CLOSING
+  CLOSED
+}
+
+enum CashTransactionType {
+  OPENING
+  SUPPLY
+  WITHDRAWAL
+  ADJUSTMENT
+}
+
+model CashSession {
+  id                     String             @id @default(cuid())
+  userId                 String
+  pointOfSaleId          String?
+  openedAt               DateTime           @default(now())
+  closedAt               DateTime?
+  openingAmount          Float              @default(0)
+  closingAmount          Float?
+  expectedClosingAmount  Float?
+  differenceAmount       Float?
+  status                 CashSessionStatus  @default(OPEN)
+  notes                  String?
+  hardwareEventReference String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointOfSale            PointOfSale?       @relation(fields: [pointOfSaleId], references: [id])
+  transactions           CashTransaction[]
+  sales                  Sale[]
+  payments               SalePayment[]
+
+  @@index([userId, status])
+  @@index([pointOfSaleId, status])
+}
+
+model CashTransaction {
+  id                     String              @id @default(cuid())
+  cashSessionId          String
+  type                   CashTransactionType
+  amount                 Float
+  description            String?
+  performedById          String?
+  paymentMethod          String?
+  hardwareEventReference String?
+  createdAt              DateTime            @default(now())
+  notes                  String?
+  cashSession            CashSession         @relation(fields: [cashSessionId], references: [id], onDelete: Cascade)
+  performedBy            User?               @relation("UserCashTransactions", fields: [performedById], references: [id])
+
+  @@index([cashSessionId])
+  @@index([performedById])
 }

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { z } from 'zod'
 import type { Prisma } from '@prisma/client'
+import { getServerSession } from 'next-auth'
+
+import { authOptions } from '@/lib/auth'
+import { CashSessionStatus } from '@prisma/client'
 
 const saleItemSchema = z.object({
   productId: z.string().min(1, 'Product ID is required'),
@@ -75,6 +79,42 @@ export async function POST(request: NextRequest) {
     }
 
     const input = parsedPayload.data
+
+    const session = await getServerSession(authOptions)
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    }
+
+    const pointOfSaleIdFromPayload = input.pointOfSaleId?.trim()
+
+    const activeCashSession = await prisma.cashSession.findFirst({
+      where: {
+        userId: session.user.id,
+        status: CashSessionStatus.OPEN,
+        ...(pointOfSaleIdFromPayload
+          ? {
+              OR: [
+                { pointOfSaleId: pointOfSaleIdFromPayload },
+                { pointOfSaleId: null },
+              ],
+            }
+          : {}),
+      },
+      orderBy: {
+        openedAt: 'desc',
+      },
+    })
+
+    if (!activeCashSession) {
+      return NextResponse.json(
+        {
+          error: 'Nenhum turno de caixa aberto',
+          details: 'Abra o caixa antes de registrar vendas.',
+        },
+        { status: 409 }
+      )
+    }
   const sanitizedCustomerName = input.customerName?.trim() || undefined
   const sanitizedCustomerEmail = input.customerEmail?.trim() || undefined
   const sanitizedCustomerPhone = input.customerPhone?.trim() || undefined
@@ -82,7 +122,7 @@ export async function POST(request: NextRequest) {
   const sanitizedCustomerAddress = input.customerAddress?.trim() || undefined
   const sanitizedChannel = input.channel?.trim() || undefined
   const sanitizedNotes = input.notes?.trim() || undefined
-  const pointOfSaleId = input.pointOfSaleId?.trim() || undefined
+  const pointOfSaleId = pointOfSaleIdFromPayload || activeCashSession.pointOfSaleId || undefined
   const discountValue = Math.max(input.discountValue ?? 0, 0)
   const taxValue = Math.max(input.taxValue ?? 0, 0)
   const serviceCharge = input.serviceCharge ?? 0
@@ -288,7 +328,8 @@ export async function POST(request: NextRequest) {
         costOfGoods,
         grossMargin: grossMarginValue,
         notes: sanitizedNotes ?? null,
-        pointOfSale: pointOfSaleId ? { connect: { id: pointOfSaleId } } : undefined,
+  pointOfSale: pointOfSaleId ? { connect: { id: pointOfSaleId } } : undefined,
+  cashSession: { connect: { id: activeCashSession.id } },
         items: {
           create: saleItems.map((item) => ({
             product: {
@@ -420,6 +461,7 @@ export async function POST(request: NextRequest) {
                 receivedAt: payment.receivedAt ?? new Date(),
                 reference: payment.reference,
                 notes: payment.notes,
+                cashSessionId: activeCashSession.id,
               } as any,
             })
           )
