@@ -1,4 +1,5 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Role } from '@prisma/client'
+import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -235,10 +236,42 @@ async function seedProducts() {
   }
 }
 
+async function seedUsers() {
+  console.log('🔐 Garantindo usuário administrador...')
+
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@nitrobeer.com'
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'admin123'
+  const adminName = process.env.SEED_ADMIN_NAME ?? 'Administrador NitroBeer'
+
+  const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } })
+
+  if (!existingAdmin) {
+    const hashedPassword = await bcrypt.hash(adminPassword, 12)
+
+    await prisma.user.create({
+      data: {
+        email: adminEmail,
+        name: adminName,
+        password: hashedPassword,
+        role: Role.ADMIN,
+      },
+    })
+
+    if (!process.env.SEED_ADMIN_PASSWORD) {
+      console.log('⚠️ Usuário admin criado com a senha padrão "admin123". Atualize após o primeiro login!')
+    } else {
+      console.log('✅ Usuário admin criado com as credenciais fornecidas nas variáveis SEED_ADMIN_*')
+    }
+  } else {
+    console.log('ℹ️ Usuário administrador padrão já existe, nenhuma alteração aplicada.')
+  }
+}
+
 async function main() {
   console.time('seed')
   console.log('🌱 Iniciando seed de produtos...')
   await seedProducts()
+  await seedUsers()
   console.log('🌿 Seed finalizado com sucesso!')
   console.timeEnd('seed')
 }

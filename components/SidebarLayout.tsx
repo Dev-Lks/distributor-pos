@@ -23,6 +23,7 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "./ThemeToggle"
+import { signOut, useSession } from "next-auth/react"
 
 interface SidebarLayoutProps {
   children: ReactNode
@@ -110,6 +111,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const pathname = usePathname()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
+  const { data: session } = useSession()
 
   const flatNav = useMemo(() => navSections.flatMap((section) => section.items), [])
 
@@ -247,6 +249,34 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
             <p className="mt-3 text-center text-[11px] text-muted-foreground">
               NitroBeer • Versão 2.5
             </p>
+          )}
+        </div>
+        <div className="border-t border-border/70 px-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/20 text-lg font-semibold text-amber-400">
+              {(session?.user?.name ?? session?.user?.email ?? "N").slice(0, 2).toUpperCase()}
+            </div>
+            {!isCollapsed && (
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium">{session?.user?.name ?? "Operador(a) NitroBeer"}</p>
+                <p className="truncate text-xs text-muted-foreground">{session?.user?.email ?? "Sem e-mail cadastrado"}</p>
+                {session?.user?.role && (
+                  <Badge className="mt-1 bg-amber-500/20 text-amber-500">
+                    {session.user.role.toUpperCase()}
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+          {!isCollapsed && (
+            <Button
+              type="button"
+              variant="outline"
+              className="mt-4 w-full"
+              onClick={() => signOut({ callbackUrl: "/login" })}
+            >
+              Sair
+            </Button>
           )}
         </div>
       </aside>

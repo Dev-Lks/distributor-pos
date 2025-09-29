@@ -1,13 +1,12 @@
 "use client"
 
-import type { FormEvent } from "react"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { AlertTriangle, Activity, DollarSign, Package, ShoppingCart, Users } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { DashboardCharts } from "@/components/dashboard/DashboardCharts"
 import { DashboardFilters } from "@/components/dashboard/DashboardFilters"
 import { DashboardHeader, type DashboardPeriod } from "@/components/dashboard/DashboardHeader"
@@ -413,65 +412,23 @@ function OverviewDashboard() {
 }
 
 export default function DashboardPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("dashboardAuthenticated") === "true"
-    }
-    return false
-  })
-  const [pin, setPin] = useState("")
+  const { status } = useSession()
+  const router = useRouter()
 
-  const handlePinSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    if (pin === "1234") {
-      setIsAuthenticated(true)
-      localStorage.setItem("dashboardAuthenticated", "true")
-    } else {
-      alert("PIN incorreto")
-      setPin("")
+  useEffect(() => {
+    if (status === "unauthenticated") {
+      const url = new URL("/login", window.location.origin)
+      url.searchParams.set("callbackUrl", "/dashboard")
+      router.replace(url.toString())
     }
+  }, [status, router])
+
+  if (status === "loading") {
+    return <DashboardLoading />
   }
 
-  if (!isAuthenticated) {
-    return (
-      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="space-y-4 text-center">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/15 text-2xl">
-              🍺
-            </div>
-            <div>
-              <CardTitle className="text-2xl">NitroBeer POS</CardTitle>
-              <p className="text-muted-foreground">Sistema de ponto de venda</p>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <form onSubmit={handlePinSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="pin" className="text-sm font-medium">
-                  PIN de acesso
-                </Label>
-                <Input
-                  id="pin"
-                  type="password"
-                  value={pin}
-                  onChange={(event) => setPin(event.target.value)}
-                  placeholder="••••"
-                  className="h-14 text-center text-2xl tracking-[0.6rem]"
-                  maxLength={4}
-                />
-              </div>
-              <Button type="submit" className="h-12 w-full text-lg">
-                Entrar
-              </Button>
-            </form>
-            <p className="text-center text-xs text-muted-foreground">
-              Sistema seguro • Versão 2.0
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    )
+  if (status !== "authenticated") {
+    return null
   }
 
   return <OverviewDashboard />

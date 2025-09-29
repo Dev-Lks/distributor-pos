@@ -1,10 +1,13 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
+import { getServerSession } from "next-auth"
 import { Inter } from "next/font/google"
 import "./globals.css"
+import { AuthSessionProvider } from "@/components/AuthSessionProvider"
 import { QueryProvider } from "@/components/QueryProvider"
 import { PWAInstall } from "@/components/PWAInstall"
 import { Toaster } from "@/components/ui/sonner"
+import { authOptions } from "@/lib/auth"
 
 export const metadata: Metadata = {
   title: "NitroBeer",
@@ -27,17 +30,21 @@ export const viewport: Viewport = {
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const session = await getServerSession(authOptions)
+
   return (
     <html lang="pt-BR">
       <body className={`${inter.variable} antialiased`}>
-        <QueryProvider>{children}</QueryProvider>
-        <PWAInstall />
-        <Toaster />
+        <AuthSessionProvider session={session}>
+          <QueryProvider>{children}</QueryProvider>
+          <PWAInstall />
+          <Toaster />
+        </AuthSessionProvider>
       </body>
     </html>
   )

@@ -32,17 +32,28 @@ Sistema completo de ponto de venda para bares e restaurantes, desenvolvido com N
      pnpm prisma migrate dev
      ```
 
-4. Popule o banco com produtos iniciais:
+4. Defina as variáveis de autenticação no `.env.local`:
+   ```bash
+   NEXTAUTH_SECRET="coloque-uma-chave-secreta-segura"
+   ```
+   Opcionalmente personalize o usuário semente:
+   ```bash
+   SEED_ADMIN_EMAIL=admin@nitrobeer.com
+   SEED_ADMIN_PASSWORD=admin123
+   SEED_ADMIN_NAME="Administrador NitroBeer"
+   ```
+
+5. Popule o banco com produtos iniciais e o usuário administrador padrão:
    ```bash
    pnpm tsx prisma/seed.ts
    ```
 
-5. Gere o cliente Prisma:
+6. Gere o cliente Prisma:
    ```bash
    pnpm prisma generate
    ```
 
-6. Inicie o servidor de desenvolvimento:
+7. Inicie o servidor de desenvolvimento:
    ```bash
    pnpm dev
    ```
@@ -50,7 +61,7 @@ Sistema completo de ponto de venda para bares e restaurantes, desenvolvido com N
 ## Uso
 
 1. Acesse `http://localhost:3000/dashboard`
-2. Digite o PIN: `1234`
+2. Entre com o e-mail e senha cadastrados (padrão: `admin@nitrobeer.com` / `admin123`)
 3. Navegue entre as abas:
    - **Vendas**: Registre vendas adicionando produtos ao carrinho
    - **Estoque**: Visualize e edite quantidades de produtos

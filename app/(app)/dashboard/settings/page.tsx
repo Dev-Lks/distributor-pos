@@ -208,7 +208,7 @@ export default function SettingsPage() {
             <CardHeader className="space-y-1">
               <CardTitle className="text-lg">Segurança e acessos</CardTitle>
               <CardDescription>
-                Gerencie o PIN de acesso e quem pode operar o sistema.
+                Controle quem pode entrar no sistema e mantenha o POS protegido.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -218,27 +218,32 @@ export default function SettingsPage() {
                     <KeyRound className="h-5 w-5" />
                   </div>
                   <div>
-                    <p className="font-semibold">PIN mestre</p>
+                    <p className="font-semibold">Autenticação com e-mail e senha</p>
                     <p className="text-xs text-muted-foreground">
-                      O PIN protege o dashboard e o PDV em dispositivos não autorizados. Altere periodicamente.
+                      Apenas usuários autorizados conseguem acessar o dashboard e registrar vendas. Adicione novos
+                      operadores diretamente pelo banco ou via painel (em breve).
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="pin">Novo PIN (4 dígitos)</Label>
-                <Input id="pin" type="password" maxLength={4} placeholder="••••" className="text-center tracking-[0.6rem]" />
+              <div className="rounded-lg border border-muted-foreground/30 bg-muted/20 p-4 text-xs text-muted-foreground">
+                <p>
+                  • O usuário administrador inicial é criado automaticamente (admin@nitrobeer.com / senha padrão
+                  <span className="font-semibold"> admin123</span>).
+                </p>
+                <p className="mt-2">
+                  • Altere a senha no primeiro acesso: <code className="rounded bg-background px-1">pnpm prisma studio</code>
+                  → tabela <strong>User</strong>.
+                </p>
+                <p className="mt-2">
+                  • Utilize diferentes papéis (ADMIN, SUPERVISOR, CASHIER) para controlar permissões.
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="admin-email">Administrador responsável</Label>
-                <Input id="admin-email" type="email" placeholder="admin@nitrobeer.com" />
-              </div>
-
-              <Button variant="outline" className="w-full gap-2">
+              <Button variant="outline" className="w-full gap-2" disabled>
                 <UserCog className="h-4 w-4" />
-                Gerenciar operadores
+                Gestão avançada de usuários em breve
               </Button>
             </CardContent>
           </Card>
