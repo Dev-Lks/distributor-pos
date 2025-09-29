@@ -605,41 +605,28 @@ export default function InventoryPage() {
       return
     }
 
-    const fromQuantity = getInventoryQuantity(product.inventory, transferFrom)
-    const toQuantity = getInventoryQuantity(product.inventory, transferTo)
+  const fromQuantity = getInventoryQuantity(product.inventory, transferFrom)
 
     if (fromQuantity < quantity) {
       toast.error("Quantidade indisponível no local de origem.")
       return
     }
 
-    const updatedOrigin = fromQuantity - quantity
-    const updatedDestination = toQuantity + quantity
-
     try {
-      const decreaseResponse = await fetch("/api/inventory", {
+      const transferResponse = await fetch("/api/inventory/transfer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: transferProductId, location: transferFrom, quantity: updatedOrigin })
-      })
-
-      if (!decreaseResponse.ok) {
-        throw new Error("Erro ao debitar estoque de origem")
-      }
-
-      const increaseResponse = await fetch("/api/inventory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: transferProductId, location: transferTo, quantity: updatedDestination })
-      })
-
-      if (!increaseResponse.ok) {
-        await fetch("/api/inventory", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ productId: transferProductId, location: transferFrom, quantity: fromQuantity })
+        body: JSON.stringify({
+          productId: transferProductId,
+          fromLocation: transferFrom,
+          toLocation: transferTo,
+          quantity
         })
-        throw new Error("Erro ao creditar estoque de destino")
+      })
+
+      if (!transferResponse.ok) {
+        const data = (await transferResponse.json().catch(() => ({}))) as { error?: string }
+        throw new Error(data.error ?? "Erro ao transferir estoque")
       }
 
       toast.success("Transferência concluída.")
@@ -651,7 +638,8 @@ export default function InventoryPage() {
       setTransferTo("house")
     } catch (error) {
       console.error(error)
-      toast.error("Não foi possível completar a transferência agora.")
+      const message = error instanceof Error ? error.message : "Não foi possível completar a transferência agora."
+      toast.error(message)
     }
   }
 

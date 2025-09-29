@@ -66,6 +66,7 @@ export function useProducts() {
       if (!response.ok) throw new Error('Failed to fetch products')
       return (await response.json()) as Product[]
     },
-    staleTime: 0, // Always refetch for instant updates
+    staleTime: 1000 * 60 * 2, // Cache for 2 minutes to avoid redundant refetches
+    refetchOnWindowFocus: false,
   })
 }
