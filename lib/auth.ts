@@ -1,7 +1,7 @@
 import { compare } from "bcryptjs"
 import type { Role } from "@prisma/client"
-import type { NextAuthOptions, Session } from "next-auth"
-import type { JWT } from "next-auth/jwt"
+import type { NextAuthOptions } from "next-auth"
+import type { AdapterUser } from "next-auth/adapters"
 import Credentials from "next-auth/providers/credentials"
 
 import { prisma } from "@/lib/prisma"
@@ -53,16 +53,17 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }: { token: JWT; user?: { role?: Role } & Record<string, unknown> | null }) {
+    async jwt({ token, user }) {
       if (user) {
-        token.role = user.role
+        const typedUser = user as AdapterUser & { role?: Role }
+        token.role = typedUser.role
       }
       return token
     },
-    async session({ session, token }: { session: Session; token: JWT }) {
+    async session({ session, token }) {
       if (session.user) {
         session.user.id = token.sub ?? ""
-        session.user.role = token.role as string | undefined
+        session.user.role = token.role as Role | undefined
       }
       return session
     },
