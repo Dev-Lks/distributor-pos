@@ -59,6 +59,8 @@ const statusColors: Record<DailyReportStatus, string> = {
   FAILED: "bg-red-500/15 text-red-600",
 }
 
+const CONSOLIDATED_POINT_VALUE = "__consolidated"
+
 function toCurrency(value: number) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -166,7 +168,9 @@ export function DailyReportsClient({ initialData, initialTotal, pointsOfSale, in
 
     if (from) next.from = from
     if (to) next.to = to
-    if (pointOfSaleId) next.pointOfSaleId = pointOfSaleId || undefined
+    if (pointOfSaleId && pointOfSaleId !== CONSOLIDATED_POINT_VALUE) {
+      next.pointOfSaleId = pointOfSaleId
+    }
 
     setFilters(next)
   }
@@ -213,12 +217,12 @@ export function DailyReportsClient({ initialData, initialTotal, pointsOfSale, in
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Ponto de venda</label>
-              <Select name="pointOfSaleId" defaultValue={filters.pointOfSaleId ?? ""}>
+              <Select name="pointOfSaleId" defaultValue={filters.pointOfSaleId ?? CONSOLIDATED_POINT_VALUE}>
                 <SelectTrigger>
                   <SelectValue placeholder="Consolidado" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Consolidado</SelectItem>
+                  <SelectItem value={CONSOLIDATED_POINT_VALUE}>Consolidado</SelectItem>
                   {pointsOfSale.map((point) => (
                     <SelectItem key={point.id} value={point.id}>
                       {point.name}
