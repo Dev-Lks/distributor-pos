@@ -17,6 +17,7 @@ import {
   ShoppingCart,
   Store,
   Users2,
+  UserRound,
   X
 } from "lucide-react"
 
@@ -93,6 +94,12 @@ const navSections: Array<{
         description: "Ficha técnica e preços",
         href: "/dashboard/products",
         icon: Building2
+      },
+      {
+        label: "Clientes",
+        description: "Cadastro e bonificações",
+        href: "/dashboard/customers",
+        icon: UserRound
       },
       {
         label: "Pontos de venda",

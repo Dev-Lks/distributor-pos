@@ -316,6 +316,24 @@ export async function generateDailyReport(input: DailyReportGenerationInput = {}
     contentType: "text/csv",
   })
 
+  const pdfMetadata = {
+    storageKey: savedPdf.storageKey,
+    url: savedPdf.url,
+    filename: savedPdf.filename,
+    contentType: savedPdf.contentType,
+    size: pdfBuffer.length,
+    ...(savedPdf.url ? {} : { base64: pdfBuffer.toString("base64") }),
+  }
+
+  const csvMetadata = {
+    storageKey: savedCsv.storageKey,
+    url: savedCsv.url,
+    filename: savedCsv.filename,
+    contentType: savedCsv.contentType,
+    size: csvBuffer.length,
+    ...(savedCsv.url ? {} : { base64: csvBuffer.toString("base64") }),
+  }
+
   const payload = {
     reportDate: periodStart,
     periodStart,
@@ -334,6 +352,14 @@ export async function generateDailyReport(input: DailyReportGenerationInput = {}
     fileType: "pdf",
     storageKey: savedPdf.storageKey,
     metadata: {
+      files: {
+        pdf: pdfMetadata,
+        csv: csvMetadata,
+      },
+      pdf: {
+        storageKey: savedPdf.storageKey,
+        url: savedPdf.url,
+      },
       csv: {
         storageKey: savedCsv.storageKey,
         url: savedCsv.url,
@@ -431,22 +457,50 @@ export async function sendDailyReportEmail(reportId: string, options: { recipien
     attachments,
   })
 
-  const status = delivery.skipped ? report.status : DailyReportStatus.SENT
+  const now = new Date()
+  const nowIso = now.toISOString()
+  const metadataBase: Record<string, unknown> =
+    typeof report.deliveryMetadata === "object" &&
+    report.deliveryMetadata !== null &&
+    !Array.isArray(report.deliveryMetadata)
+      ? (report.deliveryMetadata as Record<string, unknown>)
+      : {}
+
+  const deliveryMetadata: Record<string, unknown> = {
+    ...metadataBase,
+    lastResult: delivery,
+    lastAttemptAt: nowIso,
+    recipients,
+  }
+
+  if (!delivery.skipped) {
+    deliveryMetadata.lastSentAt = nowIso
+  }
+
+  if (delivery.error) {
+    deliveryMetadata.lastError = delivery.error
+  }
+
+  if (delivery.reason === "error") {
+    deliveryMetadata.lastErrorAt = nowIso
+  }
+
+  const updateData: Prisma.DailyReportUpdateInput = {
+    deliveryMetadata: deliveryMetadata as Prisma.InputJsonValue,
+  }
+
+  if (!delivery.skipped) {
+    updateData.status = DailyReportStatus.SENT
+    updateData.sentAt = now
+    updateData.resentCount = report.resentCount + (report.sentAt ? 1 : 0)
+    updateData.lastResentAt = report.sentAt ? now : report.lastResentAt ?? null
+  } else if (delivery.reason === "error") {
+    updateData.status = DailyReportStatus.FAILED
+  }
 
   return prisma.dailyReport.update({
     where: { id: report.id },
-    data: {
-      status,
-      sentAt: delivery.skipped ? report.sentAt : new Date(),
-      resentCount: delivery.skipped ? report.resentCount : report.resentCount + (report.sentAt ? 1 : 0),
-      lastResentAt: delivery.skipped ? report.lastResentAt : report.sentAt ? new Date() : report.lastResentAt,
-      deliveryMetadata: {
-        ...(typeof report.deliveryMetadata === "object" ? report.deliveryMetadata : {}),
-        lastResult: delivery,
-        lastSentAt: new Date().toISOString(),
-        recipients,
-      },
-    },
+    data: updateData,
   })
 }
 

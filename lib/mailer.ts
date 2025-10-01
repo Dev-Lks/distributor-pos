@@ -14,6 +14,13 @@ export type SendMailOptions = {
   attachments?: MailAttachment[]
 }
 
+export type SendMailResult = {
+  messageId?: string
+  skipped: boolean
+  reason?: "missing-config" | "error"
+  error?: string
+}
+
 let cachedTransporter: Transporter | null = null
 
 function getConfiguredRecipients(): string[] {
@@ -63,33 +70,43 @@ async function getTransporter(): Promise<Transporter | null> {
     },
   })
 
-  return cachedTransporter
+    return cachedTransporter
 }
 
-export async function sendMail(options: SendMailOptions): Promise<{ messageId?: string; skipped: boolean }> {
+  export async function sendMail(options: SendMailOptions): Promise<SendMailResult> {
   const transporter = await getTransporter()
 
   if (!transporter) {
-    return { skipped: true }
+      return { skipped: true, reason: "missing-config" }
   }
 
   const from = process.env.REPORT_SENDER_EMAIL || process.env.SMTP_USER
 
-  const info = await transporter.sendMail({
-    from,
-    to: options.to,
-    subject: options.subject,
-    text: options.text,
-    html: options.html,
-    attachments: options.attachments?.map((attachment) => ({
-      filename: attachment.filename,
-      content: attachment.content,
-      contentType: attachment.contentType,
-    })),
-  })
+    try {
+      const info = await transporter.sendMail({
+        from,
+        to: options.to,
+        subject: options.subject,
+        text: options.text,
+        html: options.html,
+        attachments: options.attachments?.map((attachment) => ({
+          filename: attachment.filename,
+          content: attachment.content,
+          contentType: attachment.contentType,
+        })),
+      })
 
-  return {
-    messageId: info.messageId,
-    skipped: false,
-  }
+      return {
+        messageId: info.messageId,
+        skipped: false,
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      console.error("Failed to send mail", message)
+      return {
+        skipped: true,
+        reason: "error",
+        error: message,
+      }
+    }
 }

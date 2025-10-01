@@ -1,4 +1,5 @@
-import { promises as fs } from "fs"
+import { promises as fs, constants as fsConstants } from "fs"
+import os from "os"
 import path from "path"
 import { randomUUID } from "crypto"
 
@@ -40,12 +41,36 @@ function sanitizeFilename(filename: string) {
     .toLowerCase()
 }
 
-export async function saveReportFile(input: SaveReportFileInput): Promise<SavedReportFile> {
-  const baseDir = resolveBaseDirectory()
+const STORAGE_PERMISSION_ERRORS = new Set(["EACCES", "EPERM", "EROFS"])
+
+function isPermissionError(error: unknown): error is NodeJS.ErrnoException {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    typeof (error as NodeJS.ErrnoException).code === "string" &&
+    STORAGE_PERMISSION_ERRORS.has((error as NodeJS.ErrnoException).code as string)
+  )
+}
+
+function encodeAbsoluteStorageKey(filePath: string) {
+  return `absolute:${Buffer.from(filePath, "utf-8").toString("base64")}`
+}
+
+function decodeAbsoluteStorageKey(storageKey: string) {
+  return Buffer.from(storageKey.slice("absolute:".length), "base64").toString("utf-8")
+}
+
+async function writeToDirectory(
+  baseDir: string,
+  input: SaveReportFileInput,
+  { absoluteStorageKey = false }: { absoluteStorageKey?: boolean } = {}
+): Promise<SavedReportFile> {
   const dateSegment = new Date().toISOString().slice(0, 10)
   const targetDir = path.join(baseDir, dateSegment)
 
   await fs.mkdir(targetDir, { recursive: true })
+  await fs.access(targetDir, fsConstants.W_OK)
 
   const fileId = randomUUID()
   const sanitized = sanitizeFilename(input.filename)
@@ -57,12 +82,14 @@ export async function saveReportFile(input: SaveReportFileInput): Promise<SavedR
   const publicDir = path.join(process.cwd(), "public")
   let url: string | null = null
 
-  if (absolutePath.startsWith(publicDir)) {
+  if (!absoluteStorageKey && absolutePath.startsWith(publicDir)) {
     const relative = path.relative(publicDir, absolutePath)
     url = `/${relative.replace(/\\/g, "/")}`
   }
 
-  const storageKey = path.relative(baseDir, absolutePath).replace(/\\/g, "/")
+  const storageKey = absoluteStorageKey
+    ? encodeAbsoluteStorageKey(absolutePath)
+    : path.relative(baseDir, absolutePath).replace(/\\/g, "/")
 
   return {
     storageKey,
@@ -73,14 +100,39 @@ export async function saveReportFile(input: SaveReportFileInput): Promise<SavedR
   }
 }
 
-export async function readReportFile(storageKey: string): Promise<{ buffer: Buffer; contentType: string; filename: string; absolutePath: string }> {
+export async function saveReportFile(input: SaveReportFileInput): Promise<SavedReportFile> {
   const baseDir = resolveBaseDirectory()
-  const absolutePath = path.join(baseDir, storageKey)
+
+  try {
+    return await writeToDirectory(baseDir, input)
+  } catch (error) {
+    if (!isPermissionError(error)) {
+      throw error
+    }
+
+    const fallbackDir = path.join(os.tmpdir(), "claudiao-reports")
+    console.warn(
+      `Falling back to temporary daily report storage at "${fallbackDir}" due to insufficient permissions in "${baseDir}": ${error instanceof Error ? error.message : String(error)}`
+    )
+    return await writeToDirectory(fallbackDir, input, { absoluteStorageKey: true })
+  }
+}
+
+function isAbsoluteStorage(storageKey: string) {
+  return storageKey.startsWith("absolute:")
+}
+
+export async function readReportFile(storageKey: string): Promise<{ buffer: Buffer; contentType: string; filename: string; absolutePath: string }> {
+  const absolutePath = isAbsoluteStorage(storageKey)
+    ? decodeAbsoluteStorageKey(storageKey)
+    : path.join(resolveBaseDirectory(), storageKey)
+
   const buffer = await fs.readFile(absolutePath)
+  const contentKey = isAbsoluteStorage(storageKey) ? absolutePath : storageKey
 
   return {
     buffer,
-    contentType: inferContentType(storageKey),
+    contentType: inferContentType(contentKey),
     filename: path.basename(absolutePath),
     absolutePath,
   }

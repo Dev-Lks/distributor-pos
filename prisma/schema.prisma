@@ -39,6 +39,11 @@ enum PendingCartStatus {
   EXPIRED
 }
 
+enum BonificationCategory {
+  BONIFICATION
+  DEGUSTATION
+}
+
 enum DailyReportStatus {
   PENDING
   GENERATED
@@ -209,6 +214,23 @@ model Customer {
   sales Sale[]
   pendingCarts PendingCart[]
   payments SalePayment[]
+  bonifications CustomerBonification[]
+}
+
+model CustomerBonification {
+  id          String               @id @default(cuid())
+  customerId  String
+  givenBy     String
+  observation String?
+  products    Json?
+  category    BonificationCategory @default(BONIFICATION)
+  bonifiedAt  DateTime             @default(now())
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  @@index([customerId, bonifiedAt])
 }
 
 model SaleItem {
