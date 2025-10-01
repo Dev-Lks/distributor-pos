@@ -1,0 +1,11 @@
+// Dashboard Widgets - Export barrel file
+export { KPIsWidget } from "./KPIsWidget"
+export { SalesChartWidget } from "./SalesChartWidget"
+export { TopProductsWidget } from "./TopProductsWidget"
+export { StockAlertsWidget } from "./StockAlertsWidget"
+export { RecentOrdersWidget } from "./RecentOrdersWidget"
+export { CashFlowWidget } from "./CashFlowWidget"
+export { CalendarWidget } from "./CalendarWidget"
+export { QuickInsightsWidget } from "./QuickInsightsWidget"
+export { RecentActivityWidget } from "./RecentActivityWidget"
+export { TeamPerformanceWidget } from "./TeamPerformanceWidget"

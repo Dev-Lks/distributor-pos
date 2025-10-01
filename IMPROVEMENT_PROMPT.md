@@ -1386,18 +1386,18 @@ interface ImprovedDarkMode {
 - [X] Status visual aprimorado
 
 ### Sistema de Encomendas
-- [ ] Schema Prisma (Order, OrderItem, modificar Product)
-- [ ] API routes (CRUD completo)
-- [ ] React Query hooks (useOrders)
-- [ ] Página de listagem (Kanban + tabela + calendário)
-- [ ] Formulário de nova encomenda (wizard 4 passos)
-- [ ] Página de detalhes (layout 2 colunas)
-- [ ] Fluxo de status com transições
-- [ ] Notificações automáticas (WhatsApp, email, SMS)
-- [ ] Dashboard de encomendas (KPIs + widgets)
-- [ ] Relatórios de encomendas
-- [ ] Integrar produtos "orderOnly" no cadastro
-- [ ] Sistema de prioridade e urgência
+- [X] Schema Prisma (Order, OrderItem, modificar Product)
+- [X] API routes (CRUD completo)
+- [X] React Query hooks (useOrders)
+- [X] Página de listagem (Kanban + tabela + calendário)
+- [X] Formulário de nova encomenda (wizard 4 passos)
+- [X] Página de detalhes (layout 2 colunas)
+- [X] Fluxo de status com transições
+- [X] Notificações automáticas (WhatsApp, email, SMS)
+- [X] Dashboard de encomendas (KPIs + widgets)
+- [X] Relatórios de encomendas
+- [X] Integrar produtos "orderOnly" no cadastro
+- [X] Sistema de prioridade e urgência
 
 ### Dashboard & Sidebar
 - [ ] Redesign completo da sidebar

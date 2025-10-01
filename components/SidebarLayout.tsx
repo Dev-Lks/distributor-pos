@@ -19,7 +19,15 @@ import {
   Users2,
   UserRound,
   X,
-  Receipt
+  Receipt,
+  Wifi,
+  WifiOff,
+  CheckCircle2,
+  Clock,
+  DollarSign,
+  LogOut,
+  User,
+  Bell
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -27,6 +35,16 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "./ThemeToggle"
 import { signOut, useSession } from "next-auth/react"
+import { useCashSession } from "@/lib/useCashSession"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 interface SidebarLayoutProps {
   children: ReactNode
@@ -45,26 +63,20 @@ const navSections: Array<{
   items: NavItem[]
 }> = [
   {
-    heading: "Principal",
+    heading: "Operacional",
     items: [
       {
-        label: "Visão geral",
+        label: "Dashboard",
         description: "Indicadores consolidados",
         href: "/dashboard",
         icon: BarChart3
       },
       {
-        label: "Ponto de venda",
+        label: "PDV",
         description: "Registrador rápido",
         href: "/dashboard/sales",
         icon: ShoppingCart,
         tag: "Live"
-      },
-      {
-        label: "Livro de vendas",
-        description: "Tabela e edição avançada",
-        href: "/dashboard/sales/ledger",
-        icon: ListChecks
       },
       {
         label: "Encomendas",
@@ -74,24 +86,24 @@ const navSections: Array<{
         tag: "Novo"
       },
       {
-        label: "Relatórios Z",
-        description: "Fechamentos diários",
-        href: "/dashboard/reports/daily",
-        icon: FileText
+        label: "Clientes",
+        description: "Cadastro e bonificações",
+        href: "/dashboard/customers",
+        icon: UserRound
       }
     ]
   },
   {
-    heading: "Operações",
+    heading: "Estoque",
     items: [
       {
-        label: "Estoque geral",
+        label: "Inventário",
         description: "Controle de lotes e saldos",
         href: "/dashboard/inventory",
         icon: Package2
       },
       {
-        label: "Estoque por ponto",
+        label: "Por Ponto",
         description: "Distribuição por unidade",
         href: "/dashboard/inventory-by-point",
         icon: Store
@@ -101,27 +113,38 @@ const navSections: Array<{
         description: "Ficha técnica e preços",
         href: "/dashboard/products",
         icon: Building2
-      },
-      {
-        label: "Clientes",
-        description: "Cadastro e bonificações",
-        href: "/dashboard/customers",
-        icon: UserRound
-      },
-      {
-        label: "Pontos de venda",
-        description: "Configuração dos PDVs",
-        href: "/dashboard/points",
-        icon: Users2
       }
     ]
   },
   {
-    heading: "Sistema",
+    heading: "Relatórios",
     items: [
       {
-        label: "Configurações",
-        description: "Preferências e integrações",
+        label: "Relatórios Z",
+        description: "Fechamentos diários",
+        href: "/dashboard/reports/daily",
+        icon: FileText
+      },
+      {
+        label: "Livro de Vendas",
+        description: "Tabela e edição avançada",
+        href: "/dashboard/sales/ledger",
+        icon: ListChecks
+      }
+    ]
+  },
+  {
+    heading: "Configurações",
+    items: [
+      {
+        label: "Pontos de Venda",
+        description: "Configuração dos PDVs",
+        href: "/dashboard/points",
+        icon: Users2
+      },
+      {
+        label: "Preferências",
+        description: "Configurações do sistema",
         href: "/dashboard/settings",
         icon: Settings
       }
@@ -134,6 +157,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const { data: session } = useSession()
+  const { session: cashSession } = useCashSession()
+  const [isOnline, setIsOnline] = useState(true)
 
   const flatNav = useMemo(() => navSections.flatMap((section) => section.items), [])
 
@@ -155,6 +180,15 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   )
 
   const closeMobile = () => setIsMobileOpen(false)
+
+  // Format cash session duration
+  const formatDuration = (openedAt: string | Date) => {
+    const now = new Date()
+    const diff = now.getTime() - new Date(openedAt).getTime()
+    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+    return `${hours}h ${minutes}min`
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-muted/40 via-background to-background text-foreground">
@@ -258,48 +292,115 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         </nav>
 
         <div className="border-t border-border/70 px-3 py-4">
-          <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-3">
+          <div className="space-y-3">
+            {/* Status Indicators */}
             {!isCollapsed && (
-              <div>
-                <p className="text-sm font-semibold">Modo escuro</p>
-                <p className="text-xs text-muted-foreground">Personalize a interface</p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Status</span>
+                  <div className="flex items-center gap-1">
+                    {isOnline ? (
+                      <>
+                        <Wifi className="h-3 w-3 text-emerald-600" />
+                        <span className="text-emerald-600">Online</span>
+                      </>
+                    ) : (
+                      <>
+                        <WifiOff className="h-3 w-3 text-red-600" />
+                        <span className="text-red-600">Offline</span>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Sincronizado</span>
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                </div>
               </div>
             )}
-            <ThemeToggle />
-          </div>
-          {!isCollapsed && (
-            <p className="mt-3 text-center text-[11px] text-muted-foreground">
-              NitroBeer • Versão 2.5
-            </p>
-          )}
-        </div>
-        <div className="border-t border-border/70 px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-amber-500/20 text-lg font-semibold text-amber-400">
-              {(session?.user?.name ?? session?.user?.email ?? "N").slice(0, 2).toUpperCase()}
+
+            {/* Theme Toggle */}
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-3">
+              {!isCollapsed && (
+                <div>
+                  <p className="text-sm font-semibold">Modo escuro</p>
+                  <p className="text-xs text-muted-foreground">Personalize a interface</p>
+                </div>
+              )}
+              <ThemeToggle />
             </div>
+
+            {/* Version */}
             {!isCollapsed && (
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-medium">{session?.user?.name ?? "Operador(a) NitroBeer"}</p>
-                <p className="truncate text-xs text-muted-foreground">{session?.user?.email ?? "Sem e-mail cadastrado"}</p>
-                {session?.user?.role && (
-                  <Badge className="mt-1 bg-amber-500/20 text-amber-500">
-                    {session.user.role.toUpperCase()}
-                  </Badge>
-                )}
-              </div>
+              <p className="text-center text-[11px] text-muted-foreground">
+                NitroBeer • Versão 2.5.0
+              </p>
             )}
           </div>
-          {!isCollapsed && (
-            <Button
-              type="button"
-              variant="outline"
-              className="mt-4 w-full"
-              onClick={() => signOut({ callbackUrl: "/login" })}
-            >
-              Sair
-            </Button>
-          )}
+        </div>
+
+        {/* User Profile Section */}
+        <div className="border-t border-border/70 px-4 py-4">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="flex w-full items-center gap-3 rounded-xl transition-colors hover:bg-muted/60"
+              >
+                <Avatar className="h-11 w-11">
+                  <AvatarFallback className="bg-amber-500/20 text-lg font-semibold text-amber-600 dark:text-amber-400">
+                    {(session?.user?.name ?? session?.user?.email ?? "N").slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {!isCollapsed && (
+                  <div className="min-w-0 flex-1 text-left">
+                    <p className="truncate text-sm font-medium">{session?.user?.name ?? "Operador(a) NitroBeer"}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {session?.user?.email ?? "Sem e-mail cadastrado"}
+                    </p>
+                    {session?.user?.role && (
+                      <Badge className="mt-1 bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                        {session.user.role.toUpperCase()}
+                      </Badge>
+                    )}
+                  </div>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <User className="mr-2 h-4 w-4" />
+                <span>Perfil</span>
+              </DropdownMenuItem>
+              {cashSession ? (
+                <DropdownMenuItem>
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  <div className="flex flex-col">
+                    <span>Caixa Aberto</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDuration(cashSession.openedAt)}
+                    </span>
+                  </div>
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem>
+                  <DollarSign className="mr-2 h-4 w-4" />
+                  <span>Abrir Caixa</span>
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem>
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Configurações</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sair</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </aside>
 
