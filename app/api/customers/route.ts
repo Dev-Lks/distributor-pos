@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { Prisma } from "@prisma/client"
 
 import { prisma } from "@/lib/prisma"
+import { detectPersonType, sanitizeDocument, validateCpfCnpj } from "@/lib/documents"
 
 const CUSTOMER_SELECT = {
   id: true,
   name: true,
+  document: true,
   phone: true,
   address: true,
   createdAt: true,
@@ -20,6 +22,7 @@ const CUSTOMER_SELECT = {
 const mapCustomer = (customer: Prisma.CustomerGetPayload<{ select: typeof CUSTOMER_SELECT }>) => ({
   id: customer.id,
   name: customer.name,
+  document: customer.document ?? null,
   phone: customer.phone ?? null,
   address: customer.address ?? null,
   createdAt: customer.createdAt,
@@ -30,8 +33,9 @@ const mapCustomer = (customer: Prisma.CustomerGetPayload<{ select: typeof CUSTOM
 const handlePrismaError = (error: unknown) => {
   if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
     const target = Array.isArray(error.meta?.target) ? error.meta?.target.join(", ") : undefined
+    const friendlyField = target?.includes("document") ? "documento (CPF/CNPJ)" : target
     return NextResponse.json(
-      { error: `Já existe um cliente cadastrado com este ${target ?? "valor único"}.` },
+      { error: `Já existe um cliente cadastrado com este ${friendlyField ?? "valor único"}.` },
       { status: 409 }
     )
   }
@@ -42,6 +46,7 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
     const search = searchParams.get("search")?.trim()
+    const sanitizedSearchDocument = sanitizeDocument(search ?? undefined)
 
     const where: Prisma.CustomerWhereInput | undefined = search
       ? {
@@ -49,6 +54,9 @@ export async function GET(request: NextRequest) {
             { name: { contains: search, mode: "insensitive" } },
             { phone: { contains: search, mode: "insensitive" } },
             { address: { contains: search, mode: "insensitive" } },
+            ...(sanitizedSearchDocument
+              ? [{ document: { contains: sanitizedSearchDocument } }]
+              : []),
           ],
         }
       : undefined
@@ -73,14 +81,20 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Payload inválido." }, { status: 400 })
     }
 
-    const { name, phone, address } = body as {
+    const { name, phone, address, document } = body as {
       name?: string
       phone?: string | null
       address?: string | null
+      document?: string | null
     }
 
     if (!name?.trim()) {
       return NextResponse.json({ error: "O nome do cliente é obrigatório." }, { status: 400 })
+    }
+
+    const sanitizedDocument = document !== undefined ? sanitizeDocument(document) ?? null : null
+    if (sanitizedDocument && !validateCpfCnpj(sanitizedDocument)) {
+      return NextResponse.json({ error: "CPF ou CNPJ inválido." }, { status: 400 })
     }
 
     const customer = await prisma.customer.create({
@@ -88,6 +102,8 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         phone: phone?.trim() || null,
         address: address?.trim() || null,
+  document: sanitizedDocument,
+  type: detectPersonType(document ?? undefined),
       },
       select: CUSTOMER_SELECT,
     })
@@ -106,11 +122,12 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Payload inválido." }, { status: 400 })
     }
 
-    const { id, name, phone, address } = body as {
+    const { id, name, phone, address, document } = body as {
       id?: string
       name?: string
       phone?: string | null
       address?: string | null
+      document?: string | null
     }
 
     if (!id) {
@@ -121,6 +138,15 @@ export async function PATCH(request: NextRequest) {
       ...(name !== undefined ? { name: name.trim() } : {}),
       ...(phone !== undefined ? { phone: phone?.trim() || null } : {}),
       ...(address !== undefined ? { address: address?.trim() || null } : {}),
+    }
+
+    if (document !== undefined) {
+      const sanitizedDocument = sanitizeDocument(document) ?? null
+      if (sanitizedDocument && !validateCpfCnpj(sanitizedDocument)) {
+        return NextResponse.json({ error: "CPF ou CNPJ inválido." }, { status: 400 })
+      }
+  data.document = sanitizedDocument
+  data.type = detectPersonType(document ?? undefined)
     }
 
     const customer = await prisma.customer.update({

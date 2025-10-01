@@ -56,6 +56,7 @@ type BonificationCategoryValue = (typeof CATEGORY_OPTIONS)[number]["value"]
 
 type CustomerFormState = {
   name: string
+  document: string
   phone: string
   address: string
 }
@@ -71,6 +72,7 @@ type BonificationFormState = {
 
 const emptyCustomerForm: CustomerFormState = {
   name: "",
+  document: "",
   phone: "",
   address: "",
 }
@@ -99,6 +101,18 @@ const formatPhone = (phone: string | null) => {
 const formatAddress = (customer: CustomerSummary) => {
   if (!customer.address) return "—"
   return customer.address
+}
+
+const formatDocument = (document: string | null) => {
+  if (!document) return "—"
+  const digits = document.replace(/\D/g, "")
+  if (digits.length === 11) {
+    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
+  }
+  if (digits.length === 14) {
+    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")
+  }
+  return document
 }
 
 const formatDate = (isoDate: string) => {
@@ -150,8 +164,9 @@ export default function CustomersPage() {
     const term = searchTerm.trim().toLowerCase()
     if (!term) return customers
     return customers.filter((customer) => {
-      const haystack = `${customer.name} ${customer.phone ?? ""} ${customer.address ?? ""}`.toLowerCase()
-      return haystack.includes(term)
+      const haystack = `${customer.name} ${customer.phone ?? ""} ${customer.address ?? ""} ${customer.document ?? ""} ${formatDocument(customer.document).replace(/\D/g, "")}`.toLowerCase()
+      const normalizedTerm = term.replace(/\D/g, "")
+      return haystack.includes(term) || (!!normalizedTerm && (customer.document ?? "").includes(normalizedTerm))
     })
   }, [customers, searchTerm])
 
@@ -179,6 +194,7 @@ export default function CustomersPage() {
     setCustomerBeingEdited(customer)
     setCustomerForm({
       name: customer.name,
+      document: customer.document ? formatDocument(customer.document) : "",
       phone: customer.phone ?? "",
       address: customer.address ?? "",
     })
@@ -196,6 +212,7 @@ export default function CustomersPage() {
         await updateCustomer.mutateAsync({
           id: customerBeingEdited.id,
           name: customerForm.name.trim(),
+          document: customerForm.document.trim() || null,
           phone: customerForm.phone.trim() || null,
           address: customerForm.address.trim() || null,
         })
@@ -203,6 +220,7 @@ export default function CustomersPage() {
       } else {
         await createCustomer.mutateAsync({
           name: customerForm.name.trim(),
+          document: customerForm.document.trim() || null,
           phone: customerForm.phone.trim() || null,
           address: customerForm.address.trim() || null,
         })
@@ -360,6 +378,7 @@ export default function CustomersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nome</TableHead>
+                    <TableHead>CPF/CNPJ</TableHead>
                     <TableHead>Telefone</TableHead>
                     <TableHead>Endereço</TableHead>
                     <TableHead className="text-center">Bonificações</TableHead>
@@ -369,7 +388,7 @@ export default function CustomersPage() {
                 <TableBody>
                   {isLoadingCustomers || isFetchingCustomers ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                         <div className="flex items-center justify-center gap-2">
                           <Loader2 className="h-4 w-4 animate-spin" /> Carregando clientes...
                         </div>
@@ -377,7 +396,7 @@ export default function CustomersPage() {
                     </TableRow>
                   ) : filteredCustomers.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
+                      <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
                         Nenhum cliente encontrado. Cadastre o primeiro clicando em "novo cliente".
                       </TableCell>
                     </TableRow>
@@ -385,6 +404,7 @@ export default function CustomersPage() {
                     filteredCustomers.map((customer) => (
                       <TableRow key={customer.id}>
                         <TableCell className="font-medium">{customer.name}</TableCell>
+                        <TableCell>{formatDocument(customer.document)}</TableCell>
                         <TableCell>{formatPhone(customer.phone)}</TableCell>
                         <TableCell>{formatAddress(customer)}</TableCell>
                         <TableCell className="text-center">
@@ -538,6 +558,16 @@ export default function CustomersPage() {
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
+                <Label htmlFor="customer-document">CPF/CNPJ</Label>
+                <Input
+                  id="customer-document"
+                  value={customerForm.document}
+                  onChange={(event) => setCustomerForm((prev) => ({ ...prev, document: event.target.value }))}
+                  placeholder="000.000.000-00"
+                  inputMode="numeric"
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="customer-phone">Telefone</Label>
                 <Input
                   id="customer-phone"
@@ -546,7 +576,7 @@ export default function CustomersPage() {
                   placeholder="(11) 99999-9999"
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 md:col-span-2">
                 <Label htmlFor="customer-address">Endereço</Label>
                 <Input
                   id="customer-address"

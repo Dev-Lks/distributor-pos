@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 export interface CustomerSummary {
   id: string
   name: string
+  document: string | null
   phone: string | null
   address: string | null
   bonificationsCount: number
@@ -39,7 +40,7 @@ export function useCustomers(search?: string) {
 export function useCreateCustomer() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { name: string; phone?: string | null; address?: string | null }) => {
+    mutationFn: async (input: { name: string; document?: string | null; phone?: string | null; address?: string | null }) => {
       const response = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -60,7 +61,13 @@ export function useCreateCustomer() {
 export function useUpdateCustomer() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { id: string; name?: string; phone?: string | null; address?: string | null }) => {
+    mutationFn: async (input: {
+      id: string
+      name?: string
+      document?: string | null
+      phone?: string | null
+      address?: string | null
+    }) => {
       const response = await fetch("/api/customers", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
