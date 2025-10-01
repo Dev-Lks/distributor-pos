@@ -52,6 +52,22 @@ enum DailyReportStatus {
   FAILED
 }
 
+enum OrderStatus {
+  PENDING        // Aguardando confirmação
+  CONFIRMED      // Confirmado pelo cliente
+  PREPARING      // Em preparação/produção
+  READY          // Pronto para retirada
+  DELIVERED      // Entregue
+  CANCELLED      // Cancelado
+}
+
+enum OrderPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String?
@@ -103,6 +119,16 @@ model Product {
   allergens String[] @default([]) // Alérgenos
   storageInstructions String? // Instruções de armazenamento
   
+  // Campos para produtos sob encomenda
+  isOrderOnly         Boolean  @default(false)  // Somente sob encomenda?
+  leadTimeDays        Int?                      // Prazo de produção (dias)
+  minOrderQuantity    Int?                      // Quantidade mínima
+  maxOrderQuantity    Int?                      // Quantidade máxima
+  requiresDeposit     Boolean  @default(false)  // Requer sinal?
+  depositPercentage   Float?                    // % de sinal
+  availableForOrder   Boolean  @default(true)   // Disponível para encomenda?
+  orderInstructions   String?                   // Instruções especiais
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -114,6 +140,7 @@ model Product {
   pendingCartItems PendingCartItem[]
   batches Batch[]
   auditItems InventoryAuditItem[]
+  orderItems OrderItem[]
 }
 
 model Inventory {
@@ -243,6 +270,7 @@ model Customer {
   pendingCarts PendingCart[]
   payments SalePayment[]
   bonifications CustomerBonification[]
+  orders Order[]
 }
 
 model CustomerBonification {
@@ -297,6 +325,7 @@ model PointOfSale {
   cashSessions CashSession[]
   pendingCarts PendingCart[]
   dailyReports DailyReport[]
+  orders Order[]
 }
 
 model SalePayment {
@@ -594,4 +623,92 @@ model CashTransaction {
 
   @@index([cashSessionId])
   @@index([performedById])
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  orderNumber     String        @unique  // Ex: "ENC-2025-001"
+  
+  // Cliente
+  customerId      String?
+  customer        Customer?     @relation(fields: [customerId], references: [id])
+  customerName    String
+  customerPhone   String
+  customerEmail   String?
+  customerAddress String?
+  
+  // Status e prioridade
+  status          OrderStatus   @default(PENDING)
+  priority        OrderPriority @default(MEDIUM)
+  
+  // Datas importantes
+  orderedAt       DateTime      @default(now())
+  confirmedAt     DateTime?
+  promisedAt      DateTime?     // Data prometida de entrega
+  readyAt         DateTime?
+  deliveredAt     DateTime?
+  cancelledAt     DateTime?
+  
+  // Financeiro
+  subtotal        Float
+  discountValue   Float         @default(0)
+  deliveryFee     Float         @default(0)
+  total           Float
+  depositPaid     Float         @default(0)
+  balanceDue      Float
+  paymentStatus   PaymentStatus @default(PENDING)
+  
+  // Itens
+  items           OrderItem[]
+  
+  // Observações
+  notes           String?       // Observações do cliente
+  internalNotes   String?       // Notas internas (não visível para cliente)
+  specialRequests String?       // Pedidos especiais
+  
+  // Rastreamento
+  statusHistory   Json?         // Histórico de mudanças de status
+  notifications   Json?         // Notificações enviadas
+  
+  // Metadados
+  createdBy       String?       // Usuário que criou
+  assignedTo      String?       // Usuário responsável
+  source          String?       // web, telefone, whatsapp, presencial
+  pointOfSaleId   String?
+  pointOfSale     PointOfSale?  @relation(fields: [pointOfSaleId], references: [id])
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  @@index([customerId])
+  @@index([status])
+  @@index([promisedAt])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id])
+  
+  quantity    Int
+  unitPrice   Float
+  discount    Float    @default(0)
+  subtotal    Float
+  
+  // Customizações
+  customizations Json?  // Ex: { engraving: "Feliz Aniversário", color: "azul" }
+  notes          String?
+  
+  // Status individual do item
+  status      String   @default("pending")  // pending, in_production, ready
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  @@index([orderId])
+  @@index([productId])
 }

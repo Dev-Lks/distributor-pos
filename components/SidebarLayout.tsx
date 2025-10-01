@@ -18,7 +18,8 @@ import {
   Store,
   Users2,
   UserRound,
-  X
+  X,
+  Receipt
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -66,11 +67,17 @@ const navSections: Array<{
         icon: ListChecks
       },
       {
+        label: "Encomendas",
+        description: "Pedidos especiais",
+        href: "/dashboard/orders",
+        icon: Receipt,
+        tag: "Novo"
+      },
+      {
         label: "Relatórios Z",
         description: "Fechamentos diários",
         href: "/dashboard/reports/daily",
-        icon: FileText,
-        tag: "Novo"
+        icon: FileText
       }
     ]
   },

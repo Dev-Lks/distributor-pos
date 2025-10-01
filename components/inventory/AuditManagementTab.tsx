@@ -298,9 +298,9 @@ export function AuditManagementTab() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas as Localizações</SelectItem>
-                    <SelectItem value="COLD_ROOM">Câmara Fria</SelectItem>
-                    <SelectItem value="HOUSE">Casa</SelectItem>
-                    <SelectItem value="SALE_POINT">Ponto de Venda</SelectItem>
+                    <SelectItem value="coldRoom">Câmara Fria</SelectItem>
+                    <SelectItem value="house">Casa</SelectItem>
+                    <SelectItem value="salePoint">Ponto de Venda</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

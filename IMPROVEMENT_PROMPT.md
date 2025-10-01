@@ -1371,19 +1371,19 @@ interface ImprovedDarkMode {
 ## 📋 CHECKLIST DE IMPLEMENTAÇÃO
 
 ### Inventário Avançado
-- [ ] Bulk operations (checkbox + toolbar flutuante)
-- [ ] Filtros avançados (supplier, price range, tags, etc)
-- [ ] Histórico de movimentações por produto
-- [ ] Análise ABC com gráfico de Pareto
-- [ ] Previsão de demanda (usando dados históricos)
-- [ ] Alertas de validade
-- [ ] Gestão de lotes (batch tracking)
-- [ ] Import/Export melhorado (wizard, preview, validação)
-- [ ] Dashboard de inventário (KPIs + gráficos)
-- [ ] Sistema de auditoria (contagem física)
-- [ ] Layout otimizado (tabs, toolbar, views)
-- [ ] Ações rápidas contextuais por produto
-- [ ] Status visual aprimorado
+- [X] Bulk operations (checkbox + toolbar flutuante)
+- [X] Filtros avançados (supplier, price range, tags, etc)
+- [X] Histórico de movimentações por produto
+- [X] Análise ABC com gráfico de Pareto
+- [X] Previsão de demanda (usando dados históricos)
+- [X] Alertas de validade
+- [X] Gestão de lotes (batch tracking)
+- [X] Import/Export melhorado (wizard, preview, validação)
+- [X] Dashboard de inventário (KPIs + gráficos)
+- [X] Sistema de auditoria (contagem física)
+- [X] Layout otimizado (tabs, toolbar, views)
+- [X] Ações rápidas contextuais por produto
+- [X] Status visual aprimorado
 
 ### Sistema de Encomendas
 - [ ] Schema Prisma (Order, OrderItem, modificar Product)
