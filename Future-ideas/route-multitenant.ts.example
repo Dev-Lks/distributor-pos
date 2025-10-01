@@ -1,0 +1,304 @@
+// Exemplo de API modificada para Multi-Tenant
+// app/api/products/route.ts (VERSÃO MULTI-TENANT)
+
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from '@/lib/prisma'
+import { authOptions } from '@/lib/auth'
+import { getTenantIdFromRequest, validateTenantAction, incrementTenantUsage } from '@/lib/tenant'
+import { z } from 'zod'
+
+// Schema de validação
+const createProductSchema = z.object({
+  name: z.string().min(1),
+  size: z.string().min(1),
+  cost: z.number().nonnegative(),
+  salePrice: z.number().positive(),
+  category: z.string().optional(),
+  sku: z.string().optional(),
+  // ... outros campos
+})
+
+/**
+ * GET /api/products
+ * Lista produtos do tenant
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // 1. Obter tenant ID
+    const tenantId = await getTenantIdFromRequest(request)
+    
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'Tenant not found' },
+        { status: 404 }
+      )
+    }
+    
+    // 2. Verificar autenticação
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
+    // 3. Verificar se user pertence ao tenant
+    if (session.user.tenantId !== tenantId) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
+    
+    // 4. Buscar produtos APENAS do tenant
+    const products = await prisma.product.findMany({
+      where: {
+        tenantId, // <<< FILTRO CRÍTICO
+      },
+      include: {
+        inventory: true,
+        productPointsOfSale: {
+          include: {
+            pointOfSale: true
+          }
+        }
+      },
+      orderBy: {
+        name: 'asc'
+      }
+    })
+    
+    return NextResponse.json(products)
+    
+  } catch (error) {
+    console.error('Failed to fetch products:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * POST /api/products
+ * Cria novo produto
+ */
+export async function POST(request: NextRequest) {
+  try {
+    // 1. Obter tenant ID
+    const tenantId = await getTenantIdFromRequest(request)
+    
+    if (!tenantId) {
+      return NextResponse.json(
+        { error: 'Tenant not found' },
+        { status: 404 }
+      )
+    }
+    
+    // 2. Verificar autenticação
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    
+    // 3. Verificar permissão
+    if (session.user.tenantId !== tenantId) {
+      return NextResponse.json(
+        { error: 'Forbidden' },
+        { status: 403 }
+      )
+    }
+    
+    // 4. Verificar role (apenas ADMIN e SUPERVISOR podem criar produtos)
+    if (!['ADMIN', 'SUPERVISOR', 'OWNER'].includes(session.user.role || '')) {
+      return NextResponse.json(
+        { error: 'Insufficient permissions' },
+        { status: 403 }
+      )
+    }
+    
+    // 5. Validar dados
+    const body = await request.json()
+    const validation = createProductSchema.safeParse(body)
+    
+    if (!validation.success) {
+      return NextResponse.json(
+        {
+          error: 'Invalid data',
+          details: validation.error.issues[0]?.message
+        },
+        { status: 400 }
+      )
+    }
+    
+    const data = validation.data
+    
+    // 6. Verificar limites do tenant
+    const limitCheck = await validateTenantAction(tenantId, 'create_product')
+    
+    if (!limitCheck.valid) {
+      return NextResponse.json(
+        { error: limitCheck.error },
+        { status: 403 }
+      )
+    }
+    
+    // 7. Verificar se SKU já existe NO TENANT
+    if (data.sku) {
+      const existing = await prisma.product.findFirst({
+        where: {
+          tenantId, // <<< Importante: buscar apenas no tenant
+          sku: data.sku
+        }
+      })
+      
+      if (existing) {
+        return NextResponse.json(
+          { error: 'SKU already exists' },
+          { status: 409 }
+        )
+      }
+    }
+    
+    // 8. Criar produto COM tenantId
+    const product = await prisma.product.create({
+      data: {
+        ...data,
+        tenantId, // <<< CRÍTICO: sempre incluir tenantId
+      },
+      include: {
+        inventory: true
+      }
+    })
+    
+    // 9. Incrementar contador de uso
+    await incrementTenantUsage(tenantId, 'products')
+    
+    return NextResponse.json(product, { status: 201 })
+    
+  } catch (error) {
+    console.error('Failed to create product:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * PATCH /api/products
+ * Atualiza produto
+ */
+export async function PATCH(request: NextRequest) {
+  try {
+    const tenantId = await getTenantIdFromRequest(request)
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
+    }
+    
+    const session = await getServerSession(authOptions)
+    if (!session || session.user.tenantId !== tenantId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const body = await request.json()
+    const { id, ...updateData } = body
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
+    }
+    
+    // Verificar se produto pertence ao tenant
+    const existing = await prisma.product.findFirst({
+      where: {
+        id,
+        tenantId // <<< Importante: garantir que é do mesmo tenant
+      }
+    })
+    
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      )
+    }
+    
+    // Atualizar
+    const product = await prisma.product.update({
+      where: { id },
+      data: updateData,
+      include: {
+        inventory: true
+      }
+    })
+    
+    return NextResponse.json(product)
+    
+  } catch (error) {
+    console.error('Failed to update product:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}
+
+/**
+ * DELETE /api/products
+ * Remove produto (soft delete)
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const tenantId = await getTenantIdFromRequest(request)
+    if (!tenantId) {
+      return NextResponse.json({ error: 'Tenant not found' }, { status: 404 })
+    }
+    
+    const session = await getServerSession(authOptions)
+    if (!session || session.user.tenantId !== tenantId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+    
+    const url = new URL(request.url)
+    const id = url.searchParams.get('id')
+    
+    if (!id) {
+      return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
+    }
+    
+    // Verificar se produto pertence ao tenant
+    const existing = await prisma.product.findFirst({
+      where: {
+        id,
+        tenantId // <<< Crítico para segurança
+      }
+    })
+    
+    if (!existing) {
+      return NextResponse.json(
+        { error: 'Product not found' },
+        { status: 404 }
+      )
+    }
+    
+    // Soft delete
+    await prisma.product.update({
+      where: { id },
+      data: { isActive: false }
+    })
+    
+    return NextResponse.json({ success: true })
+    
+  } catch (error) {
+    console.error('Failed to delete product:', error)
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+  }
+}

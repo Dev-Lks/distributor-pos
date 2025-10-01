@@ -1,0 +1,401 @@
+// EXEMPLO: Schema Prisma com Multi-Tenant
+// Este é um exemplo de como ficaria o schema.prisma modificado
+// NÃO substituir o schema.prisma atual ainda!
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// NOVO: Modelo de Tenant/Organization
+// ============================================
+
+enum TenantPlan {
+  FREE
+  STARTER
+  BUSINESS
+  ENTERPRISE
+  CUSTOM
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  UNPAID
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  
+  // Identificação
+  slug      String   @unique // URL-friendly: "cervejaria-xyz"
+  name      String   // "Cervejaria XYZ"
+  legalName String?  // Razão social
+  document  String?  // CNPJ
+  
+  // Contato
+  ownerEmail String
+  ownerName  String
+  phone      String?
+  
+  // Billing
+  plan               TenantPlan         @default(FREE)
+  subscriptionStatus SubscriptionStatus @default(TRIALING)
+  stripeCustomerId   String?            @unique
+  subscriptionId     String?
+  trialEndsAt        DateTime?
+  currentPeriodEnd   DateTime?
+  cancelAt           DateTime?
+  
+  // Limits (baseado no plano)
+  maxUsers           Int @default(2)
+  maxProducts        Int @default(50)
+  maxPointsOfSale    Int @default(1)
+  maxMonthlyOrders   Int @default(1000)
+  
+  // Usage (controle de consumo)
+  currentUsers       Int @default(0)
+  currentProducts    Int @default(0)
+  currentPointsOfSale Int @default(0)
+  monthlyOrderCount  Int @default(0)
+  lastOrderCountReset DateTime?
+  
+  // Branding
+  logo               String?
+  primaryColor       String? @default("#fbbf24")
+  secondaryColor     String?
+  customDomain       String? @unique
+  faviconUrl         String?
+  
+  // Settings
+  settings           Json? // JSON com configurações customizadas
+  timezone           String @default("America/Sao_Paulo")
+  currency           String @default("BRL")
+  locale             String @default("pt-BR")
+  
+  // Features flags
+  enabledFeatures    String[] @default([]) // ["api_access", "white_label", "custom_reports"]
+  
+  // Status
+  isActive           Boolean @default(true)
+  isSuspended        Boolean @default(false)
+  suspendedAt        DateTime?
+  suspendedReason    String?
+  
+  // Metadata
+  metadata           Json?
+  notes              String? // Notas internas (admin)
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  // Relations - TODAS as entidades pertencem a um tenant
+  users              User[]
+  products           Product[]
+  sales              Sale[]
+  customers          Customer[]
+  pointsOfSale       PointOfSale[]
+  inventories        Inventory[]
+  cashSessions       CashSession[]
+  pendingCarts       PendingCart[]
+  dailyReports       DailyReport[]
+  customerBonifications CustomerBonification[]
+  
+  @@index([slug])
+  @@index([stripeCustomerId])
+  @@index([isActive])
+}
+
+// ============================================
+// MODELOS EXISTENTES MODIFICADOS
+// ============================================
+
+enum Role {
+  OWNER        // <<< NOVO: Dono do tenant
+  ADMIN
+  SUPERVISOR
+  CASHIER
+}
+
+model User {
+  id        String   @id @default(cuid())
+  tenantId  String   // <<< ADICIONAR
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  name      String?
+  email     String   // Não é mais único globalmente!
+  password  String
+  role      Role     @default(CASHIER)
+  isActive  Boolean  @default(true)
+  
+  // Metadados
+  lastLoginAt DateTime?
+  invitedBy   String?
+  acceptedInviteAt DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  cashSessions     CashSession[]
+  cashTransactions CashTransaction[] @relation("UserCashTransactions")
+  pendingCarts     PendingCart[]     @relation("UserPendingCarts")
+  
+  @@unique([tenantId, email]) // Email único POR TENANT
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model Product {
+  id        String @id @default(cuid())
+  tenantId  String  // <<< ADICIONAR
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  name      String
+  size      String
+  cost      Float
+  salePrice Float
+  isBonified Boolean @default(false)
+  bonifications Int @default(0)
+  category  String?
+  supplier  String?
+  isActive  Boolean @default(true)
+  sku       String? // Não é mais único globalmente!
+  brand     String?
+  origin    String?
+  packaging String?
+  abv       Float?
+  ibu       Float?
+  shelfLifeDays Int?
+  tags      String[] @default([])
+  lastPurchaseCost Float?
+  lastPurchaseAt DateTime?
+  avgCost   Float?
+  priceLastUpdatedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventory          Inventory?
+  productPointsOfSale ProductPointOfSale[]
+  saleItems          SaleItem[]
+  priceHistories     ProductPriceHistory[]
+  inventoryMovements InventoryMovement[]
+  pendingCartItems   PendingCartItem[]
+  
+  @@unique([tenantId, sku]) // SKU único POR TENANT
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+  @@index([tenantId, category])
+}
+
+model Inventory {
+  id        String @id @default(cuid())
+  tenantId  String  // <<< ADICIONAR
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  productId String @unique
+  coldRoomQuantity Int @default(0)
+  houseQuantity     Int @default(0)
+  salePointQuantity Int @default(0)
+  coldRoomMinStock  Int @default(10)
+  houseMinStock     Int @default(5)
+  salePointMinStock Int @default(2)
+  reservedQuantity  Int @default(0)
+  damagedQuantity   Int @default(0)
+  inTransitQuantity Int @default(0)
+  safetyStock       Int?
+  reorderLeadTimeDays Int?
+  lastRestockedAt   DateTime?
+  lastAuditedAt     DateTime?
+  averageDailyConsumption Float?
+  turnoverDays      Float?
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([productId])
+}
+
+model Sale {
+  id        String @id @default(cuid())
+  tenantId  String  // <<< ADICIONAR
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  date      DateTime @default(now())
+  total     Float
+  status    String @default("completed")
+  paymentMethod String?
+  customerName String?
+  customerEmail String?
+  customerPhone String?
+  customerDocument String?
+  customerAddress String?
+  customerId String?
+  channel   String?
+  subtotal  Float?
+  discountValue Float @default(0)
+  taxValue  Float @default(0)
+  serviceCharge Float @default(0)
+  costOfGoods Float @default(0)
+  grossMargin Float @default(0)
+  pointOfSaleId String?
+  cashSessionId String?
+  notes     String?
+  pendingCartId String? @unique
+  metadata Json?
+  
+  items     SaleItem[]
+  payments  SalePayment[]
+  pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  customer Customer? @relation(fields: [customerId], references: [id])
+  cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
+  pendingCart PendingCart? @relation("SalePendingCart", fields: [pendingCartId], references: [id])
+  inventoryMovements InventoryMovement[]
+
+  @@index([tenantId])
+  @@index([tenantId, date])
+  @@index([tenantId, customerId])
+  @@index([tenantId, cashSessionId])
+  @@index([tenantId, status])
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  tenantId  String   // <<< ADICIONAR
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  name      String
+  type      PersonType @default(INDIVIDUAL)
+  document  String?  // Não é mais único globalmente!
+  phone     String?
+  secondaryPhone String?
+  email     String?
+  whatsapp  String?
+  address   String?
+  addressNumber String?
+  addressComplement String?
+  district  String?
+  city      String?
+  state     String?
+  postalCode String?
+  country   String?
+  preferredPaymentMethod String?
+  paymentTerms String?
+  creditLimit Float?
+  creditUsed Float @default(0)
+  isBlocked Boolean @default(false)
+  blockedReason String?
+  notes     String?
+  tags      String[] @default([])
+  birthDate DateTime?
+  isActive  Boolean @default(true)
+  isDelinquent Boolean @default(false)
+  lastPurchaseAt DateTime?
+  averageTicket Float?
+  totalSpend Float @default(0)
+  totalOrders Int @default(0)
+  metadata Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sales Sale[]
+  pendingCarts PendingCart[]
+  payments SalePayment[]
+  bonifications CustomerBonification[]
+  
+  @@unique([tenantId, document]) // Documento único POR TENANT
+  @@unique([tenantId, phone])
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model PointOfSale {
+  id        String @id @default(cuid())
+  tenantId  String  // <<< ADICIONAR
+  tenant    Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  name      String
+  isActive  Boolean @default(true)
+  code      String?
+  channel   String?
+  managerName String?
+  address   String?
+  city      String?
+  state     String?
+  country   String?
+  timezone  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  productPointsOfSale ProductPointOfSale[]
+  sales     Sale[]
+  inventoryMovements InventoryMovement[]
+  cashSessions CashSession[]
+  pendingCarts PendingCart[]
+  dailyReports DailyReport[]
+  
+  @@unique([tenantId, name]) // Nome único POR TENANT
+  @@index([tenantId])
+  @@index([tenantId, isActive])
+}
+
+model CashSession {
+  id                     String             @id @default(cuid())
+  tenantId               String             // <<< ADICIONAR
+  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  
+  userId                 String
+  pointOfSaleId          String?
+  openedAt               DateTime           @default(now())
+  closedAt               DateTime?
+  openingAmount          Float              @default(0)
+  closingAmount          Float?
+  expectedClosingAmount  Float?
+  differenceAmount       Float?
+  status                 CashSessionStatus  @default(OPEN)
+  notes                  String?
+  hardwareEventReference String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointOfSale            PointOfSale?       @relation(fields: [pointOfSaleId], references: [id])
+  transactions           CashTransaction[]
+  sales                  Sale[]
+  payments               SalePayment[]
+  dailyReports           DailyReport[]
+
+  @@index([tenantId])
+  @@index([tenantId, userId, status])
+  @@index([tenantId, pointOfSaleId, status])
+}
+
+// Continue para todos os outros modelos...
+// SaleItem, ProductPointOfSale, SalePayment, etc.
+// TODOS devem ter tenantId e índices apropriados!
+
+// ============================================
+// EXEMPLO DE USO NO CÓDIGO
+// ============================================
+
+/*
+// Antes (sem multi-tenant):
+const products = await prisma.product.findMany()
+
+// Depois (com multi-tenant):
+const tenantId = await getTenantId(request)
+const products = await prisma.product.findMany({
+  where: { tenantId }
+})
+
+// Ou melhor ainda, usando middleware:
+const db = createTenantClient(tenantId)
+const products = await db.product.findMany() // Já filtra automaticamente!
+*/

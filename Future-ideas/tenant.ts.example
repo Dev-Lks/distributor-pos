@@ -1,0 +1,306 @@
+// Utility functions para trabalhar com Multi-Tenant
+// lib/tenant.ts
+
+import { NextRequest } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { prisma } from './prisma'
+import { authOptions } from './auth'
+
+/**
+ * Extrai o tenant ID do request (via subdomain ou session)
+ */
+export async function getTenantIdFromRequest(
+  request: NextRequest
+): Promise<string | null> {
+  // Método 1: Via subdomain
+  const hostname = request.headers.get('host') || ''
+  const subdomain = extractSubdomain(hostname)
+  
+  if (subdomain) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: subdomain },
+      select: { id: true, isActive: true, isSuspended: true }
+    })
+    
+    if (!tenant) {
+      return null
+    }
+    
+    if (!tenant.isActive || tenant.isSuspended) {
+      throw new Error('Tenant suspended or inactive')
+    }
+    
+    return tenant.id
+  }
+  
+  // Método 2: Via session do usuário
+  const session = await getServerSession(authOptions)
+  if (session?.user?.tenantId) {
+    return session.user.tenantId
+  }
+  
+  // Método 3: Via query parameter (fallback para dev)
+  const url = new URL(request.url)
+  const tenantSlug = url.searchParams.get('tenant')
+  if (tenantSlug) {
+    const tenant = await prisma.tenant.findUnique({
+      where: { slug: tenantSlug },
+      select: { id: true }
+    })
+    return tenant?.id || null
+  }
+  
+  return null
+}
+
+/**
+ * Extrai subdomain do hostname
+ * Examples:
+ * - localhost:3000 -> null
+ * - app.example.com -> app
+ * - nitrobeer.seudominio.com.br -> nitrobeer
+ * - www.example.com -> null (ignora www)
+ */
+export function extractSubdomain(hostname: string): string | null {
+  // Remove porta
+  const host = hostname.split(':')[0]
+  
+  // localhost ou IP
+  if (host === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(host)) {
+    return null
+  }
+  
+  const parts = host.split('.')
+  
+  // example.com -> sem subdomain
+  if (parts.length <= 2) {
+    return null
+  }
+  
+  const subdomain = parts[0]
+  
+  // Ignora www
+  if (subdomain === 'www') {
+    return null
+  }
+  
+  return subdomain
+}
+
+/**
+ * Verifica se o tenant está ativo e dentro dos limites
+ */
+export async function checkTenantLimits(
+  tenantId: string,
+  resource: 'users' | 'products' | 'pointsOfSale' | 'orders'
+): Promise<{ allowed: boolean; message?: string }> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: {
+      plan: true,
+      maxUsers: true,
+      maxProducts: true,
+      maxPointsOfSale: true,
+      maxMonthlyOrders: true,
+      currentUsers: true,
+      currentProducts: true,
+      currentPointsOfSale: true,
+      monthlyOrderCount: true,
+    }
+  })
+  
+  if (!tenant) {
+    return { allowed: false, message: 'Tenant not found' }
+  }
+  
+  switch (resource) {
+    case 'users':
+      if (tenant.currentUsers >= tenant.maxUsers) {
+        return {
+          allowed: false,
+          message: `Limite de ${tenant.maxUsers} usuários atingido. Faça upgrade do plano.`
+        }
+      }
+      break
+      
+    case 'products':
+      if (tenant.currentProducts >= tenant.maxProducts) {
+        return {
+          allowed: false,
+          message: `Limite de ${tenant.maxProducts} produtos atingido. Faça upgrade do plano.`
+        }
+      }
+      break
+      
+    case 'pointsOfSale':
+      if (tenant.currentPointsOfSale >= tenant.maxPointsOfSale) {
+        return {
+          allowed: false,
+          message: `Limite de ${tenant.maxPointsOfSale} pontos de venda atingido. Faça upgrade.`
+        }
+      }
+      break
+      
+    case 'orders':
+      if (tenant.monthlyOrderCount >= tenant.maxMonthlyOrders) {
+        return {
+          allowed: false,
+          message: `Limite de ${tenant.maxMonthlyOrders} pedidos/mês atingido. Faça upgrade.`
+        }
+      }
+      break
+  }
+  
+  return { allowed: true }
+}
+
+/**
+ * Incrementa o contador de uso
+ */
+export async function incrementTenantUsage(
+  tenantId: string,
+  resource: 'users' | 'products' | 'pointsOfSale' | 'orders'
+) {
+  const updateData: any = {}
+  
+  switch (resource) {
+    case 'users':
+      updateData.currentUsers = { increment: 1 }
+      break
+    case 'products':
+      updateData.currentProducts = { increment: 1 }
+      break
+    case 'pointsOfSale':
+      updateData.currentPointsOfSale = { increment: 1 }
+      break
+    case 'orders':
+      updateData.monthlyOrderCount = { increment: 1 }
+      break
+  }
+  
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: updateData
+  })
+}
+
+/**
+ * Decrementa o contador de uso
+ */
+export async function decrementTenantUsage(
+  tenantId: string,
+  resource: 'users' | 'products' | 'pointsOfSale'
+) {
+  const updateData: any = {}
+  
+  switch (resource) {
+    case 'users':
+      updateData.currentUsers = { decrement: 1 }
+      break
+    case 'products':
+      updateData.currentProducts = { decrement: 1 }
+      break
+    case 'pointsOfSale':
+      updateData.currentPointsOfSale = { decrement: 1 }
+      break
+  }
+  
+  await prisma.tenant.update({
+    where: { id: tenantId },
+    data: updateData
+  })
+}
+
+/**
+ * Reseta contador mensal de orders (executar via cron)
+ */
+export async function resetMonthlyOrderCounts() {
+  await prisma.tenant.updateMany({
+    data: {
+      monthlyOrderCount: 0,
+      lastOrderCountReset: new Date()
+    }
+  })
+}
+
+/**
+ * Verifica se tenant tem acesso a uma feature
+ */
+export async function hasFeature(
+  tenantId: string,
+  feature: string
+): Promise<boolean> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { enabledFeatures: true, plan: true }
+  })
+  
+  if (!tenant) return false
+  
+  // Features por plano
+  const planFeatures = {
+    FREE: ['basic_pos', 'inventory'],
+    STARTER: ['basic_pos', 'inventory', 'dashboard', 'customers'],
+    BUSINESS: ['basic_pos', 'inventory', 'dashboard', 'customers', 'api_access', 'integrations'],
+    ENTERPRISE: ['basic_pos', 'inventory', 'dashboard', 'customers', 'api_access', 'integrations', 'white_label', 'custom_reports'],
+    CUSTOM: []
+  }
+  
+  const includedFeatures = planFeatures[tenant.plan] || []
+  
+  return includedFeatures.includes(feature) || tenant.enabledFeatures.includes(feature)
+}
+
+/**
+ * Valida se o tenant pode criar um novo recurso
+ */
+export async function validateTenantAction(
+  tenantId: string,
+  action: 'create_user' | 'create_product' | 'create_point' | 'create_order'
+): Promise<{ valid: boolean; error?: string }> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: {
+      isActive: true,
+      isSuspended: true,
+      subscriptionStatus: true,
+    }
+  })
+  
+  if (!tenant) {
+    return { valid: false, error: 'Tenant not found' }
+  }
+  
+  if (!tenant.isActive) {
+    return { valid: false, error: 'Conta inativa. Entre em contato com o suporte.' }
+  }
+  
+  if (tenant.isSuspended) {
+    return { valid: false, error: 'Conta suspensa. Verifique sua assinatura.' }
+  }
+  
+  if (tenant.subscriptionStatus === 'PAST_DUE') {
+    return { valid: false, error: 'Pagamento em atraso. Atualize sua forma de pagamento.' }
+  }
+  
+  if (tenant.subscriptionStatus === 'CANCELED') {
+    return { valid: false, error: 'Assinatura cancelada.' }
+  }
+  
+  // Verifica limites
+  const resourceMap = {
+    create_user: 'users',
+    create_product: 'products',
+    create_point: 'pointsOfSale',
+    create_order: 'orders',
+  } as const
+  
+  const resource = resourceMap[action]
+  const limitCheck = await checkTenantLimits(tenantId, resource)
+  
+  if (!limitCheck.allowed) {
+    return { valid: false, error: limitCheck.message }
+  }
+  
+  return { valid: true }
+}
