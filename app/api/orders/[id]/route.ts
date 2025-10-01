@@ -11,7 +11,14 @@ const updateOrderSchema = z.object({
   customerEmail: z.string().email().optional().nullable(),
   customerAddress: z.string().optional().nullable(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
-  promisedAt: z.string().datetime().optional().nullable(),
+  promisedAt: z.string().optional().nullable().transform((val) => {
+    if (!val) return null
+    // Se for apenas data (YYYY-MM-DD), adiciona hora
+    if (val.length === 10) {
+      return `${val}T12:00:00.000Z`
+    }
+    return val
+  }),
   notes: z.string().optional().nullable(),
   internalNotes: z.string().optional().nullable(),
   specialRequests: z.string().optional().nullable(),

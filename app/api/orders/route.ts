@@ -12,7 +12,14 @@ const createOrderSchema = z.object({
   customerEmail: z.string().email().optional().nullable(),
   customerAddress: z.string().optional().nullable(),
   priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
-  promisedAt: z.string().datetime().optional().nullable(),
+  promisedAt: z.string().optional().nullable().transform((val) => {
+    if (!val) return null
+    // Se for apenas data (YYYY-MM-DD), adiciona hora
+    if (val.length === 10) {
+      return `${val}T12:00:00.000Z`
+    }
+    return val
+  }),
   notes: z.string().optional().nullable(),
   specialRequests: z.string().optional().nullable(),
   deliveryFee: z.number().default(0),
@@ -136,6 +143,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const data = createOrderSchema.parse(body)
 
+    // Validar se todos os produtos existem
+    const productIds = data.items.map(item => item.productId)
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true }
+    })
+
+    if (products.length !== productIds.length) {
+      const foundIds = products.map(p => p.id)
+      const missingIds = productIds.filter(id => !foundIds.includes(id))
+      return NextResponse.json(
+        { error: `Produtos não encontrados: ${missingIds.join(", ")}` },
+        { status: 400 }
+      )
+    }
+
     // Gerar número da encomenda único
     const year = new Date().getFullYear()
     const lastOrder = await prisma.order.findFirst({
@@ -251,10 +274,18 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(order, { status: 201 })
-  } catch (error) {
+  } catch (error: any) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: "Dados inválidos", details: error.errors },
+        { status: 400 }
+      )
+    }
+
+    // Erro de Prisma - foreign key violation
+    if (error.code === "P2003") {
+      return NextResponse.json(
+        { error: "Um ou mais produtos selecionados não existem no banco de dados" },
         { status: 400 }
       )
     }
