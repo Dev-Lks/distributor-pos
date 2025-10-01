@@ -60,3 +60,41 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to update inventory' }, { status: 500 })
   }
 }
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json()
+    const { productId, location, quantity } = body as {
+      productId: string
+      location: 'coldRoom' | 'house' | 'salePoint'
+      quantity: number
+    }
+
+    if (!productId || typeof quantity !== 'number' || !location) {
+      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+
+    if (!['coldRoom', 'house', 'salePoint'].includes(location)) {
+      return NextResponse.json({ error: 'Invalid location' }, { status: 400 })
+    }
+
+    const fieldMap: Record<typeof location, 'coldRoomQuantity' | 'houseQuantity' | 'salePointQuantity'> = {
+      coldRoom: 'coldRoomQuantity',
+      house: 'houseQuantity',
+      salePoint: 'salePointQuantity',
+    }
+
+    const field = fieldMap[location]
+
+    const inventory = await prisma.inventory.upsert({
+      where: { productId },
+      update: { [field]: quantity },
+      create: { productId, [field]: quantity },
+    })
+
+    return NextResponse.json(inventory)
+  } catch (error) {
+    console.error('Failed to update inventory:', error)
+    return NextResponse.json({ error: 'Failed to update inventory' }, { status: 500 })
+  }
+}

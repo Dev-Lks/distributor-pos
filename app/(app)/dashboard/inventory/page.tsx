@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import type React from "react"
 import { useMemo, useRef, useState } from "react"
@@ -7,13 +7,14 @@ import { useProducts, type Product } from "@/lib/useProducts"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import {
@@ -32,12 +33,27 @@ import {
   Upload,
   FileDown,
   Loader2,
-  X
+  X,
+  BarChart3,
+  TrendingUp,
+  Calendar,
+  ClipboardCheck,
+  History
 } from "lucide-react"
-import type { InventoryImportResponse, InventoryImportSummary } from "@/lib/inventoryImport"
+
+// Importar novos componentes avançados
+import { AdvancedFilters } from "@/components/inventory/AdvancedFilters"
+import { BulkToolbar } from "@/components/inventory/BulkToolbar"
+import { InventoryDashboard } from "@/components/inventory/InventoryDashboard"
+import { InventoryHistoryDialog } from "@/components/inventory/InventoryHistoryDialog"
+import { ABCAnalysisTab } from "@/components/inventory/ABCAnalysisTab"
+import { DemandForecastCard } from "@/components/inventory/DemandForecastCard"
+import { ExpirationAlertsCard } from "@/components/inventory/ExpirationAlertsCard"
+import { BatchManagementTab } from "@/components/inventory/BatchManagementTab"
+import { AuditManagementTab } from "@/components/inventory/AuditManagementTab"
+import { MovementHistoryTab } from "@/components/inventory/MovementHistoryTab"
 
 type Location = "coldRoom" | "house" | "salePoint"
-
 type ProductInventory = NonNullable<Product["inventory"]>
 
 type LocationConfig = {
@@ -96,7 +112,6 @@ const getInventoryQuantity = (inventory: ProductInventory | undefined, location:
   if (!inventory) {
     return 0
   }
-
   const key = `${location}Quantity` as keyof ProductInventory
   const value = inventory[key]
   return typeof value === "number" ? value : 0
@@ -159,6 +174,37 @@ export default function InventoryPage() {
   const { data: rawProducts = [], isLoading: loading } = useProducts()
   const queryClient = useQueryClient()
 
+  // Estado para seleção em massa
+  const [selectedProducts, setSelectedProducts] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState("overview")
+  const [historyProductId, setHistoryProductId] = useState<string | null>(null)
+
+  // Estados existentes
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editingLocation, setEditingLocation] = useState<Location | null>(null)
+  const [editStock, setEditStock] = useState("")
+  const [editingBonifications, setEditingBonifications] = useState<string | null>(null)
+  const [editBonifications, setEditBonifications] = useState("")
+  const [filterCategory, setFilterCategory] = useState("all")
+  const [filterAlert, setFilterAlert] = useState("all")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [addProductId, setAddProductId] = useState("")
+  const [addQuantity, setAddQuantity] = useState("")
+  const [addProductSearch, setAddProductSearch] = useState("")
+  const [showTransferModal, setShowTransferModal] = useState(false)
+  const [transferProductId, setTransferProductId] = useState("")
+  const [transferFrom, setTransferFrom] = useState<Location>("coldRoom")
+  const [transferTo, setTransferTo] = useState<Location>("house")
+  const [transferQuantity, setTransferQuantity] = useState("")
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importing, setImporting] = useState(false)
+  const importInputRef = useRef<HTMLInputElement | null>(null)
+
+  // Estado para filtros avançados
+  const [advancedFilters, setAdvancedFilters] = useState<any>({})
+
   const products = useMemo(
     () =>
       rawProducts.map((product: Product) => ({
@@ -184,28 +230,114 @@ export default function InventoryPage() {
     [rawProducts]
   )
 
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null)
-  const [editStock, setEditStock] = useState("")
-  const [editingBonifications, setEditingBonifications] = useState<string | null>(null)
-  const [editBonifications, setEditBonifications] = useState("")
-  const [filterCategory, setFilterCategory] = useState("all")
-  const [filterAlert, setFilterAlert] = useState("all")
-  const [searchQuery, setSearchQuery] = useState("")
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [addProductId, setAddProductId] = useState("")
-  const [addQuantity, setAddQuantity] = useState("")
-  const [addProductSearch, setAddProductSearch] = useState("")
-  const [showTransferModal, setShowTransferModal] = useState(false)
-  const [transferProductId, setTransferProductId] = useState("")
-  const [transferFrom, setTransferFrom] = useState<Location>("coldRoom")
-  const [transferTo, setTransferTo] = useState<Location>("house")
-  const [transferQuantity, setTransferQuantity] = useState("")
-  const [showImportModal, setShowImportModal] = useState(false)
-  const [importFile, setImportFile] = useState<File | null>(null)
-  const [importing, setImporting] = useState(false)
-  const [importSummary, setImportSummary] = useState<InventoryImportSummary | null>(null)
-  const importInputRef = useRef<HTMLInputElement | null>(null)
+  // Funções de seleção em massa
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(filteredProducts.map(p => p.id))
+    } else {
+      setSelectedProducts([])
+    }
+  }
+
+  const handleSelectProduct = (productId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedProducts(prev => [...prev, productId])
+    } else {
+      setSelectedProducts(prev => prev.filter(id => id !== productId))
+    }
+  }
+
+  const handleClearSelection = () => {
+    setSelectedProducts([])
+  }
+
+  // Aplicar filtros (básicos + avançados)
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      // Filtro de busca
+      if (searchQuery && !product.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false
+      }
+
+      // Filtro de categoria
+      if (filterCategory !== "all" && product.category !== filterCategory) {
+        return false
+      }
+
+      // Filtro de alerta
+      if (filterAlert !== "all") {
+        const hasAlert = product.inventory?.coldRoomAlert || 
+                        product.inventory?.houseAlert || 
+                        product.inventory?.salePointAlert
+        if (filterAlert === "alert" && !hasAlert) {
+          return false
+        }
+        if (filterAlert === "ok" && hasAlert) {
+          return false
+        }
+      }
+
+      // Filtros avançados
+      if (advancedFilters.categories?.length > 0 && !advancedFilters.categories.includes(product.category)) {
+        return false
+      }
+
+      if (advancedFilters.priceMin !== undefined && product.salePrice < advancedFilters.priceMin) {
+        return false
+      }
+
+      if (advancedFilters.priceMax !== undefined && product.salePrice > advancedFilters.priceMax) {
+        return false
+      }
+
+      if (advancedFilters.stockMin !== undefined && (product.inventory?.totalQuantity ?? 0) < advancedFilters.stockMin) {
+        return false
+      }
+
+      if (advancedFilters.stockMax !== undefined && (product.inventory?.totalQuantity ?? 0) > advancedFilters.stockMax) {
+        return false
+      }
+
+      if (advancedFilters.sku && !product.id.toLowerCase().includes(advancedFilters.sku.toLowerCase())) {
+        return false
+      }
+
+      return true
+    })
+  }, [products, searchQuery, filterCategory, filterAlert, advancedFilters])
+
+  // Calcular estatísticas para o dashboard
+  const dashboardData = useMemo(() => {
+    const totalValue = products.reduce((sum, p) => {
+      const quantity = p.inventory?.totalQuantity ?? 0
+      return sum + (quantity * (p.cost ?? p.salePrice))
+    }, 0)
+
+    const totalItems = products.reduce((sum, p) => sum + (p.inventory?.totalQuantity ?? 0), 0)
+
+    const lowStockCount = products.filter(p => {
+      const inv = p.inventory
+      return inv?.coldRoomAlert || inv?.houseAlert || inv?.salePointAlert
+    }).length
+
+    const outOfStockCount = products.filter(p => (p.inventory?.totalQuantity ?? 0) === 0).length
+
+    return {
+      totalValue,
+      totalItems,
+      lowStockCount,
+      outOfStockCount,
+      expiringCount: 0, // Será calculado pelos componentes específicos
+      averageTurnover: 0,
+      deadStock: 0,
+      inventoryAccuracy: 0
+    }
+  }, [products])
+
+  // Extrair categorias únicas para filtros
+  const availableCategories = useMemo(() => {
+    return Array.from(new Set(products.map(p => p.category).filter(Boolean))) as string[]
+  }, [products])
 
   const handleAddModalChange = (open: boolean) => {
     setShowAddModal(open)
@@ -230,1377 +362,798 @@ export default function InventoryPage() {
     setShowImportModal(open)
     if (!open) {
       setImportFile(null)
-      setImportSummary(null)
       if (importInputRef.current) {
         importInputRef.current.value = ""
       }
     }
   }
 
-  const handleImportFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { files } = event.target
-    if (!files || !files.length) {
-      setImportFile(null)
-      return
-    }
-    setImportFile(files[0])
-  }
-
-  const handleTemplateDownload = () => {
-    window.open('/api/inventory/import', '_blank')
-  }
-
-  const handleImportSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-
-    if (!importFile) {
-      toast.error('Selecione um arquivo XLSX para continuar.')
-      return
-    }
-
-    setImporting(true)
+  const handleUpdateStock = async (productId: string, location: Location, newStock: number) => {
     try {
-      const formData = new FormData()
-      formData.append('file', importFile)
-
-      const response = await fetch('/api/inventory/import', {
-        method: 'POST',
-        body: formData
+      const response = await fetch(`/api/inventory`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          location,
+          quantity: newStock
+        })
       })
 
-      const data = (await response.json()) as Partial<InventoryImportResponse> & { error?: string }
-      if (data.summary) {
-        setImportSummary(data.summary)
-      }
+      if (!response.ok) throw new Error("Erro ao atualizar estoque")
 
-      if (!response.ok) {
-        const summary = data.summary
-        const errorMessage =
-          data.error ??
-          (summary && (summary.errors.length > 0 || summary.warnings.length > 0)
-            ? 'Importação interrompida. Revise os erros e avisos listados para continuar.'
-            : 'Não foi possível importar a planilha. Tente novamente.')
-        toast.error(errorMessage)
+      toast.success("Estoque atualizado com sucesso")
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+      setEditingId(null)
+      setEditingLocation(null)
+    } catch (error) {
+      toast.error("Erro ao atualizar estoque")
+    }
+  }
+
+  const handleQuickAdd = async (productId: string, location: Location, quantity: number) => {
+    try {
+      const product = products.find(p => p.id === productId)
+      if (!product?.inventory) return
+
+      const currentStock = getInventoryQuantity(product.inventory, location)
+      const newStock = currentStock + quantity
+
+      const response = await fetch(`/api/inventory`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productId,
+          location,
+          quantity: newStock
+        })
+      })
+
+      if (!response.ok) throw new Error("Erro ao adicionar estoque")
+
+      toast.success("Estoque adicionado com sucesso")
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+    } catch (error) {
+      toast.error("Erro ao adicionar estoque")
+    }
+  }
+
+  const handleTransfer = async () => {
+    try {
+      const quantity = Number.parseInt(transferQuantity, 10)
+      if (!transferProductId || isNaN(quantity) || quantity <= 0) {
+        toast.error("Dados inválidos")
         return
       }
 
-      await queryClient.invalidateQueries({ queryKey: ['products'] })
-      toast.success(
-        data.summary
-          ? `Importação concluída! ${data.summary.processedCount} produtos atualizados.`
-          : 'Inventário atualizado com sucesso.'
-      )
+      const response = await fetch(`/api/inventory/bulk`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          operation: "transfer",
+          productIds: [transferProductId],
+          params: {
+            fromLocation: transferFrom,
+            toLocation: transferTo,
+            quantity
+          }
+        })
+      })
 
-      setImportFile(null)
-      if (importInputRef.current) {
-        importInputRef.current.value = ""
-      }
+      if (!response.ok) throw new Error("Erro ao transferir")
+
+      toast.success("Transferência realizada com sucesso")
+      queryClient.invalidateQueries({ queryKey: ["products"] })
+      handleTransferModalChange(false)
     } catch (error) {
-      console.error('Import inventory: client error', error)
-      toast.error('Erro inesperado ao enviar a planilha. Tente novamente.')
+      toast.error("Erro ao realizar transferência")
+    }
+  }
+
+  const handleImport = async () => {
+    if (!importFile) return
+
+    setImporting(true)
+    try {
+      const text = await importFile.text()
+      const lines = text.split("\n").filter(line => line.trim())
+      const header = lines[0].toLowerCase()
+      
+      // Validar cabeçalho
+      if (!header.includes("productid") || !header.includes("location") || !header.includes("quantity")) {
+        throw new Error("CSV inválido. Formato esperado: productId,location,quantity")
+      }
+
+      let successCount = 0
+      let errorCount = 0
+
+      // Processar cada linha (pular cabeçalho)
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim()
+        if (!line) continue
+
+        const [productId, location, quantity] = line.split(",").map(s => s.trim())
+
+        try {
+          const response = await fetch(`/api/inventory`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              productId,
+              location,
+              quantity: Number.parseInt(quantity, 10)
+            })
+          })
+
+          if (response.ok) {
+            successCount++
+          } else {
+            errorCount++
+          }
+        } catch (error) {
+          errorCount++
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success(`${successCount} produto(s) importado(s) com sucesso!`)
+        queryClient.invalidateQueries({ queryKey: ["products"] })
+      }
+
+      if (errorCount > 0) {
+        toast.error(`${errorCount} erro(s) durante a importação`)
+      }
+
+      handleImportModalChange(false)
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao importar arquivo")
     } finally {
       setImporting(false)
     }
   }
 
-  const focusAlertsSection = () => {
-    setFilterAlert("with_alert")
-    if (typeof window !== "undefined") {
-      window.requestAnimationFrame(() => {
-        document.getElementById("inventory-alerts")?.scrollIntoView({ behavior: "smooth", block: "start" })
-      })
-    }
-  }
-
-  const categories = useMemo(
-    () => [
-      "all",
-      ...Array.from(
-        new Set(
-          products
-            .map((product) => product.category)
-            .filter((category): category is string => Boolean(category))
-        )
-      )
-    ],
-    [products]
-  )
-
-  const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchesCategory = filterCategory === "all" || product.category === filterCategory
-      const hasAlerts = Boolean(
-        product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert
-      )
-      const matchesAlert =
-        filterAlert === "all" ||
-        (filterAlert === "with_alert" && hasAlerts) ||
-        (filterAlert === "no_alert" && !hasAlerts)
-      const lowerSearch = searchQuery.trim().toLowerCase()
-      const matchesSearch =
-        lowerSearch.length === 0 ||
-        product.name.toLowerCase().includes(lowerSearch) ||
-        product.size.toLowerCase().includes(lowerSearch)
-
-      return matchesCategory && matchesAlert && matchesSearch
-    })
-  }, [products, filterCategory, filterAlert, searchQuery])
-
-  const lowStockAlerts = useMemo(
-    () =>
-      products.filter(
-        (product) =>
-          product.inventory?.coldRoomAlert || product.inventory?.houseAlert || product.inventory?.salePointAlert
-      ),
-    [products]
-  )
-
-  const totalBonifications = useMemo(
-    () => products.reduce((sum, product) => sum + product.bonifications, 0),
-    [products]
-  )
-
-  const totalQuantity = useMemo(
-    () => products.reduce((sum, product) => sum + (product.inventory?.totalQuantity ?? 0), 0),
-    [products]
-  )
-
-  const totalInventoryValue = useMemo(
-    () =>
-      products.reduce(
-        (sum, product) =>
-          sum + ((product.inventory?.coldRoomQuantity ?? 0) + (product.inventory?.houseQuantity ?? 0) + (product.inventory?.salePointQuantity ?? 0)) * product.salePrice,
-        0
-      ),
-    [products]
-  )
-
-  const locationSummaries = useMemo(() => {
-    return (Object.keys(locationConfig) as Location[]).map((location) => {
-      const locationQuantity = filteredProducts.reduce(
-        (sum, product) => sum + getInventoryQuantity(product.inventory, location),
-        0
-      )
-      const alertCount = filteredProducts.filter((product) =>
-        Boolean(product.inventory?.[`${location}Alert` as keyof ProductInventory])
-      ).length
-
-      return {
-        location,
-        quantity: locationQuantity,
-        alerts: alertCount
-      }
-    })
-  }, [filteredProducts])
-
-  const heroStats = useMemo(
-    () => [
-      {
-        label: "Produtos monitorados",
-        value: products.length,
-        helper: `${filteredProducts.length} na visualização`,
-        icon: Package
-      },
-      {
-        label: "Unidades em estoque",
-        value: totalQuantity,
-        helper: `${lowStockAlerts.length} com alerta`,
-        icon: Check
-      },
-      {
-        label: "Valor estimado",
-        value: currencyFormatter.format(totalInventoryValue),
-        helper: `${totalBonifications} bonificações`,
-        icon: CircleDollarSign
-      }
-    ],
-    [filteredProducts.length, lowStockAlerts.length, products.length, totalBonifications, totalInventoryValue, totalQuantity]
-  )
-
-  const quickActions = [
-    {
-      title: "Importar planilha",
-      description: "Atualize o estoque em massa com uma planilha Excel no modelo padrão.",
-      icon: Upload,
-      buttonIcon: Upload,
-      cta: "Importar XLSX",
-      variant: "outline" as const,
-      onClick: () => setShowImportModal(true)
-    },
-    {
-      title: "Entrada centralizada",
-      description: "Receba mercadorias e mantenha a câmara fria sempre atualizada.",
-      icon: Snowflake,
-      buttonIcon: Plus,
-      cta: "Registrar entrada",
-      variant: "default" as const,
-      onClick: () => setShowAddModal(true)
-    },
-    {
-      title: "Distribuir estoque",
-      description: "Use a transferência para abastecer casa e pontos de venda com controle total.",
-      icon: ArrowLeftRight,
-      buttonIcon: ArrowLeftRight,
-      cta: "Abrir transferência",
-      variant: "outline" as const,
-      onClick: () => setShowTransferModal(true)
-    },
-    {
-      title: "Zerar alertas",
-      description: "Visualize rapidamente os produtos críticos para agir antes da ruptura.",
-      icon: AlertTriangle,
-      buttonIcon: AlertTriangle,
-      cta: "Ver produtos em alerta",
-      variant: "outline" as const,
-      onClick: focusAlertsSection
-    }
-  ]
-
-  const selectedTransferProduct = useMemo(
-    () => products.find((product) => product.id === transferProductId),
-    [products, transferProductId]
-  )
-
-  const transferFromQuantity = getInventoryQuantity(selectedTransferProduct?.inventory, transferFrom)
-  const transferToQuantity = getInventoryQuantity(selectedTransferProduct?.inventory, transferTo)
-
-  const startEdit = (id: string, location: Location, currentStock: number) => {
-    setEditingId(id)
-    setEditingLocation(location)
-    setEditStock(currentStock.toString())
-  }
-
-  const saveEdit = async (id: string, location: Location) => {
-    const parsedQuantity = Number(editStock)
-    if (!Number.isFinite(parsedQuantity) || parsedQuantity < 0) {
-      toast.error("Informe uma quantidade válida.")
-      return
-    }
-
-    const product = products.find((item) => item.id === id)
-    if (!product?.inventory) {
-      toast.error("Produto não encontrado para ajuste.")
-      return
-    }
-
-    const currentQuantity = getInventoryQuantity(product.inventory, location)
-
-    if (location !== COLD_ROOM_LOCATION && parsedQuantity > currentQuantity) {
-      toast.error("Para aumentar o estoque deste local use a transferência a partir da câmara fria.")
-      return
-    }
-
-    if (parsedQuantity === currentQuantity) {
-      setEditingId(null)
-      setEditingLocation(null)
-      setEditStock("")
-      return
-    }
-
-    try {
-      const response = await fetch("/api/inventory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: id, location, quantity: parsedQuantity })
-      })
-
-      if (!response.ok) {
-        throw new Error("Erro ao atualizar estoque")
-      }
-
-      toast.success("Estoque atualizado com sucesso.")
-      queryClient.invalidateQueries({ queryKey: ["products"] })
-      setEditingId(null)
-      setEditingLocation(null)
-      setEditStock("")
-    } catch (error) {
-      console.error(error)
-      toast.error("Não foi possível atualizar o estoque agora.")
-    }
-  }
-
-  const startEditBonifications = (id: string, currentBonifications: number) => {
-    setEditingBonifications(id)
-    setEditBonifications(currentBonifications.toString())
-  }
-
-  const saveBonifications = async (id: string) => {
-    const newBonifications = Number(editBonifications)
-    if (Number.isFinite(newBonifications) && newBonifications >= 0) {
-      await fetch("/api/products", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, bonifications: newBonifications })
-      })
-      queryClient.invalidateQueries({ queryKey: ["products"] })
-    }
-    setEditingBonifications(null)
-    setEditBonifications("")
-  }
-
-  const addStock = async () => {
-    if (!addProductId) {
-      toast.error("Selecione um produto para registrar a entrada.")
-      return
-    }
-
-    const quantity = Number(addQuantity)
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      toast.error("Informe uma quantidade válida.")
-      return
-    }
-
-    const product = products.find((item) => item.id === addProductId)
-    if (!product) {
-      toast.error("Produto não encontrado.")
-      return
-    }
-
-    const currentQuantity = getInventoryQuantity(product.inventory, COLD_ROOM_LOCATION)
-    const targetQuantity = currentQuantity + quantity
-
-    try {
-      const response = await fetch("/api/inventory", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ productId: addProductId, location: COLD_ROOM_LOCATION, quantity: targetQuantity })
-      })
-
-      if (!response.ok) {
-        throw new Error("Erro ao registrar entrada")
-      }
-
-      toast.success("Entrada registrada na câmara fria.")
-      queryClient.invalidateQueries({ queryKey: ["products"] })
-      setShowAddModal(false)
-      setAddProductId("")
-      setAddQuantity("")
-      setAddProductSearch("")
-    } catch (error) {
-      console.error(error)
-      toast.error("Não foi possível registrar a entrada agora.")
-    }
-  }
-
-  const transferStock = async () => {
-    if (!transferProductId) {
-      toast.error("Selecione um produto para transferir.")
-      return
-    }
-
-    const quantity = Number(transferQuantity)
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      toast.error("Informe uma quantidade válida para transferir.")
-      return
-    }
-
-    if (transferFrom === transferTo) {
-      toast.error("Escolha locais diferentes para a transferência.")
-      return
-    }
-
-    const product = products.find((item) => item.id === transferProductId)
-    if (!product?.inventory) {
-      toast.error("Produto não encontrado para transferência.")
-      return
-    }
-
-  const fromQuantity = getInventoryQuantity(product.inventory, transferFrom)
-
-    if (fromQuantity < quantity) {
-      toast.error("Quantidade indisponível no local de origem.")
-      return
-    }
-
-    try {
-      const transferResponse = await fetch("/api/inventory/transfer", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId: transferProductId,
-          fromLocation: transferFrom,
-          toLocation: transferTo,
-          quantity
-        })
-      })
-
-      if (!transferResponse.ok) {
-        const data = (await transferResponse.json().catch(() => ({}))) as { error?: string }
-        throw new Error(data.error ?? "Erro ao transferir estoque")
-      }
-
-      toast.success("Transferência concluída.")
-      queryClient.invalidateQueries({ queryKey: ["products"] })
-      setShowTransferModal(false)
-      setTransferProductId("")
-      setTransferQuantity("")
-      setTransferFrom(COLD_ROOM_LOCATION)
-      setTransferTo("house")
-    } catch (error) {
-      console.error(error)
-      const message = error instanceof Error ? error.message : "Não foi possível completar a transferência agora."
-      toast.error(message)
-    }
-  }
-
-  const renderInventoryTable = (location: Location) => {
-    const quantityField = `${location}Quantity` as keyof Product["inventory"]
-    const minStockField = `${location}MinStock` as keyof Product["inventory"]
-    const alertField = `${location}Alert` as keyof Product["inventory"]
-    const locationSummary = locationSummaries.find((summary) => summary.location === location)
-
-    return (
-      <div className="space-y-4">
-        <div
-          className={cn("rounded-xl border bg-gradient-to-br p-4", locationConfig[location].accent)}
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-sm text-muted-foreground">{locationConfig[location].description}</p>
-              <h3 className="text-lg font-semibold">{locationConfig[location].label}</h3>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="bg-background/60">
-                {(locationSummary?.quantity ?? 0).toLocaleString("pt-BR")} itens
-              </Badge>
-              {locationSummary && (
-                <Badge
-                  variant="outline"
-                  className={cn(
-                    "border text-xs",
-                    locationSummary.alerts > 0
-                      ? "border-amber-300 bg-amber-100 text-amber-700"
-                      : "border-border bg-transparent text-muted-foreground"
-                  )}
-                >
-                  {locationSummary.alerts > 0 ? `${locationSummary.alerts} alerta(s)` : "Sem alertas"}
-                </Badge>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {location !== COLD_ROOM_LOCATION && (
-          <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:text-sm">
-            Para aumentar o estoque em {locationConfig[location].label}, registre a chegada na câmara fria e em seguida realize uma transferência.
-          </div>
-        )}
-
-        <div className="space-y-4">
-          <div className="space-y-3 md:hidden">
-            {filteredProducts.length === 0 ? (
-              <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-                Nenhum produto encontrado para este filtro.
-              </div>
-            ) : (
-              filteredProducts.map((product) => {
-                const stock = product.inventory?.[quantityField] ?? 0
-                const minStock = product.inventory?.[minStockField] ?? 0
-                const status = getStockStatus(stock, minStock)
-                const isEditing = editingId === product.id && editingLocation === location
-                const isEditingBonifications = editingBonifications === product.id
-
-                return (
-                  <div
-                    key={`${product.id}-${location}-card`}
-                    className={cn(
-                      "space-y-4 rounded-xl border bg-card p-4 shadow-sm transition-colors",
-                      product.inventory?.[alertField] && "border-amber-300 bg-amber-50/70 dark:bg-amber-500/10",
-                      product.bonifications > 0 && !isEditingBonifications && "border-primary/40"
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold leading-tight">{product.name}</p>
-                        <p className="text-xs text-muted-foreground">{product.size}</p>
-                      </div>
-                      <Badge className={status.className}>{status.label}</Badge>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="uppercase tracking-tight">
-                        {product.category || "Sem categoria"}
-                      </Badge>
-                      {product.bonifications > 0 && !isEditingBonifications && (
-                        <Badge variant="secondary" className="bg-primary/10 text-primary">
-                          {product.bonifications} brinde(s)
-                        </Badge>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">Estoque</p>
-                        {isEditing ? (
-                          <div className="mt-1 flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              value={editStock}
-                              onChange={(event) => setEditStock(event.target.value)}
-                              className="h-9 w-full text-right"
-                            />
-                            <Button size="icon" onClick={() => saveEdit(product.id, location)}>
-                              <Check className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingId(null)
-                                setEditingLocation(null)
-                                setEditStock("")
-                              }}
-                            >
-                              <X className="size-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <p
-                            className={cn(
-                              "font-mono text-lg",
-                              stock <= minStock ? "text-red-600" : "text-emerald-600"
-                            )}
-                          >
-                            {stock.toLocaleString("pt-BR")} un
-                          </p>
-                        )}
-                      </div>
-
-                      <div>
-                        <p className="text-xs font-medium text-muted-foreground">Bonificações</p>
-                        {isEditingBonifications ? (
-                          <div className="mt-1 flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              value={editBonifications}
-                              onChange={(event) => setEditBonifications(event.target.value)}
-                              className="h-9 w-full text-right"
-                            />
-                            <Button size="icon" variant="ghost" onClick={() => saveBonifications(product.id)}>
-                              <Check className="size-4" />
-                            </Button>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingBonifications(null)
-                                setEditBonifications("")
-                              }}
-                            >
-                              <X className="size-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <p
-                            className={cn(
-                              "font-mono text-lg",
-                              product.bonifications > 0 ? "text-primary" : "text-muted-foreground"
-                            )}
-                          >
-                            {product.bonifications}
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Valor estimado</span>
-                        <span className="font-medium text-foreground">
-                          {currencyFormatter.format(stock * product.salePrice)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {!isEditing && !isEditingBonifications && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEdit(product.id, location, stock)}
-                          className="flex-1 min-w-[120px]"
-                        >
-                          <Edit2 className="size-4" />
-                          Estoque
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEditBonifications(product.id, product.bonifications)}
-                          className="flex-1 min-w-[120px]"
-                        >
-                          <Gift className="size-4" />
-                          Brindes
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )
-              })
-            )}
-          </div>
-
-          <div className="hidden md:block">
-            <div className="rounded-xl border">
-              <div className="relative overflow-x-auto">
-                <Table className="min-w-[780px]">
-                  <TableHeader className="bg-muted/50">
-                    <TableRow>
-                      <TableHead className="w-[240px]">Produto</TableHead>
-                      <TableHead>Categoria</TableHead>
-                      <TableHead className="text-center">Bonificações</TableHead>
-                      <TableHead className="text-right">Estoque</TableHead>
-                      <TableHead className="text-center">Status</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead className="w-[120px] text-center">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredProducts.map((product) => {
-                      const stock = product.inventory?.[quantityField] ?? 0
-                      const minStock = product.inventory?.[minStockField] ?? 0
-                      const status = getStockStatus(stock, minStock)
-                      const isEditing = editingId === product.id && editingLocation === location
-                      const isEditingBonifications = editingBonifications === product.id
-
-                      return (
-                        <TableRow
-                          key={`${product.id}-${location}`}
-                          className={cn(
-                            "transition-colors",
-                            product.inventory?.[alertField] && "bg-amber-50/60 dark:bg-amber-500/15",
-                            product.bonifications > 0 && !isEditingBonifications && "bg-primary/5 dark:bg-primary/20"
-                          )}
-                        >
-                          <TableCell>
-                            <div className="flex flex-col gap-1">
-                              <div className="flex items-center gap-2">
-                                <span className="font-medium">{product.name}</span>
-                                {product.bonifications > 0 && (
-                                  <Badge variant="secondary" className="bg-primary/10 text-primary">
-                                    {product.bonifications} brinde(s)
-                                  </Badge>
-                                )}
-                              </div>
-                              <span className="text-sm text-muted-foreground">{product.size}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="uppercase tracking-tight">
-                              {product.category || "Sem categoria"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center">
-                            {isEditingBonifications ? (
-                              <div className="flex items-center justify-center gap-2">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={editBonifications}
-                                  onChange={(event) => setEditBonifications(event.target.value)}
-                                  className="h-9 w-20 text-center"
-                                />
-                                <div className="flex gap-2">
-                                  <Button size="icon" variant="ghost" onClick={() => saveBonifications(product.id)}>
-                                    <Check className="size-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setEditingBonifications(null)
-                                      setEditBonifications("")
-                                    }}
-                                  >
-                                    <X className="size-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <span
-                                className={cn(
-                                  "font-mono text-lg",
-                                  product.bonifications > 0 ? "text-primary" : "text-muted-foreground"
-                                )}
-                              >
-                                {product.bonifications}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isEditing ? (
-                              <div className="flex items-center justify-end gap-2">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  value={editStock}
-                                  onChange={(event) => setEditStock(event.target.value)}
-                                  className="h-9 w-24 text-right"
-                                />
-                                <div className="flex gap-2">
-                                  <Button size="icon" onClick={() => saveEdit(product.id, location)}>
-                                    <Check className="size-4" />
-                                  </Button>
-                                  <Button
-                                    size="icon"
-                                    variant="ghost"
-                                    onClick={() => {
-                                      setEditingId(null)
-                                      setEditingLocation(null)
-                                      setEditStock("")
-                                    }}
-                                  >
-                                    <X className="size-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ) : (
-                              <span
-                                className={cn(
-                                  "font-mono text-lg",
-                                  stock <= minStock
-                                    ? "text-red-600 dark:text-red-300"
-                                    : "text-emerald-600 dark:text-emerald-300"
-                                )}
-                              >
-                                {stock}
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-center">
-                            <Badge className={status.className}>{status.label}</Badge>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {currencyFormatter.format(stock * product.salePrice)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-center gap-2">
-                              {!isEditing && !isEditingBonifications && (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => startEdit(product.id, location, stock)}
-                                    aria-label={`Editar estoque de ${product.name}`}
-                                  >
-                                    <Edit2 className="size-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => startEditBonifications(product.id, product.bonifications)}
-                                    aria-label={`Editar bonificações de ${product.name}`}
-                                  >
-                                    <Gift className="size-4" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
   if (loading) {
     return (
-      <div className="space-y-6 pb-8">
-        <InventoryPageSkeleton />
+      <div className="space-y-6 p-6">
+        <Skeleton className="h-10 w-64" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        <Skeleton className="h-96" />
       </div>
     )
   }
 
   return (
-    <>
-      <div className="space-y-6 pb-8">
-        <Card className="border-none bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-none">
-          <CardHeader className="pb-4">
-            <div className="space-y-2">
-              <Badge variant="secondary" className="bg-primary/15 text-primary">
-                Inventário em tempo real
-              </Badge>
-              <CardTitle className="text-2xl md:text-3xl">Painel de inventário</CardTitle>
-              <p className="max-w-3xl text-sm text-muted-foreground">
-                Todas as entradas chegam primeiro à câmara fria. A partir dela, distribua para casa ou pontos de venda com total visibilidade e sem atropelos.
-              </p>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {heroStats.map((stat) => (
-                <div
-                  key={stat.label}
-                  className="flex items-center justify-between rounded-lg border border-white/40 bg-white/60 p-4 backdrop-blur-md dark:border-border dark:bg-background/40"
-                >
-                  <div>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                    <p className="text-xl font-semibold tracking-tight">
-                      {typeof stat.value === "number" ? stat.value.toLocaleString("pt-BR") : stat.value}
-                    </p>
-                    <p className="text-xs text-muted-foreground">{stat.helper}</p>
-                  </div>
-                  <div className="flex size-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <stat.icon className="size-5" />
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="grid gap-3 md:grid-cols-3">
-              {quickActions.map((action) => {
-                const Icon = action.icon
-                const ButtonIcon = action.buttonIcon
-                return (
-                  <div
-                    key={action.title}
-                    className="flex flex-col justify-between rounded-lg border border-white/40 bg-white/70 p-4 backdrop-blur dark:border-border dark:bg-background/50"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary">
-                        <Icon className="size-5" />
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-semibold leading-tight">{action.title}</p>
-                        <p className="text-xs text-muted-foreground">{action.description}</p>
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant={action.variant}
-                      onClick={action.onClick}
-                      className={cn("mt-4 self-start", action.variant === "outline" && "border-dashed")}
-                    >
-                      <ButtonIcon className="mr-2 size-4" />
-                      {action.cta}
-                    </Button>
-                  </div>
-                )
-              })}
-            </div>
-          </CardContent>
-        </Card>
+    <div className="space-y-6 p-6">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Gestão de Inventário</h1>
+          <p className="text-muted-foreground">
+            Controle avançado de estoque com análises inteligentes
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowImportModal(true)}>
+            <Upload className="mr-2 size-4" />
+            Importar
+          </Button>
+          <Button variant="outline">
+            <FileDown className="mr-2 size-4" />
+            Exportar
+          </Button>
+          <Button onClick={() => setShowAddModal(true)}>
+            <Plus className="mr-2 size-4" />
+            Adicionar Estoque
+          </Button>
+        </div>
+      </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Filtrar produtos</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-            <div className="relative flex min-w-[220px] w-full flex-1 sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar por nome ou tamanho"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <div className="min-w-[180px] w-full sm:w-auto">
-              <Select value={filterCategory} onValueChange={setFilterCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todas as categorias" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as categorias</SelectItem>
-                  {categories
-                    .filter((category) => category !== "all")
-                    .map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="min-w-[200px] w-full sm:w-auto">
-              <Select value={filterAlert} onValueChange={setFilterAlert}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os produtos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os produtos</SelectItem>
-                  <SelectItem value="with_alert">Apenas com alerta</SelectItem>
-                  <SelectItem value="no_alert">Sem alerta</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Sistema de Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-7">
+          <TabsTrigger value="overview" className="gap-2">
+            <Package className="size-4" />
+            Visão Geral
+          </TabsTrigger>
+          <TabsTrigger value="abc" className="gap-2">
+            <BarChart3 className="size-4" />
+            Análise ABC
+          </TabsTrigger>
+          <TabsTrigger value="forecast" className="gap-2">
+            <TrendingUp className="size-4" />
+            Previsões
+          </TabsTrigger>
+          <TabsTrigger value="expiration" className="gap-2">
+            <Calendar className="size-4" />
+            Vencimentos
+          </TabsTrigger>
+          <TabsTrigger value="batches" className="gap-2">
+            <Package className="size-4" />
+            Lotes
+          </TabsTrigger>
+          <TabsTrigger value="audits" className="gap-2">
+            <ClipboardCheck className="size-4" />
+            Auditorias
+          </TabsTrigger>
+          <TabsTrigger value="history" className="gap-2">
+            <History className="size-4" />
+            Histórico
+          </TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Distribuição por local</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {locationSummaries.map(({ location, quantity, alerts }) => {
-              const { label: locationLabel, icon: Icon } = locationConfig[location]
-              return (
-                <div key={location} className="flex items-center justify-between rounded-lg border p-4">
-                  <div className="space-y-1">
-                    <p className="text-xs uppercase text-muted-foreground">{locationLabel}</p>
-                    <p className="text-xl font-semibold tracking-tight">{quantity.toLocaleString("pt-BR")}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {alerts > 0 ? `${alerts} produto(s) em alerta` : "Sem alertas"}
-                    </p>
-                  </div>
-                  <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-                    <Icon className="size-5" />
-                  </div>
-                </div>
-              )
-            })}
-          </CardContent>
-        </Card>
+        {/* Tab: Visão Geral */}
+        <TabsContent value="overview" className="space-y-6">
+          {/* Dashboard KPIs */}
+          <InventoryDashboard data={dashboardData} />
 
-        {lowStockAlerts.length > 0 && (
-          <Card id="inventory-alerts" className="border-amber-400/50 bg-amber-50/60 dark:bg-amber-500/10">
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="size-5 text-amber-600" />
-                <CardTitle className="text-base">Centro de alertas</CardTitle>
+          {/* Filtros e Ações */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar produtos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
               </div>
-              <Badge className="bg-amber-600 text-white">{lowStockAlerts.length}</Badge>
+            </div>
+            <Select value={filterCategory} onValueChange={setFilterCategory}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Categoria" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas</SelectItem>
+                {availableCategories.map(cat => (
+                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={filterAlert} onValueChange={setFilterAlert}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                <SelectItem value="alert">Com Alerta</SelectItem>
+                <SelectItem value="ok">Saudável</SelectItem>
+              </SelectContent>
+            </Select>
+            <AdvancedFilters
+              filters={advancedFilters}
+              onChange={setAdvancedFilters}
+              availableCategories={availableCategories}
+              availableSuppliers={[]}
+              availableBrands={[]}
+            />
+            <Button
+              variant="outline"
+              onClick={() => setShowTransferModal(true)}
+            >
+              <ArrowLeftRight className="mr-2 size-4" />
+              Transferir
+            </Button>
+          </div>
+
+          {/* Tabela de Produtos com Seleção */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Produtos ({filteredProducts.length})</span>
+                {selectedProducts.length > 0 && (
+                  <Badge variant="secondary">
+                    {selectedProducts.length} selecionado{selectedProducts.length > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {lowStockAlerts.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-amber-200 bg-white/80 p-3 dark:bg-amber-500/10"
-                >
-                  <div>
-                    <p className="font-medium">{product.name}</p>
-                    <p className="text-xs text-muted-foreground">{product.size}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs">
-                    {(Object.keys(locationConfig) as Location[]).map((location) => {
-                      const flag = product.inventory?.[
-                        `${location}Alert` as keyof ProductInventory
-                      ]
-                      if (!flag) return null
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-12">
+                      <Checkbox
+                        checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                        onCheckedChange={handleSelectAll}
+                      />
+                    </TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Categoria</TableHead>
+                    <TableHead className="text-center">Câmara Fria</TableHead>
+                    <TableHead className="text-center">Casa</TableHead>
+                    <TableHead className="text-center">Ponto de Venda</TableHead>
+                    <TableHead className="text-center">Total</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredProducts.map((product) => {
+                    const inv = product.inventory
+                    const isSelected = selectedProducts.includes(product.id)
 
-                      const quantity = getInventoryQuantity(product.inventory, location)
-                      return (
-                        <Badge key={location} variant="outline" className="bg-amber-100 text-amber-700">
-                          {locationConfig[location].label}: {quantity}
-                        </Badge>
-                      )
-                    })}
-                  </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <CardTitle className="text-base">Inventário detalhado</CardTitle>
-              <Badge variant="outline" className="text-xs text-muted-foreground">
-                {filteredProducts.length} produto(s) exibidos
-              </Badge>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {filteredProducts.length === 0 ? (
-              <div className="flex flex-col items-center gap-3 py-16 text-center">
-                <Package className="size-12 text-muted-foreground" />
-                <div className="space-y-1">
-                  <h3 className="text-lg font-semibold">Nenhum produto encontrado</h3>
-                  <p className="max-w-sm text-sm text-muted-foreground">
-                    Ajuste os filtros acima ou limpe a busca para visualizar todos os produtos novamente.
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setFilterAlert("all")
-                    setFilterCategory("all")
-                    setSearchQuery("")
-                  }}
-                >
-                  Limpar filtros
-                </Button>
-              </div>
-            ) : (
-              <Tabs defaultValue="coldRoom" className="w-full">
-                <TabsList className="grid w-full grid-cols-1 gap-2 sm:grid-cols-3">
-                  {(Object.keys(locationConfig) as Location[]).map((location) => {
-                    const { label } = locationConfig[location]
                     return (
-                      <TabsTrigger key={location} value={location} className="text-xs sm:text-sm">
-                        {label}
-                      </TabsTrigger>
+                      <TableRow key={product.id} className={isSelected ? "bg-muted/50" : ""}>
+                        <TableCell>
+                          <Checkbox
+                            checked={isSelected}
+                            onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="font-medium">{product.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {currencyFormatter.format(product.salePrice)}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{product.category}</Badge>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {editingId === product.id && editingLocation === "coldRoom" ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <Input
+                                type="number"
+                                value={editStock}
+                                onChange={(e) => setEditStock(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleUpdateStock(product.id, "coldRoom", Number.parseInt(editStock, 10))
+                                  }
+                                  if (e.key === "Escape") {
+                                    setEditingId(null)
+                                    setEditingLocation(null)
+                                  }
+                                }}
+                                className="h-8 w-20 text-center"
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleUpdateStock(product.id, "coldRoom", Number.parseInt(editStock, 10))}
+                              >
+                                <Check className="size-4 text-emerald-600" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingId(null)
+                                  setEditingLocation(null)
+                                }}
+                              >
+                                <X className="size-4 text-red-600" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingId(product.id)
+                                setEditingLocation("coldRoom")
+                                setEditStock(String(inv?.coldRoomQuantity ?? 0))
+                              }}
+                              className="hover:text-primary hover:underline"
+                            >
+                              {inv?.coldRoomQuantity ?? 0}
+                            </button>
+                          )}
+                          {inv?.coldRoomAlert && (
+                            <AlertTriangle className="ml-1 inline size-4 text-amber-500" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {editingId === product.id && editingLocation === "house" ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <Input
+                                type="number"
+                                value={editStock}
+                                onChange={(e) => setEditStock(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleUpdateStock(product.id, "house", Number.parseInt(editStock, 10))
+                                  }
+                                  if (e.key === "Escape") {
+                                    setEditingId(null)
+                                    setEditingLocation(null)
+                                  }
+                                }}
+                                className="h-8 w-20 text-center"
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleUpdateStock(product.id, "house", Number.parseInt(editStock, 10))}
+                              >
+                                <Check className="size-4 text-emerald-600" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingId(null)
+                                  setEditingLocation(null)
+                                }}
+                              >
+                                <X className="size-4 text-red-600" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingId(product.id)
+                                setEditingLocation("house")
+                                setEditStock(String(inv?.houseQuantity ?? 0))
+                              }}
+                              className="hover:text-primary hover:underline"
+                            >
+                              {inv?.houseQuantity ?? 0}
+                            </button>
+                          )}
+                          {inv?.houseAlert && (
+                            <AlertTriangle className="ml-1 inline size-4 text-amber-500" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {editingId === product.id && editingLocation === "salePoint" ? (
+                            <div className="flex items-center justify-center gap-1">
+                              <Input
+                                type="number"
+                                value={editStock}
+                                onChange={(e) => setEditStock(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    handleUpdateStock(product.id, "salePoint", Number.parseInt(editStock, 10))
+                                  }
+                                  if (e.key === "Escape") {
+                                    setEditingId(null)
+                                    setEditingLocation(null)
+                                  }
+                                }}
+                                className="h-8 w-20 text-center"
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleUpdateStock(product.id, "salePoint", Number.parseInt(editStock, 10))}
+                              >
+                                <Check className="size-4 text-emerald-600" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditingId(null)
+                                  setEditingLocation(null)
+                                }}
+                              >
+                                <X className="size-4 text-red-600" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setEditingId(product.id)
+                                setEditingLocation("salePoint")
+                                setEditStock(String(inv?.salePointQuantity ?? 0))
+                              }}
+                              className="hover:text-primary hover:underline"
+                            >
+                              {inv?.salePointQuantity ?? 0}
+                            </button>
+                          )}
+                          {inv?.salePointAlert && (
+                            <AlertTriangle className="ml-1 inline size-4 text-amber-500" />
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center font-semibold">
+                          {inv?.totalQuantity ?? 0}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const hasAlert = inv?.coldRoomAlert || inv?.houseAlert || inv?.salePointAlert
+                            if ((inv?.totalQuantity ?? 0) === 0) {
+                              return <Badge className={stockStatusStyles.danger}>Esgotado</Badge>
+                            }
+                            if (hasAlert) {
+                              return <Badge className={stockStatusStyles.warning}>Crítico</Badge>
+                            }
+                            return <Badge className={stockStatusStyles.ok}>Saudável</Badge>
+                          })()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setHistoryProductId(product.id)}
+                              title="Ver histórico de movimentações"
+                            >
+                              <Package className="size-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
                     )
                   })}
-                </TabsList>
-                {(Object.keys(locationConfig) as Location[]).map((location) => (
-                  <TabsContent key={location} value={location} className="mt-6">
-                    {renderInventoryTable(location)}
-                  </TabsContent>
-                ))}
-              </Tabs>
-            )}
-          </CardContent>
-        </Card>
-  </div>
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Dialog open={showImportModal} onOpenChange={handleImportModalChange}>
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader>
-            <DialogTitle>Importar inventário via planilha</DialogTitle>
-            <DialogDescription>
-              Utilize o modelo sugerido para atualizar quantidades, mínimos e reservas de vários produtos de uma só vez.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleImportSubmit} className="space-y-5">
-            <div className="flex items-start gap-3 rounded-lg border border-dashed border-primary/40 bg-primary/5 p-4 text-sm text-primary dark:text-primary-foreground">
-              <div className="flex size-10 items-center justify-center rounded-md bg-primary/10 text-primary dark:bg-primary/20">
-                <Upload className="size-5" />
-              </div>
-              <div className="space-y-1 text-left">
-                <p className="font-semibold">Atualize o estoque em lote</p>
-                <p className="text-xs text-muted-foreground">
-                  Cada linha deve conter o SKU ou Nome do produto e as quantidades desejadas. Campos não informados permanecem inalterados.
-                </p>
-              </div>
-            </div>
+        {/* Tab: Análise ABC */}
+        <TabsContent value="abc">
+          <ABCAnalysisTab />
+        </TabsContent>
 
-            <div className="space-y-3">
-              <div className="space-y-2">
-                <Label htmlFor="inventory-import-file">Arquivo XLSX</Label>
-                <Input
-                  id="inventory-import-file"
-                  ref={importInputRef}
-                  type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleImportFileChange}
-                  disabled={importing}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Colunas reconhecidas: SKU, Nome, Câmara fria, Casa, Pontos de venda, Estoque mínimo (por local), Reservado, Avariado, Em trânsito, Estoque de segurança.
-                </p>
-              </div>
+        {/* Tab: Previsões de Demanda */}
+        <TabsContent value="forecast">
+          <DemandForecastCard />
+        </TabsContent>
 
-              {importSummary && (
-                <div className="space-y-4 rounded-lg border border-muted-foreground/30 bg-muted/20 p-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {[{
-                      label: 'Linhas na planilha',
-                      value: importSummary.totalRows
-                    }, {
-                      label: 'Processadas',
-                      value: importSummary.processedCount
-                    }, {
-                      label: 'Atualizadas',
-                      value: importSummary.updatedCount
-                    }, {
-                      label: 'Criadas',
-                      value: importSummary.createdCount
-                    }, {
-                      label: 'Ignoradas',
-                      value: importSummary.ignoredCount
-                    }].map((item) => (
-                      <div key={item.label} className="rounded-md bg-background/60 p-3 shadow-sm">
-                        <p className="text-xs font-medium text-muted-foreground">{item.label}</p>
-                        <p className="text-lg font-semibold">{item.value}</p>
-                      </div>
-                    ))}
-                  </div>
+        {/* Tab: Alertas de Vencimento */}
+        <TabsContent value="expiration">
+          <ExpirationAlertsCard />
+        </TabsContent>
 
-                  {importSummary.errors.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-destructive">Erros</p>
-                      <ul className="list-disc space-y-1 pl-5 text-xs text-destructive/80">
-                        {importSummary.errors.slice(0, 5).map((error) => (
-                          <li key={`${error.row}-${error.message}`}>
-                            Linha {error.row}: {error.message}
-                          </li>
-                        ))}
-                      </ul>
-                      {importSummary.errors.length > 5 && (
-                        <p className="text-xs text-muted-foreground">
-                          ... e mais {importSummary.errors.length - 5} erro(s).
-                        </p>
-                      )}
-                    </div>
-                  )}
+        {/* Tab: Lotes */}
+        <TabsContent value="batches">
+          <BatchManagementTab />
+        </TabsContent>
 
-                  {importSummary.warnings.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">Avisos</p>
-                      <ul className="list-disc space-y-1 pl-5 text-xs text-amber-600/80 dark:text-amber-400/80">
-                        {importSummary.warnings.slice(0, 5).map((warning, index) => (
-                          <li key={`${index}-${warning}`}>{warning}</li>
-                        ))}
-                      </ul>
-                      {importSummary.warnings.length > 5 && (
-                        <p className="text-xs text-muted-foreground">
-                          ... e mais {importSummary.warnings.length - 5} aviso(s).
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+        {/* Tab: Auditorias */}
+        <TabsContent value="audits">
+          <AuditManagementTab />
+        </TabsContent>
 
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Button
-                type="button"
-                variant="ghost"
-                className="pl-0"
-                onClick={handleTemplateDownload}
-                disabled={importing}
-              >
-                <FileDown className="mr-2 size-4" /> Baixar modelo XLSX
-              </Button>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => handleImportModalChange(false)} disabled={importing}>
-                  Cancelar
-                </Button>
-                <Button type="submit" disabled={!importFile || importing}>
-                  {importing && <Loader2 className="mr-2 size-4 animate-spin" />}
-                  Importar planilha
-                </Button>
-              </div>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
+        {/* Tab: Histórico de Movimentações */}
+        <TabsContent value="history">
+          <MovementHistoryTab />
+        </TabsContent>
+      </Tabs>
 
+      {/* Bulk Toolbar (aparece quando há seleção) */}
+      {selectedProducts.length > 0 && (
+        <BulkToolbar
+          selectedIds={selectedProducts}
+          totalCount={filteredProducts.length}
+          onClearSelection={handleClearSelection}
+          onSelectAll={() => handleSelectAll(true)}
+        />
+      )}
+
+      {/* Dialog de Histórico */}
+      {historyProductId && (
+        <InventoryHistoryDialog
+          productId={historyProductId}
+          productName={products.find(p => p.id === historyProductId)?.name ?? "Produto"}
+          open={!!historyProductId}
+          onOpenChange={(open) => !open && setHistoryProductId(null)}
+        />
+      )}
+
+      {/* Modais Existentes (Add, Transfer, Import) */}
+      
+      {/* Modal de Adicionar Estoque */}
       <Dialog open={showAddModal} onOpenChange={handleAddModalChange}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Entrada na câmara fria</DialogTitle>
+            <DialogTitle>Adicionar Estoque</DialogTitle>
             <DialogDescription>
-              Registre novas chegadas direto no estoque central. Para abastecer os demais locais, finalize a
-              transferência após esta etapa.
+              Adicione produtos ao estoque em uma localização específica
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-5">
-            <div className="flex items-start gap-3 rounded-lg border border-sky-500/40 bg-sky-500/10 p-3 text-sm text-sky-900 dark:text-sky-200">
-              <div className="flex size-10 items-center justify-center rounded-md bg-white/70 text-sky-600 dark:bg-sky-500/20">
-                <Snowflake className="size-5" />
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="addProduct">Produto</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar produto..."
+                  value={addProductSearch}
+                  onChange={(e) => setAddProductSearch(e.target.value)}
+                  className="pl-9"
+                />
               </div>
-              <div className="space-y-1">
-                <p className="font-semibold">
-                  Destino único: {locationConfig[COLD_ROOM_LOCATION].label}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Entradas sempre chegam à câmara fria. Use a transferência para abastecer casa ou pontos de venda.
-                </p>
+              <div className="max-h-[200px] overflow-y-auto rounded-md border">
+                {products
+                  .filter((p) =>
+                    p.name.toLowerCase().includes(addProductSearch.toLowerCase())
+                  )
+                  .map((product) => (
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => {
+                        setAddProductId(product.id)
+                        setAddProductSearch(product.name)
+                      }}
+                      className={cn(
+                        "w-full p-3 text-left hover:bg-muted/50",
+                        addProductId === product.id && "bg-muted"
+                      )}
+                    >
+                      <div className="font-medium">{product.name}</div>
+                      <div className="text-sm text-muted-foreground">
+                        Estoque atual: {product.inventory?.totalQuantity || 0}
+                      </div>
+                    </button>
+                  ))}
               </div>
             </div>
-            <div className="space-y-2">
-              <Label>Buscar produto</Label>
+            <div className="grid gap-2">
+              <Label htmlFor="addQuantity">Quantidade</Label>
               <Input
-                value={addProductSearch}
-                onChange={(event) => setAddProductSearch(event.target.value)}
-                placeholder="Nome ou tamanho"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Produto</Label>
-              <Select value={addProductId || undefined} onValueChange={setAddProductId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um produto" />
-                </SelectTrigger>
-                <SelectContent className="max-h-64">
-                  {products
-                    .filter((product) => {
-                      const term = addProductSearch.trim().toLowerCase()
-                      return (
-                        term.length === 0 ||
-                        product.name.toLowerCase().includes(term) ||
-                        product.size.toLowerCase().includes(term)
-                      )
-                    })
-                    .map((product) => (
-                      <SelectItem key={product.id} value={product.id}>
-                        <div className="flex flex-col text-sm">
-                          <span className="font-medium">{product.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {product.size} • Câmara fria: {getInventoryQuantity(product.inventory, COLD_ROOM_LOCATION)} un
-                          </span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Quantidade</Label>
-              <Input
+                id="addQuantity"
                 type="number"
                 min="1"
                 value={addQuantity}
-                onChange={(event) => setAddQuantity(event.target.value)}
-                placeholder="Informe a quantidade"
+                onChange={(e) => setAddQuantity(e.target.value)}
+                placeholder="Digite a quantidade"
               />
-              <div className="flex flex-wrap gap-2">
-                {QUICK_ADD_PRESETS.map((preset) => (
-                  <Button
-                    key={preset}
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setAddQuantity((current) => {
-                        const currentNumber = Number(current)
-                        const safeCurrent = Number.isFinite(currentNumber) ? currentNumber : 0
-                        return (safeCurrent + preset).toString()
-                      })
-                    }
-                  >
-                    +{preset}
-                  </Button>
-                ))}
-              </div>
             </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => handleAddModalChange(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={addStock} disabled={!addProductId || !addQuantity}>
-                Confirmar entrada
-              </Button>
+            <div className="grid gap-2">
+              <Label>Localização</Label>
+              <LocationSelector
+                value={editingLocation}
+                onChange={setEditingLocation}
+                label=""
+              />
             </div>
           </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleAddModalChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={async () => {
+                if (!addProductId || !addQuantity || !editingLocation) {
+                  toast.error("Preencha todos os campos")
+                  return
+                }
+                await handleQuickAdd(
+                  addProductId,
+                  editingLocation,
+                  Number.parseInt(addQuantity, 10)
+                )
+                handleAddModalChange(false)
+              }}
+            >
+              Adicionar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
-  <Dialog open={showTransferModal} onOpenChange={handleTransferModalChange}>
-        <DialogContent className="sm:max-w-xl">
+      {/* Modal de Transferência */}
+      <Dialog open={showTransferModal} onOpenChange={handleTransferModalChange}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Transferir estoque entre locais</DialogTitle>
+            <DialogTitle>Transferir Estoque</DialogTitle>
+            <DialogDescription>
+              Transfira produtos entre localizações
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-5">
-            <div className="flex items-start gap-3 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm text-primary dark:text-primary-foreground">
-              <div className="flex size-10 items-center justify-center rounded-md bg-white/70 text-primary dark:bg-primary/20">
-                <ArrowLeftRight className="size-5" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-semibold">Movimente estoques entre locais</p>
-                <p className="text-xs text-muted-foreground">
-                  Aumente casa e pontos de venda em duas etapas: debite da origem e credite o destino sem sair desta tela.
-                </p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>Produto</Label>
-              <Select value={transferProductId || undefined} onValueChange={setTransferProductId}>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="transferProduct">Produto</Label>
+              <Select
+                value={transferProductId}
+                onValueChange={setTransferProductId}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecione um produto" />
                 </SelectTrigger>
-                <SelectContent className="max-h-64">
+                <SelectContent>
                   {products.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      <div className="flex flex-col text-sm">
-                        <span className="font-medium">{product.name}</span>
-                        <span className="text-xs text-muted-foreground">{product.size}</span>
-                      </div>
+                      {product.name} - Estoque: {product.inventory?.totalQuantity || 0}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <LocationSelector value={transferFrom} onChange={setTransferFrom} label="De" />
-              <LocationSelector value={transferTo} onChange={setTransferTo} label="Para" />
-            </div>
-            {selectedTransferProduct && (
-              <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 px-4 py-3 text-xs text-muted-foreground sm:text-sm">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <span>
-                    Origem ({locationConfig[transferFrom].label}): {transferFromQuantity.toLocaleString("pt-BR")} un disponíveis
-                  </span>
-                  <span>
-                    Destino ({locationConfig[transferTo].label}): {transferToQuantity.toLocaleString("pt-BR")} un atuais
-                  </span>
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label>De</Label>
+                <LocationSelector
+                  value={transferFrom}
+                  onChange={setTransferFrom}
+                  label=""
+                />
               </div>
-            )}
-            <div className="space-y-2">
-              <Label>Quantidade</Label>
+              <div className="grid gap-2">
+                <Label>Para</Label>
+                <LocationSelector
+                  value={transferTo}
+                  onChange={setTransferTo}
+                  label=""
+                />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="transferQuantity">Quantidade</Label>
               <Input
+                id="transferQuantity"
                 type="number"
                 min="1"
                 value={transferQuantity}
-                onChange={(event) => setTransferQuantity(event.target.value)}
-                placeholder="Informe a quantidade"
+                onChange={(e) => setTransferQuantity(e.target.value)}
+                placeholder="Digite a quantidade"
               />
             </div>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" type="button" onClick={() => handleTransferModalChange(false)}>
-                Cancelar
-              </Button>
-              <Button
-                onClick={transferStock}
-                disabled={!transferProductId || !transferQuantity || transferFrom === transferTo}
-              >
-                Transferir
-              </Button>
-            </div>
           </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleTransferModalChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleTransfer}>
+              Transferir
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
-  )
-}
 
-function InventoryPageSkeleton() {
-  return (
-    <div className="space-y-6">
-      <Card className="border-none">
-        <CardContent className="space-y-4 pt-6">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="space-y-2">
-              <Skeleton className="h-6 w-32" />
-              <Skeleton className="h-8 w-56" />
-              <Skeleton className="h-4 w-72" />
+      {/* Modal de Importação */}
+      <Dialog open={showImportModal} onOpenChange={handleImportModalChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Importar Inventário</DialogTitle>
+            <DialogDescription>
+              Importe dados de inventário via arquivo CSV
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label>Arquivo CSV</Label>
+              <Input
+                ref={importInputRef}
+                type="file"
+                accept=".csv"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) setImportFile(file)
+                }}
+              />
+              <p className="text-sm text-muted-foreground">
+                Formato: productId, location, quantity
+              </p>
             </div>
-            <div className="flex gap-2">
-              <Skeleton className="h-9 w-32" />
-              <Skeleton className="h-9 w-28" />
-            </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-            <Skeleton className="h-24" />
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="space-y-3 pt-6">
-          <Skeleton className="h-9 w-full" />
-          <div className="grid gap-3 sm:grid-cols-3">
-            <Skeleton className="h-9" />
-            <Skeleton className="h-9" />
-            <Skeleton className="h-9" />
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="space-y-3 pt-6">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-24" />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <Skeleton className="h-6 w-48" />
-          <Skeleton className="h-64" />
-        </CardContent>
-      </Card>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => handleImportModalChange(false)}
+            >
+              Cancelar
+            </Button>
+            <Button disabled={!importFile || importing} onClick={handleImport}>
+              {importing ? (
+                <>
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                  Importando...
+                </>
+              ) : (
+                "Importar"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

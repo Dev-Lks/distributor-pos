@@ -89,6 +89,20 @@ model Product {
   lastPurchaseAt DateTime?
   avgCost   Float?
   priceLastUpdatedAt DateTime?
+  
+  // Novos campos para gestão avançada de inventário
+  expirationDate DateTime? // Data de validade
+  batchNumber String? // Número do lote
+  supplierProductCode String? // Código do fornecedor
+  barcode String? // Código de barras
+  weight Float? // Peso em kg
+  volume Float? // Volume em litros
+  image String? // URL da imagem
+  description String? // Descrição detalhada
+  nutritionalInfo Json? // Informações nutricionais
+  allergens String[] @default([]) // Alérgenos
+  storageInstructions String? // Instruções de armazenamento
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -98,6 +112,8 @@ model Product {
   priceHistories ProductPriceHistory[]
   inventoryMovements InventoryMovement[]
   pendingCartItems PendingCartItem[]
+  batches Batch[]
+  auditItems InventoryAuditItem[]
 }
 
 model Inventory {
@@ -120,9 +136,21 @@ model Inventory {
   lastAuditedAt     DateTime?
   averageDailyConsumption Float?
   turnoverDays      Float?
+  
+  // Novos campos para análises avançadas
+  reorderPoint      Int? // Ponto de reposição
+  economicOrderQuantity Int? // Quantidade econômica de pedido
+  abcClass          String? // Classificação ABC (A, B, C)
+  revenueContribution Float? // % de contribuição para receita
+  lastSoldAt        DateTime? // Última venda
+  stockoutCount     Int @default(0) // Número de vezes que ficou sem estoque
+  lastStockoutAt    DateTime? // Última vez que ficou sem estoque
+  stockValue        Float? // Valor total do estoque (custo * quantidade)
+  
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
+  @@index([abcClass])
 }
 
 model ProductPointOfSale {
@@ -394,6 +422,7 @@ model InventoryMovement {
   productId String
   saleId    String?
   pointOfSaleId String?
+  batchId   String? // Relacionar com lote específico
   type      InventoryMovementType
   quantity  Int
   unitCost  Float?
@@ -406,10 +435,90 @@ model InventoryMovement {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   sale      Sale? @relation(fields: [saleId], references: [id])
   pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  batch     Batch? @relation(fields: [batchId], references: [id])
 
   @@index([productId, occurredAt])
   @@index([saleId])
   @@index([pointOfSaleId])
+  @@index([batchId])
+}
+
+// Novo modelo para gestão de lotes
+model Batch {
+  id               String   @id @default(cuid())
+  productId        String
+  batchNumber      String   @unique
+  supplier         String?
+  productionDate   DateTime?
+  expirationDate   DateTime?
+  receivedDate     DateTime @default(now())
+  quantity         Int
+  remainingQuantity Int
+  cost             Float
+  location         InventoryLocation
+  notes            String?
+  qrCode           String?  // QR Code gerado para o lote
+  status           BatchStatus @default(ACTIVE)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventoryMovements InventoryMovement[]
+  auditItems       InventoryAuditItem[]
+
+  @@index([productId])
+  @@index([expirationDate])
+  @@index([status])
+}
+
+enum BatchStatus {
+  ACTIVE
+  DEPLETED
+  EXPIRED
+  RECALLED
+}
+
+// Modelo para auditorias de inventário
+model InventoryAudit {
+  id           String   @id @default(cuid())
+  startedAt    DateTime @default(now())
+  completedAt  DateTime?
+  status       AuditStatus @default(IN_PROGRESS)
+  location     InventoryLocation? // Auditar local específico
+  performedBy  String[] @default([])
+  totalItems   Int @default(0)
+  itemsWithDifference Int @default(0)
+  accuracyRate Float?
+  totalValueDifference Float?
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  items        InventoryAuditItem[]
+}
+
+enum AuditStatus {
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+// Itens da auditoria
+model InventoryAuditItem {
+  id                String   @id @default(cuid())
+  auditId           String
+  productId         String
+  batchId           String?
+  expectedQuantity  Int
+  countedQuantity   Int
+  difference        Int
+  notes             String?
+  photoUrl          String?
+  countedAt         DateTime @default(now())
+  audit             InventoryAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  product           Product @relation(fields: [productId], references: [id])
+  batch             Batch? @relation(fields: [batchId], references: [id])
+
+  @@index([auditId])
+  @@index([productId])
 }
 
 enum InventoryMovementType {
