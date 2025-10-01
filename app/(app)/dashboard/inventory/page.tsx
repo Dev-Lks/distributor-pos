@@ -52,6 +52,12 @@ import { ExpirationAlertsCard } from "@/components/inventory/ExpirationAlertsCar
 import { BatchManagementTab } from "@/components/inventory/BatchManagementTab"
 import { AuditManagementTab } from "@/components/inventory/AuditManagementTab"
 import { MovementHistoryTab } from "@/components/inventory/MovementHistoryTab"
+import { ProductQuickActions } from "@/components/inventory/ProductQuickActions"
+import { StockLevelBar } from "@/components/inventory/StockLevelBar"
+import { LocationPills } from "@/components/inventory/LocationPills"
+import { ProductHealthScore } from "@/components/inventory/ProductHealthScore"
+import { ViewToggle, type ViewType } from "@/components/inventory/ViewToggle"
+import { ProductCard } from "@/components/inventory/ProductCard"
 
 type Location = "coldRoom" | "house" | "salePoint"
 type ProductInventory = NonNullable<Product["inventory"]>
@@ -178,6 +184,7 @@ export default function InventoryPage() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState("overview")
   const [historyProductId, setHistoryProductId] = useState<string | null>(null)
+  const [viewType, setViewType] = useState<ViewType>("table")
 
   // Estados existentes
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -528,15 +535,23 @@ export default function InventoryPage() {
 
   return (
     <div className="space-y-6 p-6">
-      {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
+      {/* Cabeçalho Melhorado */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Inventário</h1>
-          <p className="text-muted-foreground">
-            Controle avançado de estoque com análises inteligentes
+          <h1 className="text-3xl font-bold tracking-tight">Inventário</h1>
+          <p className="text-muted-foreground mt-1">
+            Gestão completa de estoque com análises inteligentes
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setShowTransferModal(true)}>
+            <ArrowLeftRight className="mr-2 size-4" />
+            Transferir
+          </Button>
+          <Button variant="outline">
+            <ClipboardCheck className="mr-2 size-4" />
+            Auditar
+          </Button>
           <Button variant="outline" onClick={() => setShowImportModal(true)}>
             <Upload className="mr-2 size-4" />
             Importar
@@ -592,7 +607,7 @@ export default function InventoryPage() {
 
           {/* Filtros e Ações */}
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-1">
+            <div className="flex-1 min-w-[200px]">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
@@ -631,6 +646,7 @@ export default function InventoryPage() {
               availableSuppliers={[]}
               availableBrands={[]}
             />
+            <ViewToggle value={viewType} onChange={setViewType} />
             <Button
               variant="outline"
               onClick={() => setShowTransferModal(true)}
@@ -640,253 +656,207 @@ export default function InventoryPage() {
             </Button>
           </div>
 
-          {/* Tabela de Produtos com Seleção */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Produtos ({filteredProducts.length})</span>
+          {/* Visualização de Produtos */}
+          {viewType === "table" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Produtos ({filteredProducts.length})</span>
+                  {selectedProducts.length > 0 && (
+                    <Badge variant="secondary">
+                      {selectedProducts.length} selecionado{selectedProducts.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="overflow-visible">
+                <div className="relative overflow-x-auto">
+                  <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-12">
+                        <Checkbox
+                          checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
+                          onCheckedChange={handleSelectAll}
+                        />
+                      </TableHead>
+                      <TableHead>Produto</TableHead>
+                      <TableHead className="text-center">Estoque</TableHead>
+                      <TableHead>Localizações</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredProducts.map((product) => {
+                      const inv = product.inventory
+                      const isSelected = selectedProducts.includes(product.id)
+                      const totalStock = inv?.totalQuantity ?? 0
+                      const hasAlert = inv?.coldRoomAlert || inv?.houseAlert || inv?.salePointAlert
+
+                      return (
+                        <TableRow key={product.id} className={isSelected ? "bg-muted/50" : ""}>
+                          <TableCell>
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-1">
+                              <div className="font-medium">{product.name}</div>
+                              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <span>{currencyFormatter.format(product.salePrice)}</span>
+                                {product.size && (
+                                  <>
+                                    <span>•</span>
+                                    <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                                      <Package className="mr-1 size-3" />
+                                      {product.size}
+                                    </Badge>
+                                  </>
+                                )}
+                              </div>
+                              {product.category && (
+                                <Badge variant="outline" className="text-xs">{product.category}</Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="space-y-2 min-w-[120px]">
+                              <div className="flex items-center justify-between">
+                                <span className="text-2xl font-bold tabular-nums">{totalStock}</span>
+                                {hasAlert && <AlertTriangle className="size-4 text-amber-500" />}
+                              </div>
+                              <StockLevelBar
+                                current={totalStock}
+                                min={10}
+                                max={50}
+                              />
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <LocationPills
+                              coldRoom={inv?.coldRoomQuantity ?? 0}
+                              house={inv?.houseQuantity ?? 0}
+                              salePoint={inv?.salePointQuantity ?? 0}
+                              coldRoomAlert={inv?.coldRoomAlert}
+                              houseAlert={inv?.houseAlert}
+                              salePointAlert={inv?.salePointAlert}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {totalStock === 0 ? (
+                              <Badge variant="destructive" className="gap-1">
+                                <AlertTriangle className="size-3" />
+                                Esgotado
+                              </Badge>
+                            ) : hasAlert ? (
+                              <Badge variant="secondary" className="gap-1 border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                                <AlertTriangle className="size-3" />
+                                Crítico
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="gap-1 border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                                Saudável
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <ProductQuickActions
+                              productId={product.id}
+                              productName={product.name}
+                              onViewHistory={() => setHistoryProductId(product.id)}
+                              onAddStock={() => {
+                                setAddProductId(product.id)
+                                setAddProductSearch(product.name)
+                                setShowAddModal(true)
+                              }}
+                              onTransfer={() => {
+                                setTransferProductId(product.id)
+                                setShowTransferModal(true)
+                              }}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+                </div>
+              </CardContent>
+            </Card>
+          ) : viewType === "cards" ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Produtos ({filteredProducts.length})</h3>
                 {selectedProducts.length > 0 && (
                   <Badge variant="secondary">
                     {selectedProducts.length} selecionado{selectedProducts.length > 1 ? 's' : ''}
                   </Badge>
                 )}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-12">
-                      <Checkbox
-                        checked={selectedProducts.length === filteredProducts.length && filteredProducts.length > 0}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead className="text-center">Câmara Fria</TableHead>
-                    <TableHead className="text-center">Casa</TableHead>
-                    <TableHead className="text-center">Ponto de Venda</TableHead>
-                    <TableHead className="text-center">Total</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredProducts.map((product) => {
-                    const inv = product.inventory
-                    const isSelected = selectedProducts.includes(product.id)
-
-                    return (
-                      <TableRow key={product.id} className={isSelected ? "bg-muted/50" : ""}>
-                        <TableCell>
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={(checked) => handleSelectProduct(product.id, checked as boolean)}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <div className="font-medium">{product.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {currencyFormatter.format(product.salePrice)}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{product.category}</Badge>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {editingId === product.id && editingLocation === "coldRoom" ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <Input
-                                type="number"
-                                value={editStock}
-                                onChange={(e) => setEditStock(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    handleUpdateStock(product.id, "coldRoom", Number.parseInt(editStock, 10))
-                                  }
-                                  if (e.key === "Escape") {
-                                    setEditingId(null)
-                                    setEditingLocation(null)
-                                  }
-                                }}
-                                className="h-8 w-20 text-center"
-                                autoFocus
-                              />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleUpdateStock(product.id, "coldRoom", Number.parseInt(editStock, 10))}
-                              >
-                                <Check className="size-4 text-emerald-600" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditingId(null)
-                                  setEditingLocation(null)
-                                }}
-                              >
-                                <X className="size-4 text-red-600" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setEditingId(product.id)
-                                setEditingLocation("coldRoom")
-                                setEditStock(String(inv?.coldRoomQuantity ?? 0))
-                              }}
-                              className="hover:text-primary hover:underline"
-                            >
-                              {inv?.coldRoomQuantity ?? 0}
-                            </button>
-                          )}
-                          {inv?.coldRoomAlert && (
-                            <AlertTriangle className="ml-1 inline size-4 text-amber-500" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {editingId === product.id && editingLocation === "house" ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <Input
-                                type="number"
-                                value={editStock}
-                                onChange={(e) => setEditStock(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    handleUpdateStock(product.id, "house", Number.parseInt(editStock, 10))
-                                  }
-                                  if (e.key === "Escape") {
-                                    setEditingId(null)
-                                    setEditingLocation(null)
-                                  }
-                                }}
-                                className="h-8 w-20 text-center"
-                                autoFocus
-                              />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleUpdateStock(product.id, "house", Number.parseInt(editStock, 10))}
-                              >
-                                <Check className="size-4 text-emerald-600" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditingId(null)
-                                  setEditingLocation(null)
-                                }}
-                              >
-                                <X className="size-4 text-red-600" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setEditingId(product.id)
-                                setEditingLocation("house")
-                                setEditStock(String(inv?.houseQuantity ?? 0))
-                              }}
-                              className="hover:text-primary hover:underline"
-                            >
-                              {inv?.houseQuantity ?? 0}
-                            </button>
-                          )}
-                          {inv?.houseAlert && (
-                            <AlertTriangle className="ml-1 inline size-4 text-amber-500" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {editingId === product.id && editingLocation === "salePoint" ? (
-                            <div className="flex items-center justify-center gap-1">
-                              <Input
-                                type="number"
-                                value={editStock}
-                                onChange={(e) => setEditStock(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    handleUpdateStock(product.id, "salePoint", Number.parseInt(editStock, 10))
-                                  }
-                                  if (e.key === "Escape") {
-                                    setEditingId(null)
-                                    setEditingLocation(null)
-                                  }
-                                }}
-                                className="h-8 w-20 text-center"
-                                autoFocus
-                              />
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleUpdateStock(product.id, "salePoint", Number.parseInt(editStock, 10))}
-                              >
-                                <Check className="size-4 text-emerald-600" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditingId(null)
-                                  setEditingLocation(null)
-                                }}
-                              >
-                                <X className="size-4 text-red-600" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                setEditingId(product.id)
-                                setEditingLocation("salePoint")
-                                setEditStock(String(inv?.salePointQuantity ?? 0))
-                              }}
-                              className="hover:text-primary hover:underline"
-                            >
-                              {inv?.salePointQuantity ?? 0}
-                            </button>
-                          )}
-                          {inv?.salePointAlert && (
-                            <AlertTriangle className="ml-1 inline size-4 text-amber-500" />
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center font-semibold">
-                          {inv?.totalQuantity ?? 0}
-                        </TableCell>
-                        <TableCell>
-                          {(() => {
-                            const hasAlert = inv?.coldRoomAlert || inv?.houseAlert || inv?.salePointAlert
-                            if ((inv?.totalQuantity ?? 0) === 0) {
-                              return <Badge className={stockStatusStyles.danger}>Esgotado</Badge>
-                            }
-                            if (hasAlert) {
-                              return <Badge className={stockStatusStyles.warning}>Crítico</Badge>
-                            }
-                            return <Badge className={stockStatusStyles.ok}>Saudável</Badge>
-                          })()}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setHistoryProductId(product.id)}
-                              title="Ver histórico de movimentações"
-                            >
-                              <Package className="size-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+              </div>
+              <div className="space-y-2">
+                {filteredProducts.map((product) => {
+                  const isSelected = selectedProducts.includes(product.id)
+                  
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      isSelected={isSelected}
+                      onSelect={(checked) => handleSelectProduct(product.id, checked)}
+                      onViewHistory={() => setHistoryProductId(product.id)}
+                      onAddStock={() => {
+                        setAddProductId(product.id)
+                        setAddProductSearch(product.name)
+                        setShowAddModal(true)
+                      }}
+                      onTransfer={() => {
+                        setTransferProductId(product.id)
+                        setShowTransferModal(true)
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Produtos ({filteredProducts.length})</h3>
+                {selectedProducts.length > 0 && (
+                  <Badge variant="secondary">
+                    {selectedProducts.length} selecionado{selectedProducts.length > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {filteredProducts.map((product) => {
+                  const isSelected = selectedProducts.includes(product.id)
+                  
+                  return (
+                    <ProductCard
+                      key={product.id}
+                      product={product}
+                      isSelected={isSelected}
+                      onSelect={(checked) => handleSelectProduct(product.id, checked)}
+                      onViewHistory={() => setHistoryProductId(product.id)}
+                      onAddStock={() => {
+                        setAddProductId(product.id)
+                        setAddProductSearch(product.name)
+                        setShowAddModal(true)
+                      }}
+                      onTransfer={() => {
+                        setTransferProductId(product.id)
+                        setShowTransferModal(true)
+                      }}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </TabsContent>
 
         {/* Tab: Análise ABC */}

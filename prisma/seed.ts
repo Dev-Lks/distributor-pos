@@ -173,10 +173,7 @@ const defaultInventory = {
   safetyStock: 0,
 }
 
-const buildName = (definition: ProductDefinition) => {
-  if (definition.name) return definition.name
-  return `${definition.category} ${definition.volume}`.replace(/\s+/g, ' ').trim()
-}
+const buildName = (definition: ProductDefinition) => definition.category
 
 const buildSku = (definition: ProductDefinition) => {
   const sanitize = (value: string) =>
@@ -206,6 +203,7 @@ async function seedProducts() {
         cost: definition.cost,
         salePrice: definition.salePrice,
         category: definition.category,
+        packaging,
         isActive: true,
         isBonified: false,
         bonifications: 0,
@@ -223,6 +221,7 @@ async function seedProducts() {
         cost: definition.cost,
         salePrice: definition.salePrice,
         category: definition.category,
+        packaging,
         isActive: true,
         isBonified: false,
         bonifications: 0,

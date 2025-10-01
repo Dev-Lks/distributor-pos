@@ -82,21 +82,31 @@ export function AdvancedFilters({
   return (
     <div className="flex items-center gap-2">
       <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="relative">
-            <Filter className="mr-2 h-4 w-4" />
-            Filtros Avançados
-            {activeFilterCount > 0 && (
-              <Badge
-                variant="default"
-                className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center"
-              >
-                {activeFilterCount}
-              </Badge>
-            )}
-          </Button>
+        <PopoverTrigger 
+          className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+          onClick={(e) => {
+            e.stopPropagation()
+            setIsOpen(!isOpen)
+          }}
+        >
+          <Filter className="h-4 w-4" />
+          Filtros Avançados
+          {activeFilterCount > 0 && (
+            <Badge
+              variant="default"
+              className="ml-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
+            >
+              {activeFilterCount}
+            </Badge>
+          )}
         </PopoverTrigger>
-        <PopoverContent className="w-[500px] max-h-[600px] overflow-y-auto" align="start">
+        <PopoverContent 
+          className="w-[500px] max-h-[600px] overflow-y-auto" 
+          align="start"
+          onInteractOutside={(e) => {
+            setIsOpen(false)
+          }}
+        >
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h3 className="font-semibold text-lg">Filtros Avançados</h3>
