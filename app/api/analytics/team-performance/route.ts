@@ -32,13 +32,10 @@ export async function GET(request: Request) {
         startDate = startOfDay(now)
     }
 
-    // Buscar usuários e suas vendas
+    // Buscar usuários e suas vendas (todos os usuários ativos)
     const users = await prisma.user.findMany({
       where: {
-        isActive: true,
-        role: {
-          in: ['CASHIER', 'SUPERVISOR', 'ADMIN'],
-        },
+        status: 'ACTIVE',
       },
       select: {
         id: true,

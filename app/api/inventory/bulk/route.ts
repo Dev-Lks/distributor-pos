@@ -206,7 +206,7 @@ export async function POST(request: NextRequest) {
       case 'delete':
         {
           // Apenas ADMIN pode deletar
-          if (session.user?.role !== 'ADMIN') {
+          if (!session.user?.isAdmin) {
             return NextResponse.json(
               { error: 'Only admins can delete products' },
               { status: 403 }
