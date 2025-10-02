@@ -13,7 +13,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { useProducts, type Product } from "@/lib/useProducts"
-import { Plus, Edit, Trash2, Search, Package, Sparkles, X, Calculator, Tag as TagIcon, Loader2 } from "lucide-react"
+import { usePointsOfSale } from "@/lib/usePointsOfSale"
+import { StockAllocationDialog } from "@/components/inventory/StockAllocationDialog"
+import { Plus, Edit, Trash2, Search, Package, Sparkles, X, Calculator, Tag as TagIcon, Loader2, Store } from "lucide-react"
 
 type TabKey = "basic" | "pricing" | "identity"
 
@@ -519,14 +521,17 @@ const IdentityFields = ({
 
 export default function ProductsPage() {
   const { data: products = [], isLoading, refetch } = useProducts()
+  const { data: pointsOfSale = [] } = usePointsOfSale()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedSize, setSelectedSize] = useState("all")
   const [showCreatePanel, setShowCreatePanel] = useState(false)
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [isStockAllocationOpen, setIsStockAllocationOpen] = useState(false)
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
   const [productToDelete, setProductToDelete] = useState<Product | null>(null)
+  const [productForAllocation, setProductForAllocation] = useState<Product | null>(null)
   const [createForm, setCreateForm] = useState<ProductFormState>(initialFormState)
   const [editForm, setEditForm] = useState<ProductFormState>(initialFormState)
   const [createErrors, setCreateErrors] = useState<Partial<Record<keyof ProductFormState, string>>>({})
@@ -1017,6 +1022,17 @@ export default function ProductsPage() {
                           )}
                         </TableCell>
                         <TableCell className="flex justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setProductForAllocation(product)
+                              setIsStockAllocationOpen(true)
+                            }}
+                            title="Distribuir estoque"
+                          >
+                            <Store className="h-4 w-4 text-blue-500" />
+                          </Button>
                           <Button variant="ghost" size="sm" onClick={() => openEditDialog(product)}>
                             <Edit className="h-4 w-4" />
                           </Button>
@@ -1094,6 +1110,13 @@ export default function ProductsPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        <StockAllocationDialog
+          open={isStockAllocationOpen}
+          onOpenChange={setIsStockAllocationOpen}
+          product={productForAllocation}
+          pointsOfSale={Array.isArray(pointsOfSale) ? pointsOfSale : []}
+        />
 
         <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <DialogContent>

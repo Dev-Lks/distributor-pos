@@ -4,6 +4,7 @@ import type React from "react"
 import { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useProducts, type Product } from "@/lib/useProducts"
+import { usePointsOfSale, type PointOfSale } from "@/lib/usePointsOfSale"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -58,6 +59,7 @@ import { LocationPills } from "@/components/inventory/LocationPills"
 import { ProductHealthScore } from "@/components/inventory/ProductHealthScore"
 import { ViewToggle, type ViewType } from "@/components/inventory/ViewToggle"
 import { ProductCard } from "@/components/inventory/ProductCard"
+import { DistributeStockDialog } from "@/components/inventory/DistributeStockDialog"
 
 type Location = "coldRoom" | "house" | "salePoint"
 type ProductInventory = NonNullable<Product["inventory"]>
@@ -178,6 +180,7 @@ function LocationSelector({
 
 export default function InventoryPage() {
   const { data: rawProducts = [], isLoading: loading } = useProducts()
+  const { data: pointsData = [], isLoading: pointsLoading } = usePointsOfSale()
   const queryClient = useQueryClient()
 
   // Estado para seleção em massa
@@ -208,6 +211,10 @@ export default function InventoryPage() {
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
   const importInputRef = useRef<HTMLInputElement | null>(null)
+  
+  // Estado para distribuição de estoque
+  const [showDistributeDialog, setShowDistributeDialog] = useState(false)
+  const [distributeProductId, setDistributeProductId] = useState<string | null>(null)
 
   // Estado para filtros avançados
   const [advancedFilters, setAdvancedFilters] = useState<any>({})
@@ -235,6 +242,15 @@ export default function InventoryPage() {
           : undefined
       })),
     [rawProducts]
+  )
+
+  // Pontos de venda ativos
+  const activePointsOfSale = useMemo(
+    () =>
+      Array.isArray(pointsData)
+        ? (pointsData as PointOfSale[]).filter((point) => point.isActive)
+        : [],
+    [pointsData]
   )
 
   // Funções de seleção em massa
@@ -776,6 +792,10 @@ export default function InventoryPage() {
                                 setTransferProductId(product.id)
                                 setShowTransferModal(true)
                               }}
+                              onDistribute={() => {
+                                setDistributeProductId(product.id)
+                                setShowDistributeDialog(true)
+                              }}
                             />
                           </TableCell>
                         </TableRow>
@@ -1124,6 +1144,18 @@ export default function InventoryPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Diálogo de Distribuição para Pontos de Venda */}
+      <DistributeStockDialog
+        open={showDistributeDialog}
+        onOpenChange={setShowDistributeDialog}
+        product={products.find(p => p.id === distributeProductId) || null}
+        pointsOfSale={activePointsOfSale}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["products"] })
+          setDistributeProductId(null)
+        }}
+      />
     </div>
   )
 }

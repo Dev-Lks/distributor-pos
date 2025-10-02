@@ -17,6 +17,7 @@ import {
   History,
   BarChart,
   MoreHorizontal,
+  Store,
 } from "lucide-react"
 
 interface ProductQuickActionsProps {
@@ -25,6 +26,7 @@ interface ProductQuickActionsProps {
   onViewDetails?: () => void
   onEdit?: () => void
   onTransfer?: () => void
+  onDistribute?: () => void
   onAddStock?: () => void
   onAdjust?: () => void
   onViewHistory?: () => void
@@ -37,6 +39,7 @@ export function ProductQuickActions({
   onViewDetails,
   onEdit,
   onTransfer,
+  onDistribute,
   onAddStock,
   onAdjust,
   onViewHistory,
@@ -70,6 +73,12 @@ export function ProductQuickActions({
           <DropdownMenuItem onClick={onTransfer}>
             <ArrowUpDown className="mr-2 size-4" />
             Transferir
+          </DropdownMenuItem>
+        )}
+        {onDistribute && (
+          <DropdownMenuItem onClick={onDistribute}>
+            <Store className="mr-2 size-4" />
+            Distribuir para PDVs
           </DropdownMenuItem>
         )}
         {onAddStock && (
