@@ -206,7 +206,7 @@ export default function UsersPage() {
                     </td>
                     <td className="px-4 py-3 text-right">
                       <div className="flex justify-end gap-2">
-                        <Link href={`/admin/users/${user.id}`}>
+                        <Link href={`/dashboard/admin/users/${user.id}`}>
                           <Button variant="ghost" size="sm">
                             <Edit className="h-4 w-4 mr-1" />
                             Editar

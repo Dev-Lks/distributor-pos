@@ -35,8 +35,15 @@ export default withAuth(
       return isAdmin || permissions.includes(permission);
     };
 
-    // Rotas exclusivas do ADMIN
-    if (path.startsWith("/admin")) {
+    // Rotas exclusivas do ADMIN (legado - manter para compatibilidade)
+    if (path.startsWith("/admin") && !path.startsWith("/dashboard/admin")) {
+      if (!isAdmin) {
+        return NextResponse.redirect(new URL("/unauthorized", req.url));
+      }
+    }
+
+    // Rotas de administração dentro do dashboard
+    if (path.startsWith("/dashboard/admin")) {
       if (!isAdmin) {
         return NextResponse.redirect(new URL("/unauthorized", req.url));
       }

@@ -175,6 +175,18 @@ const navSections: Array<{
         permission: "viewSettings"
       }
     ]
+  },
+  {
+    heading: "Administração",
+    items: [
+      {
+        label: "Usuários",
+        description: "Gestão de usuários e permissões",
+        href: "/dashboard/admin/users",
+        icon: User,
+        permission: "manageUsers"
+      }
+    ]
   }
 ]
 

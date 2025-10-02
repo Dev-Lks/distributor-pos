@@ -230,7 +230,7 @@ export default function EditUserPage() {
 
         {/* Ações */}
         <div className="flex justify-end gap-4">
-          <Link href="/admin/users">
+          <Link href="/dashboard/admin/users">
             <Button type="button" variant="outline">
               Cancelar
             </Button>
