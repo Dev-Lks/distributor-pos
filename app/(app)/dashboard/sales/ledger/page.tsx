@@ -18,7 +18,11 @@ import {
   Sparkles,
   TrendingUp,
   User,
-  WalletCards
+  WalletCards,
+  Download,
+  X,
+  FileDown,
+  DollarSign
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -35,6 +39,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { useSales, type SaleRecord, type UpdateSalePayload } from "@/lib/useSales"
+import { useCashSession } from "@/lib/useCashSession"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -81,6 +86,7 @@ const highValueThreshold = 400
 
 export default function SalesLedgerPage() {
   const { sales = [], salesLoading, cancelSale, updateSale, refetchSales } = useSales()
+  const { session: cashSession } = useCashSession()
 
   const [searchTerm, setSearchTerm] = useState("")
   const [paymentFilter, setPaymentFilter] = useState<string>("all")
@@ -89,6 +95,7 @@ export default function SalesLedgerPage() {
   const [toDate, setToDate] = useState("")
   const [sort, setSort] = useState<SortOption>("date-desc")
   const [showHighValueOnly, setShowHighValueOnly] = useState(false)
+  const [showCurrentSessionOnly, setShowCurrentSessionOnly] = useState(false)
   const [editorOpen, setEditorOpen] = useState(false)
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null)
   const [isSaving, setIsSaving] = useState(false)
@@ -126,6 +133,16 @@ export default function SalesLedgerPage() {
 
       if (showHighValueOnly && (sale.total ?? 0) < highValueThreshold) return false
 
+      // Filtro por sessão de caixa atual
+      if (showCurrentSessionOnly && cashSession) {
+        const sessionStart = new Date(cashSession.openedAt)
+        if (saleDate < sessionStart) return false
+        if (cashSession.closedAt) {
+          const sessionEnd = new Date(cashSession.closedAt)
+          if (saleDate > sessionEnd) return false
+        }
+      }
+
       if (term.length > 0) {
         const haystack = getSaleSearchContent(sale)
         if (!haystack.includes(term)) return false
@@ -133,7 +150,7 @@ export default function SalesLedgerPage() {
 
       return true
     })
-  }, [sales, searchTerm, paymentFilter, statusFilter, fromDate, toDate, showHighValueOnly])
+  }, [sales, searchTerm, paymentFilter, statusFilter, fromDate, toDate, showHighValueOnly, showCurrentSessionOnly, cashSession])
 
   const sortedSales = useMemo(() => {
     const result = [...filteredSales]
@@ -206,6 +223,60 @@ export default function SalesLedgerPage() {
     setFromDate("")
     setToDate("")
     setShowHighValueOnly(false)
+    setShowCurrentSessionOnly(false)
+  }
+
+  const handleExportCSV = () => {
+    if (sortedSales.length === 0) {
+      toast.error("Nenhuma venda para exportar")
+      return
+    }
+
+    try {
+      // Preparar dados para CSV
+      const csvData = sortedSales.map((sale) => ({
+        ID: sale.id.slice(-8),
+        Data: dateFormatter.format(new Date(sale.date)),
+        Cliente: sale.customerName || "Não informado",
+        Telefone: sale.customerPhone || "",
+        "Ponto de Venda": sale.pointOfSale?.name || "",
+        Canal: sale.channel || "",
+        Status: statusLabels[(sale.status ?? "completed").toLowerCase()] || sale.status,
+        Pagamento: paymentLabels[(sale.paymentMethod ?? "other").toLowerCase()] || sale.paymentMethod,
+        Total: `R$ ${(sale.total ?? 0).toFixed(2)}`,
+        Itens: sale.items.map((item) => `${item.quantity}x ${item.product?.name ?? "Produto"}`).join("; "),
+        Observações: sale.notes || ""
+      }))
+
+      // Converter para CSV
+      const headers = Object.keys(csvData[0])
+      const csvContent = [
+        headers.join(","),
+        ...csvData.map((row) => 
+          headers.map((header) => {
+            const value = row[header as keyof typeof row]
+            // Escapar vírgulas e aspas
+            return `"${String(value).replace(/"/g, '""')}"`
+          }).join(",")
+        )
+      ].join("\n")
+
+      // Download do arquivo
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" })
+      const link = document.createElement("a")
+      const url = URL.createObjectURL(blob)
+      link.setAttribute("href", url)
+      link.setAttribute("download", `vendas_${new Date().toISOString().split('T')[0]}.csv`)
+      link.style.visibility = "hidden"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      
+      toast.success(`${sortedSales.length} vendas exportadas com sucesso`)
+    } catch (error) {
+      console.error("Erro ao exportar CSV:", error)
+      toast.error("Erro ao exportar vendas")
+    }
   }
 
   const handleOpenEditor = (sale: SaleRecord) => {
@@ -263,16 +334,31 @@ export default function SalesLedgerPage() {
         <Card className="border-none bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-sm">
           <CardHeader className="pb-2">
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div className="space-y-1">
-                <Badge variant="secondary" className="bg-primary/20 text-primary">
-                  Painel avançado de vendas
-                </Badge>
-                <CardTitle className="text-2xl md:text-3xl">Livro de vendas</CardTitle>
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="text-2xl md:text-3xl">Registro de Vendas</CardTitle>
+                  {cashSession && (
+                    <Badge variant="outline" className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                      <DollarSign className="h-3 w-3" />
+                      Caixa aberto
+                    </Badge>
+                  )}
+                </div>
                 <p className="max-w-2xl text-sm text-muted-foreground">
-                  Acompanhe cada venda em detalhe, encontre padrões e ajuste dados com poucos cliques. Ideal para conferência diária ou fechamento de caixa.
+                  Consulte, edite e audite todas as transações. Visualize o histórico completo de vendas com filtros avançados e ferramentas de análise.
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="gap-2"
+                  onClick={handleExportCSV}
+                  disabled={sortedSales.length === 0}
+                >
+                  <FileDown className="h-4 w-4" />
+                  Exportar CSV
+                </Button>
                 <Button asChild variant="outline" size="sm" className="gap-2">
                   <Link href="/dashboard">
                     <ArrowUpDown className="h-4 w-4" />
@@ -387,6 +473,18 @@ export default function SalesLedgerPage() {
                   Mostrar apenas tickets acima de {currencyFormatter.format(highValueThreshold)}
                 </Label>
               </div>
+              {cashSession && (
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-3 py-2">
+                  <Switch 
+                    checked={showCurrentSessionOnly} 
+                    onCheckedChange={setShowCurrentSessionOnly} 
+                    id="current-session" 
+                  />
+                  <Label htmlFor="current-session" className="cursor-pointer text-sm text-emerald-700 dark:text-emerald-300">
+                    Apenas sessão de caixa atual
+                  </Label>
+                </div>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={handleClearFilters}>
                   Limpar filtros

@@ -72,13 +72,6 @@ const navSections: Array<{
         icon: BarChart3
       },
       {
-        label: "PDV",
-        description: "Registrador rápido",
-        href: "/dashboard/sales",
-        icon: ShoppingCart,
-        tag: "Live"
-      },
-      {
         label: "Encomendas",
         description: "Pedidos especiais",
         href: "/dashboard/orders",
@@ -90,6 +83,25 @@ const navSections: Array<{
         description: "Cadastro e bonificações",
         href: "/dashboard/customers",
         icon: UserRound
+      }
+    ]
+  },
+  {
+    heading: "Vendas",
+    items: [
+      {
+        label: "PDV",
+        description: "Ponto de venda rápido",
+        href: "/dashboard/sales",
+        icon: ShoppingCart,
+        tag: "Live"
+      },
+      {
+        label: "Registro de Vendas",
+        description: "Histórico e auditoria",
+        href: "/dashboard/sales/ledger",
+        icon: FileText,
+        tag: "Novo"
       }
     ]
   },
@@ -126,9 +138,9 @@ const navSections: Array<{
         icon: FileText
       },
       {
-        label: "Livro de Vendas",
-        description: "Tabela e edição avançada",
-        href: "/dashboard/sales/ledger",
+        label: "Análise de Vendas",
+        description: "Relatórios e estatísticas",
+        href: "/dashboard/reports/sales",
         icon: ListChecks
       }
     ]
@@ -163,14 +175,25 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const flatNav = useMemo(() => navSections.flatMap((section) => section.items), [])
 
   const activeItem = useMemo(
-    () =>
-      flatNav.find((item) => {
-        if (pathname === item.href) return true
-        if (item.href === "/dashboard") {
-          return pathname === "/dashboard"
-        }
+    () => {
+      // Primeiro, tentar correspondência exata
+      const exactMatch = flatNav.find((item) => pathname === item.href)
+      if (exactMatch) return exactMatch
+
+      // Depois, tentar correspondência de subrotas (mais específico primeiro)
+      // Ordenar por comprimento de href (mais longo primeiro) para pegar rotas mais específicas
+      const sortedNav = [...flatNav].sort((a, b) => b.href.length - a.href.length)
+      
+      const subRouteMatch = sortedNav.find((item) => {
+        // Dashboard só fica ativo na rota exata (já verificado acima)
+        if (item.href === "/dashboard") return false
+        
+        // Verificar se pathname começa com o href + /
         return pathname.startsWith(`${item.href}/`)
-      }) ?? flatNav[0],
+      })
+      
+      return subRouteMatch ?? flatNav[0]
+    },
     [flatNav, pathname]
   )
 
