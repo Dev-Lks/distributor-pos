@@ -30,16 +30,36 @@ export default function LoginPage() {
       redirect: false,
       email,
       password,
-      callbackUrl,
     })
 
     if (result?.error) {
-      setErrorMessage("Credenciais inválidas. Verifique e tente novamente.")
+      setErrorMessage(result.error || "Credenciais inválidas. Verifique e tente novamente.")
       setIsSubmitting(false)
       return
     }
 
-    router.push(result?.url ?? callbackUrl)
+    // Buscar sessão para redirecionar baseado no role
+    try {
+      const sessionRes = await fetch("/api/auth/session")
+      const session = await sessionRes.json()
+      const role = session?.user?.role
+
+      // Redirecionar baseado no role do usuário
+      if (role === "ADMIN" || role === "MANAGER" || role === "SUPERVISOR") {
+        router.push(callbackUrl || "/dashboard")
+      } else if (role === "SELLER") {
+        router.push("/sales")
+      } else if (role === "CASHIER") {
+        router.push("/cash-session")
+      } else {
+        router.push("/")
+      }
+      
+      router.refresh()
+    } catch (error) {
+      console.error("Erro ao buscar sessão:", error)
+      router.push(callbackUrl)
+    }
   }
 
   const resolvedError = errorMessage ?? (defaultError ? "Sessão expirada. Faça login novamente." : null)

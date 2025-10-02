@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from '@prisma/client'
+import { PrismaClient, UserRole } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -247,14 +247,33 @@ async function seedUsers() {
   if (!existingAdmin) {
     const hashedPassword = await bcrypt.hash(adminPassword, 12)
 
-    await prisma.user.create({
+    // Buscar primeiro ponto de venda para vincular
+    const firstPointOfSale = await prisma.pointOfSale.findFirst()
+
+    const admin = await prisma.user.create({
       data: {
         email: adminEmail,
         name: adminName,
+        fullName: adminName,
         password: hashedPassword,
-        role: Role.ADMIN,
+        passwordHash: hashedPassword,
+        role: UserRole.ADMIN,
+        status: 'ACTIVE',
+        isActive: true,
       },
     })
+
+    // Vincular ao ponto de venda se existir
+    if (firstPointOfSale) {
+      await prisma.userPointOfSale.create({
+        data: {
+          userId: admin.id,
+          pointOfSaleId: firstPointOfSale.id,
+          roleInPOS: 'MANAGER',
+          isPrimary: true,
+        },
+      })
+    }
 
     if (!process.env.SEED_ADMIN_PASSWORD) {
       console.log('⚠️ Usuário admin criado com a senha padrão "admin123". Atualize após o primeiro login!')

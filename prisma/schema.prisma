@@ -13,10 +13,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Role {
+enum UserRole {
   ADMIN
-  SUPERVISOR
+  MANAGER
+  SELLER
   CASHIER
+  SUPERVISOR
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_ACTIVATION
+}
+
+enum RoleInPOS {
+  MANAGER      // Gerencia este PDV
+  SELLER       // Vende neste PDV
+  CASHIER      // Opera caixa neste PDV
+  SUPERVISOR   // Supervisiona este PDV
 }
 
 enum PersonType {
@@ -69,17 +85,72 @@ enum OrderPriority {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String   @unique
-  password  String
-  role      Role     @default(CASHIER)
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  cashSessions CashSession[]
-  cashTransactions CashTransaction[] @relation("UserCashTransactions")
-  pendingCarts PendingCart[] @relation("UserPendingCarts")
+  id                String         @id @default(cuid())
+  
+  // Informações básicas
+  fullName          String
+  email             String         @unique
+  passwordHash      String
+  phone             String?
+  cpf               String?        @unique
+  avatarUrl         String?
+  
+  // Informações legadas (compatibilidade)
+  name              String?
+  password          String?
+  
+  // Permissões e status
+  role              UserRole       @default(SELLER)
+  status            UserStatus     @default(ACTIVE)
+  isActive          Boolean        @default(true)
+  
+  // Multi-tenancy (preparação futura)
+  tenantId          String?
+  
+  // Metadados
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime?
+  failedLoginAttempts Int         @default(0)
+  lockedUntil       DateTime?
+  
+  // Timestamps
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  createdById       String?
+  
+  // Relações
+  cashSessions      CashSession[]
+  cashTransactions  CashTransaction[] @relation("UserCashTransactions")
+  pendingCarts      PendingCart[]     @relation("UserPendingCarts")
+  userPointsOfSale  UserPointOfSale[]
+  salesCreated      Sale[]            @relation("SaleCreatedBy")
+  inventoryMovements InventoryMovement[] @relation("MovementPerformedBy")
+  ordersCreated     Order[]           @relation("OrderCreatedBy")
+  ordersAssigned    Order[]           @relation("OrderAssignedTo")
+  
+  @@index([email])
+  @@index([status])
+  @@index([role])
+  @@index([tenantId])
+}
+
+model UserPointOfSale {
+  id            String      @id @default(cuid())
+  userId        String
+  pointOfSaleId String
+  roleInPOS     RoleInPOS   @default(SELLER)
+  isPrimary     Boolean     @default(false)
+  isActive      Boolean     @default(true)
+  assignedAt    DateTime    @default(now())
+  assignedBy    String?
+  
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointOfSale   PointOfSale @relation(fields: [pointOfSaleId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, pointOfSaleId])
+  @@index([userId])
+  @@index([pointOfSaleId])
+  @@index([isPrimary])
 }
 
 model Product {
@@ -225,6 +296,8 @@ model Sale {
   notes     String?
   pendingCartId String? @unique
   metadata Json?
+  createdById   String?
+  
   items     SaleItem[]
   payments  SalePayment[]
   pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
@@ -232,9 +305,11 @@ model Sale {
   cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
   pendingCart PendingCart? @relation("SalePendingCart", fields: [pendingCartId], references: [id])
   inventoryMovements InventoryMovement[]
+  createdBy     User?   @relation("SaleCreatedBy", fields: [createdById], references: [id])
 
   @@index([customerId])
   @@index([cashSessionId])
+  @@index([createdById])
   @@index([date, pointOfSaleId]) // Para análises de vendas por período e ponto
   @@index([date, status]) // Para filtros de vendas por data e status
   @@index([date]) // Para queries ordenadas por data
@@ -337,6 +412,7 @@ model PointOfSale {
   pendingCarts PendingCart[]
   dailyReports DailyReport[]
   orders Order[]
+  userPointsOfSale UserPointOfSale[]
 }
 
 model SalePayment {
@@ -478,16 +554,20 @@ model InventoryMovement {
   adjustmentReason String?
   notes     String?
   performedBy String?
+  performedById String?
   occurredAt DateTime @default(now())
+  
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   sale      Sale? @relation(fields: [saleId], references: [id])
   pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
   batch     Batch? @relation(fields: [batchId], references: [id])
+  performedByUser User? @relation("MovementPerformedBy", fields: [performedById], references: [id])
 
   @@index([productId, occurredAt])
   @@index([saleId])
   @@index([pointOfSaleId])
   @@index([batchId])
+  @@index([performedById])
 }
 
 // Novo modelo para gestão de lotes
@@ -689,11 +769,14 @@ model Order {
   notifications   Json?         // Notificações enviadas
   
   // Metadados
-  createdBy       String?       // Usuário que criou
-  assignedTo      String?       // Usuário responsável
-  source          String?       // web, telefone, whatsapp, presencial
+  createdBy       String?
+  assignedTo      String?
+  source          String?
   pointOfSaleId   String?
+  
   pointOfSale     PointOfSale?  @relation(fields: [pointOfSaleId], references: [id])
+  createdByUser   User?         @relation("OrderCreatedBy", fields: [createdBy], references: [id])
+  assignedToUser  User?         @relation("OrderAssignedTo", fields: [assignedTo], references: [id])
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -702,6 +785,8 @@ model Order {
   @@index([status])
   @@index([promisedAt])
   @@index([orderNumber])
+  @@index([createdBy])
+  @@index([assignedTo])
 }
 
 model OrderItem {
