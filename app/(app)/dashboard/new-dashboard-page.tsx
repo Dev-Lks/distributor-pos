@@ -80,7 +80,7 @@ export default function NewDashboardPage() {
       />
 
       {/* KPIs Grid */}
-      <KPIsWidget metrics={kpiMetrics} />
+      <KPIsWidget />
 
       {/* Widgets Grid - Responsive Layout */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
