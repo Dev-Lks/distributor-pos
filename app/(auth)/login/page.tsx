@@ -26,39 +26,41 @@ export default function LoginPage() {
     setIsSubmitting(true)
     setErrorMessage(null)
 
-    const result = await signIn("credentials", {
-      redirect: false,
-      email,
-      password,
-    })
-
-    if (result?.error) {
-      setErrorMessage(result.error || "Credenciais inválidas. Verifique e tente novamente.")
-      setIsSubmitting(false)
-      return
-    }
-
-    // Buscar sessão para redirecionar baseado no role
     try {
+      const result = await signIn("credentials", {
+        redirect: false,
+        email,
+        password,
+      })
+
+      if (result?.error) {
+        setErrorMessage(result.error || "Credenciais inválidas. Verifique e tente novamente.")
+        setIsSubmitting(false)
+        return
+      }
+
+      // Buscar sessão para redirecionar baseado no role
       const sessionRes = await fetch("/api/auth/session")
       const session = await sessionRes.json()
       const role = session?.user?.role
 
-      // Redirecionar baseado no role do usuário
-      if (role === "ADMIN" || role === "MANAGER" || role === "SUPERVISOR") {
-        router.push(callbackUrl || "/dashboard")
-      } else if (role === "SELLER") {
-        router.push("/sales")
-      } else if (role === "CASHIER") {
-        router.push("/cash-session")
-      } else {
-        router.push("/")
-      }
+      // Redirecionar baseado no role do usuário (apenas uma vez)
+      let redirectUrl = "/"
       
-      router.refresh()
+      if (role === "ADMIN" || role === "MANAGER" || role === "SUPERVISOR") {
+        redirectUrl = callbackUrl || "/dashboard"
+      } else if (role === "SELLER") {
+        redirectUrl = "/sales"
+      } else if (role === "CASHIER") {
+        redirectUrl = "/cash-session"
+      }
+
+      // Usar window.location para evitar múltiplas chamadas ao router
+      window.location.href = redirectUrl
     } catch (error) {
-      console.error("Erro ao buscar sessão:", error)
-      router.push(callbackUrl)
+      console.error("Erro ao fazer login:", error)
+      setErrorMessage("Erro ao processar login. Tente novamente.")
+      setIsSubmitting(false)
     }
   }
 

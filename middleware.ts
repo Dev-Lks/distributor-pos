@@ -26,10 +26,14 @@ export default withAuth(
       }
     }
 
-    // Rotas de gerente - vendedores e caixas não acessam
+    // Rotas de dashboard - vendedores e caixas não acessam dashboard
     if (path.startsWith("/dashboard") && !path.startsWith("/dashboard/users")) {
       if (role === "SELLER" || role === "CASHIER") {
-        return NextResponse.redirect(new URL("/sales", req.url));
+        // Redireciona para página apropriada apenas se tentando acessar dashboard
+        if (path === "/dashboard" || path === "/dashboard/") {
+          return NextResponse.redirect(new URL("/sales", req.url));
+        }
+        return NextResponse.redirect(new URL("/unauthorized", req.url));
       }
     }
 
@@ -63,7 +67,8 @@ export const config = {
   matcher: [
     "/dashboard/:path*",
     "/admin/:path*",
-    "/sales/:path*",
+    // Remover /sales do matcher para evitar loop
+    // "/sales/:path*",
     "/inventory/:path*",
     "/reports/:path*",
     "/orders/:path*",
