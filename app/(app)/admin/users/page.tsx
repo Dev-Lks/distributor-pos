@@ -5,15 +5,17 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePermissions } from "@/lib/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserPlus, Search } from "lucide-react";
-import { redirect } from "next/navigation";
+import { UserPlus, Search, Edit, Shield } from "lucide-react";
+import { redirect, useRouter } from "next/navigation";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function UsersPage() {
   const { can } = usePermissions();
   const queryClient = useQueryClient();
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<string>("");
+  const [adminFilter, setAdminFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
 
   if (!can.manageUsers) {
@@ -21,11 +23,11 @@ export default function UsersPage() {
   }
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ["users", searchQuery, roleFilter, statusFilter],
+    queryKey: ["users", searchQuery, adminFilter, statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (searchQuery) params.set("search", searchQuery);
-      if (roleFilter) params.set("role", roleFilter);
+      if (adminFilter) params.set("isAdmin", adminFilter);
       if (statusFilter) params.set("status", statusFilter);
 
       const res = await fetch(`/api/users?${params}`);
@@ -83,16 +85,13 @@ export default function UsersPage() {
         </div>
 
         <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
+          value={adminFilter}
+          onChange={(e) => setAdminFilter(e.target.value)}
           className="px-4 py-2 border rounded-md"
         >
-          <option value="">Todos os papéis</option>
-          <option value="ADMIN">Administrador</option>
-          <option value="MANAGER">Gerente</option>
-          <option value="SELLER">Vendedor</option>
-          <option value="CASHIER">Caixa</option>
-          <option value="SUPERVISOR">Supervisor</option>
+          <option value="">Todos os tipos</option>
+          <option value="true">Administradores</option>
+          <option value="false">Usuários Comuns</option>
         </select>
 
         <select
@@ -120,7 +119,10 @@ export default function UsersPage() {
                   Email
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium">
-                  Papel
+                  Tipo
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium">
+                  Permissões
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-medium">
                   Status
@@ -139,14 +141,14 @@ export default function UsersPage() {
             <tbody>
               {isLoading && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center">
+                  <td colSpan={8} className="px-4 py-8 text-center">
                     Carregando usuários...
                   </td>
                 </tr>
               )}
               {!isLoading && users?.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-8 text-center">
+                  <td colSpan={8} className="px-4 py-8 text-center">
                     Nenhum usuário encontrado
                   </td>
                 </tr>
@@ -160,27 +162,21 @@ export default function UsersPage() {
                     <td className="px-4 py-3 text-sm">{user.email}</td>
                     <td className="px-4 py-3 text-sm">
                       <span
-                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                          user.role === "ADMIN"
+                        className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
+                          user.isAdmin
                             ? "bg-red-100 text-red-800"
-                            : user.role === "MANAGER"
-                            ? "bg-orange-100 text-orange-800"
-                            : user.role === "SUPERVISOR"
-                            ? "bg-purple-100 text-purple-800"
-                            : user.role === "SELLER"
-                            ? "bg-green-100 text-green-800"
                             : "bg-blue-100 text-blue-800"
                         }`}
                       >
-                        {user.role === "ADMIN"
-                          ? "Admin"
-                          : user.role === "MANAGER"
-                          ? "Gerente"
-                          : user.role === "SUPERVISOR"
-                          ? "Supervisor"
-                          : user.role === "SELLER"
-                          ? "Vendedor"
-                          : "Caixa"}
+                        {user.isAdmin && <Shield className="h-3 w-3" />}
+                        {user.isAdmin ? "Administrador" : "Usuário"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span className="text-muted-foreground">
+                        {user.isAdmin
+                          ? "Todas"
+                          : `${user.permissions?.length || 0} permissões`}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm">
@@ -209,19 +205,27 @@ export default function UsersPage() {
                         : "Nunca"}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          toggleUserStatus.mutate({
-                            id: user.id,
-                            status: user.status,
-                          })
-                        }
-                        disabled={toggleUserStatus.isPending}
-                      >
-                        {user.status === "ACTIVE" ? "Desativar" : "Ativar"}
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/admin/users/${user.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Edit className="h-4 w-4 mr-1" />
+                            Editar
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            toggleUserStatus.mutate({
+                              id: user.id,
+                              status: user.status,
+                            })
+                          }
+                          disabled={toggleUserStatus.isPending}
+                        >
+                          {user.status === "ACTIVE" ? "Desativar" : "Ativar"}
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

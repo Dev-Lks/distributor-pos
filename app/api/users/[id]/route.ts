@@ -18,6 +18,7 @@ export async function GET(
   const user = await prisma.user.findUnique({
     where: { id: params.id },
     include: {
+      permissions: true,
       userPointsOfSale: {
         include: {
           pointOfSale: true,
@@ -43,15 +44,12 @@ export async function PATCH(
 ) {
   const session = await getServerSession(authOptions);
 
-  if (
-    !session ||
-    (session.user.role !== "ADMIN" && session.user.role !== "MANAGER")
-  ) {
+  if (!session || !session.user.isAdmin) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
 
   const body = await req.json();
-  const { fullName, phone, cpf, role, status, pointsOfSaleIds, newPassword } =
+  const { fullName, phone, cpf, isAdmin, status, pointsOfSaleIds, newPassword, permissions } =
     body;
 
   const updateData: any = {};
@@ -61,7 +59,7 @@ export async function PATCH(
   }
   if (phone !== undefined) updateData.phone = phone;
   if (cpf !== undefined) updateData.cpf = cpf;
-  if (role) updateData.role = role;
+  if (isAdmin !== undefined) updateData.isAdmin = isAdmin;
   if (status) updateData.status = status;
 
   // Se nova senha foi fornecida
@@ -89,9 +87,26 @@ export async function PATCH(
       data: pointsOfSaleIds.map((posId: string, index: number) => ({
         userId: params.id,
         pointOfSaleId: posId,
-        roleInPOS: role === "MANAGER" ? "MANAGER" : "SELLER",
         isPrimary: index === 0,
         assignedBy: session.user.id,
+      })),
+    });
+  }
+
+  // Atualizar permissões se fornecido
+  if (permissions) {
+    // Remover permissões antigas
+    await prisma.userPermission.deleteMany({
+      where: { userId: params.id },
+    });
+
+    // Criar novas permissões
+    await prisma.userPermission.createMany({
+      data: permissions.map((perm: string) => ({
+        userId: params.id,
+        permission: perm,
+        granted: true,
+        grantedBy: session.user.id,
       })),
     });
   }
@@ -106,7 +121,7 @@ export async function DELETE(
 ) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !session.user.isAdmin) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
 

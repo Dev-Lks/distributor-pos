@@ -1,4 +1,4 @@
-import { PrismaClient, UserRole } from '@prisma/client'
+import { PrismaClient, PermissionKey } from '@prisma/client'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
@@ -257,7 +257,7 @@ async function seedUsers() {
         fullName: adminName,
         password: hashedPassword,
         passwordHash: hashedPassword,
-        role: UserRole.ADMIN,
+        isAdmin: true,
         status: 'ACTIVE',
         isActive: true,
       },
@@ -269,7 +269,6 @@ async function seedUsers() {
         data: {
           userId: admin.id,
           pointOfSaleId: firstPointOfSale.id,
-          roleInPOS: 'MANAGER',
           isPrimary: true,
         },
       })

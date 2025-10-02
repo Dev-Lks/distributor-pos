@@ -26,7 +26,7 @@ async function createAdmin() {
       console.log('⚠️  Usuário admin já existe:');
       console.log(`   Email: ${existing.email}`);
       console.log(`   Nome: ${existing.fullName || existing.name}`);
-      console.log(`   Role: ${existing.role}`);
+      console.log(`   isAdmin: ${existing.isAdmin}`);
       console.log(`   Status: ${existing.status}\n`);
       return;
     }
@@ -45,7 +45,7 @@ async function createAdmin() {
         name: fullName, // Compatibilidade legado
         passwordHash,
         password: passwordHash, // Compatibilidade legado
-        role: 'ADMIN',
+        isAdmin: true,
         status: 'ACTIVE',
         isActive: true,
       },
@@ -55,7 +55,7 @@ async function createAdmin() {
     console.log('📋 Credenciais:');
     console.log(`   Email: ${email}`);
     console.log(`   Senha: ${password}`);
-    console.log(`   Role: ${admin.role}`);
+    console.log(`   isAdmin: ${admin.isAdmin}`);
     console.log(`   ID: ${admin.id}\n`);
 
     // Vincular ao PDV se existir
@@ -64,7 +64,6 @@ async function createAdmin() {
         data: {
           userId: admin.id,
           pointOfSaleId: firstPOS.id,
-          roleInPOS: 'MANAGER',
           isPrimary: true,
         },
       });

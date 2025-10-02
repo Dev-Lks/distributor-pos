@@ -36,6 +36,7 @@ import { Button } from "@/components/ui/button"
 import { ThemeTogglePopover } from "./ThemeTogglePopover"
 import { signOut, useSession } from "next-auth/react"
 import { useCashSession } from "@/lib/useCashSession"
+import { usePermissions } from "@/lib/usePermissions"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +57,7 @@ interface NavItem {
   href: string
   icon: ComponentType<{ className?: string }>
   tag?: string
+  permission?: keyof ReturnType<typeof usePermissions>["can"]
 }
 
 const navSections: Array<{
@@ -69,20 +71,23 @@ const navSections: Array<{
         label: "Dashboard",
         description: "Indicadores consolidados",
         href: "/dashboard",
-        icon: BarChart3
+        icon: BarChart3,
+        permission: "viewDashboard"
       },
       {
         label: "Encomendas",
         description: "Pedidos especiais",
         href: "/dashboard/orders",
         icon: Receipt,
-        tag: "Novo"
+        tag: "Novo",
+        permission: "viewOrders"
       },
       {
         label: "Clientes",
         description: "Cadastro e bonificações",
         href: "/dashboard/customers",
-        icon: UserRound
+        icon: UserRound,
+        permission: "viewCustomers"
       }
     ]
   },
@@ -94,14 +99,16 @@ const navSections: Array<{
         description: "Ponto de venda rápido",
         href: "/dashboard/sales",
         icon: ShoppingCart,
-        tag: "Live"
+        tag: "Live",
+        permission: "createSales"
       },
       {
         label: "Registro de Vendas",
         description: "Histórico e auditoria",
         href: "/dashboard/sales/ledger",
         icon: FileText,
-        tag: "Novo"
+        tag: "Novo",
+        permission: "viewOwnSales"
       }
     ]
   },
@@ -112,19 +119,22 @@ const navSections: Array<{
         label: "Inventário",
         description: "Controle de lotes e saldos",
         href: "/dashboard/inventory",
-        icon: Package2
+        icon: Package2,
+        permission: "viewInventory"
       },
       {
         label: "Por Ponto",
         description: "Distribuição por unidade",
         href: "/dashboard/inventory-by-point",
-        icon: Store
+        icon: Store,
+        permission: "viewInventory"
       },
       {
         label: "Produtos",
         description: "Ficha técnica e preços",
         href: "/dashboard/products",
-        icon: Building2
+        icon: Building2,
+        permission: "viewProducts"
       }
     ]
   },
@@ -135,13 +145,15 @@ const navSections: Array<{
         label: "Relatórios Z",
         description: "Fechamentos diários",
         href: "/dashboard/reports/daily",
-        icon: FileText
+        icon: FileText,
+        permission: "viewReports"
       },
       {
         label: "Análise de Vendas",
         description: "Relatórios e estatísticas",
         href: "/dashboard/reports/sales",
-        icon: ListChecks
+        icon: ListChecks,
+        permission: "viewReports"
       }
     ]
   },
@@ -152,13 +164,15 @@ const navSections: Array<{
         label: "Pontos de Venda",
         description: "Configuração dos PDVs",
         href: "/dashboard/points",
-        icon: Users2
+        icon: Users2,
+        permission: "viewPointsOfSale"
       },
       {
         label: "Preferências",
         description: "Configurações do sistema",
         href: "/dashboard/settings",
-        icon: Settings
+        icon: Settings,
+        permission: "viewSettings"
       }
     ]
   }
@@ -170,9 +184,37 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const { data: session } = useSession()
   const { session: cashSession } = useCashSession()
+  const { can, isAdmin } = usePermissions()
   const [isOnline, setIsOnline] = useState(true)
 
-  const flatNav = useMemo(() => navSections.flatMap((section) => section.items), [])
+  // DEBUG: Verificar permissões (REMOVER DEPOIS)
+  console.log("🔍 SidebarLayout Debug:", {
+    isAdmin,
+    email: session?.user?.email,
+    permissionsCount: session?.user?.permissions?.length || 0,
+    permissions: session?.user?.permissions,
+    canViewDashboard: can.viewDashboard,
+    canViewReports: can.viewReports,
+  })
+
+  // Filtrar seções e itens baseado nas permissões do usuário
+  const filteredNavSections = useMemo(() => {
+    return navSections
+      .map((section) => ({
+        ...section,
+        items: section.items.filter((item) => {
+          // Se não tem permissão definida, mostra para todos
+          if (!item.permission) return true
+          // Se é admin, mostra tudo
+          if (isAdmin) return true
+          // Verifica se tem a permissão específica
+          return can[item.permission]
+        }),
+      }))
+      .filter((section) => section.items.length > 0) // Remove seções vazias
+  }, [can, isAdmin])
+
+  const flatNav = useMemo(() => filteredNavSections.flatMap((section) => section.items), [filteredNavSections])
 
   const activeItem = useMemo(
     () => {
@@ -198,8 +240,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   )
 
   const activeSection = useMemo(
-    () => navSections.find((section) => section.items.some((item) => item === activeItem)) ?? navSections[0],
-    [activeItem]
+    () => filteredNavSections.find((section) => section.items.some((item) => item === activeItem)) ?? filteredNavSections[0],
+    [activeItem, filteredNavSections]
   )
 
   const closeMobile = () => setIsMobileOpen(false)
@@ -263,7 +305,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
         </div>
 
         <nav className="flex flex-1 flex-col gap-6 overflow-y-auto px-3 py-6">
-          {navSections.map((section) => (
+          {filteredNavSections.map((section) => (
             <div key={section.heading} className="space-y-2">
               {!isCollapsed && (
                 <p className="px-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground/80">
@@ -381,9 +423,14 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
                     <p className="truncate text-xs text-muted-foreground">
                       {session?.user?.email ?? "Sem e-mail cadastrado"}
                     </p>
-                    {session?.user?.role && (
+                    {session?.user?.isAdmin && (
+                      <Badge className="mt-1 bg-red-500/20 text-red-600 dark:text-red-400">
+                        ADMINISTRADOR
+                      </Badge>
+                    )}
+                    {session?.user && !session.user.isAdmin && (
                       <Badge className="mt-1 bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                        {session.user.role.toUpperCase()}
+                        USUÁRIO
                       </Badge>
                     )}
                   </div>

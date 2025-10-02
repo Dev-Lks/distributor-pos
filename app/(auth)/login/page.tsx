@@ -39,21 +39,9 @@ export default function LoginPage() {
         return
       }
 
-      // Buscar sessão para redirecionar baseado no role
-      const sessionRes = await fetch("/api/auth/session")
-      const session = await sessionRes.json()
-      const role = session?.user?.role
-
-      // Redirecionar baseado no role do usuário (apenas uma vez)
-      let redirectUrl = "/"
-      
-      if (role === "ADMIN" || role === "MANAGER" || role === "SUPERVISOR") {
-        redirectUrl = callbackUrl || "/dashboard"
-      } else if (role === "SELLER") {
-        redirectUrl = "/sales"
-      } else if (role === "CASHIER") {
-        redirectUrl = "/cash-session"
-      }
+      // Redirecionar após login bem-sucedido
+      // Todos os usuários vão para o dashboard - as permissões definem o que cada um pode ver
+      const redirectUrl = callbackUrl || "/dashboard"
 
       // Usar window.location para evitar múltiplas chamadas ao router
       window.location.href = redirectUrl

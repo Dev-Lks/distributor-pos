@@ -47,7 +47,7 @@ async function createTestUser() {
         passwordHash,
         password: passwordHash,
         phone: '11999999999',
-        role: 'SELLER',
+        isAdmin: false,
         status: 'ACTIVE',
         isActive: true,
       },
@@ -58,7 +58,6 @@ async function createTestUser() {
       data: {
         userId: seller.id,
         pointOfSaleId: firstPOS.id,
-        roleInPOS: 'SELLER',
         isPrimary: true,
       },
     });
@@ -67,7 +66,7 @@ async function createTestUser() {
     console.log('📋 Credenciais:');
     console.log(`   Email: ${email}`);
     console.log(`   Senha: ${password}`);
-    console.log(`   Role: ${seller.role}`);
+    console.log(`   isAdmin: false`);
     console.log(`   PDV: ${firstPOS.name}\n`);
 
     console.log('🧪 Para testar:');

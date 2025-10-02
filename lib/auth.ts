@@ -1,5 +1,5 @@
 import { compare } from "bcryptjs";
-import type { UserRole, UserStatus } from "@prisma/client";
+import type { UserStatus, PermissionKey } from "@prisma/client";
 import type { NextAuthOptions } from "next-auth";
 import type { AdapterUser } from "next-auth/adapters";
 import Credentials from "next-auth/providers/credentials";
@@ -37,6 +37,9 @@ export const authOptions: NextAuthOptions = {
               include: {
                 pointOfSale: true,
               },
+            },
+            permissions: {
+              where: { granted: true },
             },
           },
         });
@@ -92,14 +95,14 @@ export const authOptions: NextAuthOptions = {
           id: user.id,
           email: user.email,
           name: user.fullName || user.name || null,
-          role: user.role,
+          isAdmin: user.isAdmin,
           status: user.status,
           avatarUrl: user.avatarUrl || null,
           tenantId: user.tenantId ?? null,
+          permissions: user.permissions.map((p) => p.permission),
           pointsOfSale: user.userPointsOfSale.map((ups) => ({
             id: ups.pointOfSaleId,
             name: ups.pointOfSale.name,
-            roleInPOS: ups.roleInPOS,
             isPrimary: ups.isPrimary,
           })),
         } as any;
@@ -110,15 +113,17 @@ export const authOptions: NextAuthOptions = {
     async jwt({ token, user }) {
       if (user) {
         const typedUser = user as AdapterUser & {
-          role?: UserRole;
+          isAdmin?: boolean;
           status?: UserStatus;
           tenantId?: string;
+          permissions?: PermissionKey[];
           pointsOfSale?: any[];
         };
         token.id = user.id;
-        token.role = typedUser.role;
+        token.isAdmin = typedUser.isAdmin || false;
         token.status = typedUser.status;
         token.tenantId = typedUser.tenantId;
+        token.permissions = typedUser.permissions || [];
         token.pointsOfSale = typedUser.pointsOfSale;
       }
       return token;
@@ -126,9 +131,10 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = token.role as UserRole;
+        session.user.isAdmin = token.isAdmin as boolean;
         session.user.status = token.status as UserStatus;
         session.user.tenantId = (token.tenantId as string) || null;
+        session.user.permissions = (token.permissions as PermissionKey[]) || [];
         session.user.pointsOfSale = (token.pointsOfSale as any[]) || [];
       }
       return session;

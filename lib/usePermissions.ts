@@ -1,66 +1,89 @@
 "use client";
 
 import { useSession } from "next-auth/react";
+import type { PermissionKey } from "@prisma/client";
 
 export function usePermissions() {
   const { data: session } = useSession();
-  const role = session?.user?.role;
+  const isAdmin = session?.user?.isAdmin || false;
+  const permissions = (session?.user?.permissions || []) as PermissionKey[];
+
+  const hasPermission = (permission: PermissionKey) => {
+    return isAdmin || permissions.includes(permission);
+  };
 
   const can = {
+    // Dashboard
+    viewDashboard: hasPermission("VIEW_DASHBOARD"),
+    viewAnalytics: hasPermission("VIEW_ANALYTICS"),
+    viewReports: hasPermission("VIEW_REPORTS"),
+
     // Gestão de usuários
-    manageUsers: role === "ADMIN",
-    createSellers: role === "ADMIN" || role === "MANAGER",
-    viewAllUsers: role === "ADMIN",
+    manageUsers: hasPermission("MANAGE_USERS"),
+    viewUsers: hasPermission("VIEW_USERS"),
+    assignPermissions: hasPermission("ASSIGN_PERMISSIONS"),
 
     // Vendas
-    createSales: true, // Todos podem criar vendas
-    viewAllSales: role === "ADMIN" || role === "MANAGER",
-    viewOwnSales: true,
-    deleteSales: role === "ADMIN" || role === "MANAGER",
+    createSales: hasPermission("CREATE_SALES"),
+    viewAllSales: hasPermission("VIEW_ALL_SALES"),
+    viewOwnSales: hasPermission("VIEW_OWN_SALES"),
+    editSales: hasPermission("EDIT_SALES"),
+    deleteSales: hasPermission("DELETE_SALES"),
+    applyDiscounts: hasPermission("APPLY_DISCOUNTS"),
+
+    // Produtos
+    viewProducts: hasPermission("VIEW_PRODUCTS"),
+    createProducts: hasPermission("CREATE_PRODUCTS"),
+    editProducts: hasPermission("EDIT_PRODUCTS"),
+    deleteProducts: hasPermission("DELETE_PRODUCTS"),
+    managePrices: hasPermission("MANAGE_PRICES"),
 
     // Inventário
-    manageInventory: role === "ADMIN" || role === "MANAGER",
-    viewInventory: true, // Todos podem ver
-    transferStock: role === "ADMIN" || role === "MANAGER",
-    adjustStock: role === "ADMIN" || role === "MANAGER",
-
-    // Relatórios
-    viewGlobalReports: role === "ADMIN",
-    viewPOSReports:
-      role === "ADMIN" || role === "MANAGER" || role === "SUPERVISOR",
-    viewOwnPerformance: true,
-
-    // Caixa
-    manageCashSessions: role !== "SELLER",
-    openCashSession: role !== "SELLER",
-    forceCloseCashSession: role === "ADMIN",
+    viewInventory: hasPermission("VIEW_INVENTORY"),
+    manageInventory: hasPermission("MANAGE_INVENTORY"),
+    transferStock: hasPermission("TRANSFER_STOCK"),
+    adjustStock: hasPermission("ADJUST_STOCK"),
+    viewStockMovements: hasPermission("VIEW_STOCK_MOVEMENTS"),
 
     // Clientes
-    createCustomers: true, // Todos podem cadastrar
-    editCustomers: role === "ADMIN" || role === "MANAGER",
-    deleteCustomers: role === "ADMIN",
+    viewCustomers: hasPermission("VIEW_CUSTOMERS"),
+    createCustomers: hasPermission("CREATE_CUSTOMERS"),
+    editCustomers: hasPermission("EDIT_CUSTOMERS"),
+    deleteCustomers: hasPermission("DELETE_CUSTOMERS"),
+    viewCustomerHistory: hasPermission("VIEW_CUSTOMER_HISTORY"),
+
+    // Caixa
+    openCashSession: hasPermission("OPEN_CASH_SESSION"),
+    closeCashSession: hasPermission("CLOSE_CASH_SESSION"),
+    manageCashTransactions: hasPermission("MANAGE_CASH_TRANSACTIONS"),
+    forceCloseCash: hasPermission("FORCE_CLOSE_CASH"),
+    viewCashReports: hasPermission("VIEW_CASH_REPORTS"),
 
     // Encomendas
-    createOrders: true,
-    manageOrders: role === "ADMIN" || role === "MANAGER",
-    viewAllOrders: role === "ADMIN" || role === "MANAGER",
+    viewOrders: hasPermission("VIEW_ORDERS"),
+    createOrders: hasPermission("CREATE_ORDERS"),
+    editOrders: hasPermission("EDIT_ORDERS"),
+    deleteOrders: hasPermission("DELETE_ORDERS"),
+    manageOrderStatus: hasPermission("MANAGE_ORDER_STATUS"),
 
     // Pontos de venda
-    managePOS: role === "ADMIN",
-    viewPOSData: role !== "SELLER",
+    viewPointsOfSale: hasPermission("VIEW_POINTS_OF_SALE"),
+    managePointsOfSale: hasPermission("MANAGE_POINTS_OF_SALE"),
 
     // Bonificações
-    approveBonifications: role === "ADMIN" || role === "MANAGER",
-    createBonifications: true,
+    createBonifications: hasPermission("CREATE_BONIFICATIONS"),
+    approveBonifications: hasPermission("APPROVE_BONIFICATIONS"),
+    viewBonifications: hasPermission("VIEW_BONIFICATIONS"),
+
+    // Configurações
+    viewSettings: hasPermission("VIEW_SETTINGS"),
+    manageSettings: hasPermission("MANAGE_SETTINGS"),
   };
 
-  const is = {
-    admin: role === "ADMIN",
-    manager: role === "MANAGER",
-    seller: role === "SELLER",
-    cashier: role === "CASHIER",
-    supervisor: role === "SUPERVISOR",
+  return { 
+    can, 
+    isAdmin, 
+    permissions,
+    hasPermission,
   };
-
-  return { can, is, role };
 }

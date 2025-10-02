@@ -1,31 +1,31 @@
-import type { UserRole, UserStatus } from "@prisma/client";
+import type { UserStatus, PermissionKey } from "@prisma/client";
 import type { DefaultSession } from "next-auth";
 
 declare module "next-auth" {
   interface Session {
     user: {
       id: string;
-      role: UserRole;
+      isAdmin: boolean;
       status: UserStatus;
       tenantId: string | null;
+      permissions: PermissionKey[];
       pointsOfSale: Array<{
         id: string;
         name: string;
-        roleInPOS: string;
         isPrimary: boolean;
       }>;
     } & DefaultSession["user"];
   }
 
   interface User {
-    role: UserRole;
+    isAdmin: boolean;
     status: UserStatus;
     tenantId: string | null;
     avatarUrl: string | null;
+    permissions: PermissionKey[];
     pointsOfSale: Array<{
       id: string;
       name: string;
-      roleInPOS: string;
       isPrimary: boolean;
     }>;
   }
@@ -34,13 +34,13 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     id: string;
-    role: UserRole;
+    isAdmin: boolean;
     status: UserStatus;
     tenantId: string | null;
+    permissions: PermissionKey[];
     pointsOfSale: Array<{
       id: string;
       name: string;
-      roleInPOS: string;
       isPrimary: boolean;
     }>;
   }

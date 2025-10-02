@@ -17,7 +17,7 @@ async function validate() {
   // 1. Verificar usuário admin
   console.log('📋 Verificando usuário administrador...');
   const admin = await prisma.user.findFirst({
-    where: { role: 'ADMIN' },
+    where: { isAdmin: true },
   });
 
   if (!admin) {
@@ -67,18 +67,18 @@ async function validate() {
   console.log('📋 Verificando usuários de teste...');
   const testUsers = await prisma.user.findMany({
     where: {
-      role: { in: ['SELLER', 'MANAGER', 'CASHIER'] },
+      isAdmin: false,
     },
   });
 
   if (testUsers.length === 0) {
-    console.log('   ⚠️  AVISO: Nenhum usuário de teste (vendedor, gerente, etc.)');
+    console.log('   ⚠️  AVISO: Nenhum usuário de teste (não-admin)');
     console.log('   → Execute: npx tsx scripts/create-test-user.ts\n');
     warnings++;
   } else {
     console.log(`   ✅ ${testUsers.length} usuário(s) de teste encontrado(s)`);
     testUsers.forEach((user) => {
-      console.log(`   → ${user.fullName || user.name} (${user.role})`);
+      console.log(`   → ${user.fullName || user.name} (isAdmin: ${user.isAdmin})`);
     });
     console.log('');
   }

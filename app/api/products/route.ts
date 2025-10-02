@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
+import { getServerAuth, notAuthenticated, unauthorized } from '@/lib/serverAuth'
 
 const prismaProductPoints = (prisma as unknown as {
   productPointOfSale: {
@@ -9,6 +10,11 @@ const prismaProductPoints = (prisma as unknown as {
 }).productPointOfSale
 
 export async function GET() {
+  const { session, hasPermission } = await getServerAuth()
+  
+  if (!session) return notAuthenticated()
+  if (!hasPermission("VIEW_PRODUCTS")) return unauthorized("Você não tem permissão para visualizar produtos")
+
   try {
     const [products, productPoints] = await Promise.all([
       prisma.product.findMany({
@@ -60,6 +66,11 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const { session, hasPermission } = await getServerAuth()
+  
+  if (!session) return notAuthenticated()
+  if (!hasPermission("CREATE_PRODUCTS")) return unauthorized("Você não tem permissão para criar produtos")
+
   try {
     const body = await request.json()
     if (typeof body !== 'object' || body === null) {
@@ -76,6 +87,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const { session, hasPermission } = await getServerAuth()
+  
+  if (!session) return notAuthenticated()
+  if (!hasPermission("EDIT_PRODUCTS")) return unauthorized("Você não tem permissão para editar produtos")
+
   try {
     const body = await request.json()
     if (typeof body !== 'object' || body === null) {
@@ -98,6 +114,11 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const { session, hasPermission } = await getServerAuth()
+  
+  if (!session) return notAuthenticated()
+  if (!hasPermission("DELETE_PRODUCTS")) return unauthorized("Você não tem permissão para deletar produtos")
+
   try {
     const body = await request.json()
     const { id } = body as { id?: string }

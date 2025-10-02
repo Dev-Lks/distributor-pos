@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client"
 
 import { prisma } from "@/lib/prisma"
 import { detectPersonType, sanitizeDocument, validateCpfCnpj } from "@/lib/documents"
+import { getServerAuth, notAuthenticated, unauthorized } from "@/lib/serverAuth"
 
 const CUSTOMER_SELECT = {
   id: true,
@@ -43,6 +44,11 @@ const handlePrismaError = (error: unknown) => {
 }
 
 export async function GET(request: NextRequest) {
+  const { session, hasPermission } = await getServerAuth()
+  
+  if (!session) return notAuthenticated()
+  if (!hasPermission("VIEW_CUSTOMERS")) return unauthorized("Você não tem permissão para visualizar clientes")
+
   try {
     const { searchParams } = request.nextUrl
     const search = searchParams.get("search")?.trim()
@@ -75,6 +81,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const { session, hasPermission } = await getServerAuth()
+  
+  if (!session) return notAuthenticated()
+  if (!hasPermission("CREATE_CUSTOMERS")) return unauthorized("Você não tem permissão para criar clientes")
+
   try {
     const body = await request.json()
     if (typeof body !== "object" || body === null) {
@@ -116,6 +127,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const { session, hasPermission } = await getServerAuth()
+  
+  if (!session) return notAuthenticated()
+  if (!hasPermission("EDIT_CUSTOMERS")) return unauthorized("Você não tem permissão para editar clientes")
+
   try {
     const body = await request.json()
     if (typeof body !== "object" || body === null) {
@@ -163,6 +179,11 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const { session, hasPermission } = await getServerAuth()
+  
+  if (!session) return notAuthenticated()
+  if (!hasPermission("DELETE_CUSTOMERS")) return unauthorized("Você não tem permissão para deletar clientes")
+
   try {
     const body = await request.json().catch(() => null)
     const id = (body as { id?: string } | null)?.id

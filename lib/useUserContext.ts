@@ -15,12 +15,12 @@ export function useUserContext() {
   }, [session]);
 
   const canAccessPOS = (posId: string) => {
-    if (session?.user?.role === "ADMIN") return true;
+    if (session?.user?.isAdmin) return true;
     return userPOSIds.includes(posId);
   };
 
   const shouldFilterByPOS = () => {
-    return session?.user?.role !== "ADMIN";
+    return !session?.user?.isAdmin;
   };
 
   return {

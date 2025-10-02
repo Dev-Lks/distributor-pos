@@ -56,7 +56,7 @@ async function createPointsOfSale() {
 
     // Vincular admin ao primeiro PDV
     const admin = await prisma.user.findFirst({
-      where: { role: 'ADMIN' },
+      where: { isAdmin: true },
     });
 
     if (admin) {
@@ -71,7 +71,6 @@ async function createPointsOfSale() {
             data: {
               userId: admin.id,
               pointOfSaleId: firstPOS.id,
-              roleInPOS: 'MANAGER',
               isPrimary: true,
             },
           });

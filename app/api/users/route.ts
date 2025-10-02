@@ -8,14 +8,14 @@ import { hash } from "bcryptjs";
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !session.user.isAdmin) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
 
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search");
-  const role = searchParams.get("role");
   const status = searchParams.get("status");
+  const isAdmin = searchParams.get("isAdmin");
 
   const where: any = {};
 
@@ -27,12 +27,15 @@ export async function GET(req: NextRequest) {
     ];
   }
 
-  if (role) where.role = role;
   if (status) where.status = status;
+  if (isAdmin !== null && isAdmin !== undefined) {
+    where.isAdmin = isAdmin === "true";
+  }
 
   const users = await prisma.user.findMany({
     where,
     include: {
+      permissions: true,
       userPointsOfSale: {
         include: {
           pointOfSale: true,
@@ -59,17 +62,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
   }
 
-  // Apenas ADMIN pode criar qualquer usuário
-  // MANAGER só pode criar SELLER e CASHIER
-  if (
-    session.user.role !== "ADMIN" &&
-    session.user.role !== "MANAGER"
-  ) {
+  // Apenas ADMIN pode criar usuários
+  if (!session.user.isAdmin) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
 
   const body = await req.json();
-  const { fullName, email, password, phone, cpf, role, pointsOfSaleIds } =
+  const { fullName, email, password, phone, cpf, isAdmin, pointsOfSaleIds, permissions } =
     body;
 
   // Validações
@@ -87,16 +86,6 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // MANAGER não pode criar ADMIN ou outros MANAGERS
-  if (session.user.role === "MANAGER") {
-    if (role === "ADMIN" || role === "MANAGER") {
-      return NextResponse.json(
-        { error: "Você não tem permissão para criar este tipo de usuário" },
-        { status: 403 }
-      );
-    }
-  }
-
   // Verificar se email já existe
   const existingUser = await prisma.user.findUnique({
     where: { email },
@@ -112,7 +101,7 @@ export async function POST(req: NextRequest) {
   // Hash da senha
   const passwordHash = await hash(password, 10);
 
-  // Criar usuário com vinculações aos PDVs
+  // Criar usuário com vinculações aos PDVs e permissões
   const user = await prisma.user.create({
     data: {
       fullName,
@@ -122,19 +111,25 @@ export async function POST(req: NextRequest) {
       name: fullName, // Compatibilidade legado
       phone,
       cpf,
-      role: role || "SELLER",
+      isAdmin: isAdmin || false,
       createdById: session.user.id,
       userPointsOfSale: {
         create: pointsOfSaleIds.map((posId: string, index: number) => ({
           pointOfSaleId: posId,
-          roleInPOS:
-            role === "MANAGER" ? "MANAGER" : "SELLER",
           isPrimary: index === 0, // Primeiro PDV é o primário
           assignedBy: session.user.id,
         })),
       },
+      permissions: {
+        create: (permissions || []).map((perm: string) => ({
+          permission: perm,
+          granted: true,
+          grantedBy: session.user.id,
+        })),
+      },
     },
     include: {
+      permissions: true,
       userPointsOfSale: {
         include: {
           pointOfSale: true,
