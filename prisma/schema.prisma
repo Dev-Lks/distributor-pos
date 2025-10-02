@@ -439,9 +439,16 @@ model DailyReport {
   serviceChargeTotal Float @default(0)
   grossTotal         Float @default(0)
   netTotal           Float @default(0)
+  
+  // Armazenamento de PDFs no banco (novo sistema)
+  pdfData            Bytes?            // PDF armazenado diretamente no banco
+  csvData            Bytes?            // CSV armazenado diretamente no banco
+  
+  // Campos legados (compatibilidade com sistema antigo)
   fileUrl            String?
   fileType           String?
   storageKey         String?
+  
   sentAt             DateTime?
   resentCount        Int @default(0)
   lastResentAt       DateTime?

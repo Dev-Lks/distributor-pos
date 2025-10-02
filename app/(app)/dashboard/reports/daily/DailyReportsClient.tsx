@@ -359,28 +359,23 @@ export function DailyReportsClient({ initialData, initialTotal, pointsOfSale, in
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        {report.fileUrl ? (
-                          <>
-                            <Button asChild size="sm" variant="outline" className="gap-2">
-                              <a href={report.fileUrl} target="_blank" rel="noopener noreferrer">
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                                Ver PDF
-                              </a>
-                            </Button>
-                            <Button asChild size="sm" variant="ghost" className="gap-2">
-                              <a href={report.fileUrl} download>
-                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                                Download
-                              </a>
-                            </Button>
-                          </>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Arquivo não disponível</span>
-                        )}
+                        {/* Sempre mostrar botões - PDFs agora estão no banco */}
+                        <Button asChild size="sm" variant="outline" className="gap-2">
+                          <a href={`/api/reports/${report.id}/pdf`} target="_blank" rel="noopener noreferrer">
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            Ver PDF
+                          </a>
+                        </Button>
+                        <Button asChild size="sm" variant="ghost" className="gap-2">
+                          <a href={`/api/reports/${report.id}/pdf`} download>
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download
+                          </a>
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"

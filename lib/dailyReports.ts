@@ -507,34 +507,20 @@ export async function generateDailyReport(input: DailyReportGenerationInput = {}
     computation,
   })
 
-  const savedPdf = await saveReportFile({
-    buffer: pdfBuffer,
-    filename: buildReportFilename(baseFilename, "pdf"),
-    contentType: "application/pdf",
-  })
-
-  const savedCsv = await saveReportFile({
-    buffer: csvBuffer,
-    filename: buildReportFilename(baseFilename, "csv"),
-    contentType: "text/csv",
-  })
+  // Novo sistema: Salvar PDFs diretamente no banco
+  const pdfFilename = buildReportFilename(baseFilename, "pdf")
+  const csvFilename = buildReportFilename(baseFilename, "csv")
 
   const pdfMetadata = {
-    storageKey: savedPdf.storageKey,
-    url: savedPdf.url,
-    filename: savedPdf.filename,
-    contentType: savedPdf.contentType,
+    filename: pdfFilename,
+    contentType: "application/pdf",
     size: pdfBuffer.length,
-    ...(savedPdf.url ? {} : { base64: pdfBuffer.toString("base64") }),
   }
 
   const csvMetadata = {
-    storageKey: savedCsv.storageKey,
-    url: savedCsv.url,
-    filename: savedCsv.filename,
-    contentType: savedCsv.contentType,
+    filename: csvFilename,
+    contentType: "text/csv",
     size: csvBuffer.length,
-    ...(savedCsv.url ? {} : { base64: csvBuffer.toString("base64") }),
   }
 
   const payload = {
@@ -551,21 +537,20 @@ export async function generateDailyReport(input: DailyReportGenerationInput = {}
     serviceChargeTotal: computation.serviceChargeTotal,
     grossTotal: computation.grossTotal,
     netTotal: computation.netTotal,
-    fileUrl: savedPdf.url,
+    
+    // Armazenar PDFs diretamente no banco
+    pdfData: pdfBuffer,
+    csvData: csvBuffer,
+    
+    // Manter campos legados como null (compatibilidade)
+    fileUrl: null,
     fileType: "pdf",
-    storageKey: savedPdf.storageKey,
+    storageKey: null,
+    
     metadata: {
       files: {
         pdf: pdfMetadata,
         csv: csvMetadata,
-      },
-      pdf: {
-        storageKey: savedPdf.storageKey,
-        url: savedPdf.url,
-      },
-      csv: {
-        storageKey: savedCsv.storageKey,
-        url: savedCsv.url,
       },
       timezone,
     },
@@ -589,7 +574,12 @@ export async function generateDailyReport(input: DailyReportGenerationInput = {}
 }
 
 export async function sendDailyReportEmail(reportId: string, options: { recipients?: string[]; timezone?: string } = {}) {
-  const report = await prisma.dailyReport.findUnique({ where: { id: reportId } })
+  const report = await prisma.dailyReport.findUnique({ 
+    where: { id: reportId },
+    include: {
+      pointOfSale: true,
+    }
+  })
 
   if (!report) {
     throw new Error("REPORT_NOT_FOUND")
@@ -606,32 +596,28 @@ export async function sendDailyReportEmail(reportId: string, options: { recipien
     return report
   }
 
-  if (!report.storageKey) {
-    throw new Error("REPORT_FILE_MISSING")
+  // Verificar se há PDFs no banco
+  if (!report.pdfData) {
+    throw new Error("REPORT_PDF_MISSING")
   }
 
-  const [pdfFile, csvFile, pointOfSale] = await Promise.all([
-    readReportFile(report.storageKey),
-    (async () => {
-      const csvMetadataCandidate = metadata && isJsonObject(metadata.csv) ? metadata.csv : undefined
-      const csvStorageKey = typeof csvMetadataCandidate?.storageKey === "string" ? csvMetadataCandidate.storageKey : null
-      if (!csvStorageKey) return null
-      try {
-        return await readReportFile(String(csvStorageKey))
-      } catch (error) {
-        console.warn("Failed to load CSV for report", report.id, error)
-        return null
-      }
-    })(),
-    report.pointOfSaleId ? prisma.pointOfSale.findUnique({ where: { id: report.pointOfSaleId } }) : null,
-  ])
+  // Extrair nomes de arquivo do metadata
+  const pdfFilename = 
+    (metadata && isJsonObject(metadata.files) && isJsonObject(metadata.files.pdf) && typeof metadata.files.pdf.filename === "string")
+      ? metadata.files.pdf.filename
+      : "relatorio-z.pdf"
+  
+  const csvFilename = 
+    (metadata && isJsonObject(metadata.files) && isJsonObject(metadata.files.csv) && typeof metadata.files.csv.filename === "string")
+      ? metadata.files.csv.filename
+      : "relatorio-z.csv"
 
   const formattedDate = format(toZonedTime(report.reportDate, timezone), "dd/MM/yyyy")
-  const subject = `Relatório Z · ${formattedDate}${pointOfSale ? ` · ${pointOfSale.name}` : ""}`
+  const subject = `Relatório Z · ${formattedDate}${report.pointOfSale ? ` · ${report.pointOfSale.name}` : ""}`
 
   const text = [
     `Segue em anexo o relatório Z do dia ${formattedDate}.`,
-    pointOfSale ? `Ponto de venda: ${pointOfSale.name}.` : "",
+    report.pointOfSale ? `Ponto de venda: ${report.pointOfSale.name}.` : "",
     `Total líquido: ${toCurrency(report.netTotal)}`,
   ]
     .filter(Boolean)
@@ -639,17 +625,18 @@ export async function sendDailyReportEmail(reportId: string, options: { recipien
 
   const attachments = [
     {
-      filename: pdfFile.filename,
-      content: pdfFile.buffer,
-      contentType: pdfFile.contentType,
+      filename: pdfFilename,
+      content: report.pdfData,
+      contentType: "application/pdf",
     },
   ]
 
-  if (csvFile) {
+  // Adicionar CSV se disponível
+  if (report.csvData) {
     attachments.push({
-      filename: csvFile.filename,
-      content: csvFile.buffer,
-      contentType: csvFile.contentType,
+      filename: csvFilename,
+      content: report.csvData,
+      contentType: "text/csv",
     })
   }
 
