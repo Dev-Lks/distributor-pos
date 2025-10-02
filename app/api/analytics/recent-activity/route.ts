@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get('limit') || '10')
 
     // Buscar últimas vendas
+    // Query otimizada: select apenas campos necessários (id, date, total, customerName, user)
     const recentSales = await prisma.sale.findMany({
       take: Math.ceil(limit / 2),
       orderBy: {

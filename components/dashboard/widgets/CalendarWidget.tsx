@@ -1,122 +1,148 @@
 "use client"
 
-import { Calendar as CalendarIcon, Clock, Package, Truck, Users } from "lucide-react"
+import { Calendar as CalendarIcon, Clock, Package, Truck, FileText, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { useUpcomingEvents } from "@/lib/useUpcomingEvents"
+import { format, isToday, isTomorrow } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
-type EventType = "order_deadline" | "audit" | "delivery" | "meeting"
-
-interface CalendarEvent {
-  date: Date
-  type: EventType
-  title: string
-  urgent: boolean
+const eventIcons = {
+  order_deadline: Package,
+  expiration: AlertTriangle,
+  audit: FileText,
+  delivery: Truck,
 }
 
-interface CalendarWidgetProps {
-  events?: CalendarEvent[]
+const priorityColors = {
+  high: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20",
+  medium: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
+  low: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
 }
 
-const eventConfig: Record<EventType, { icon: any; color: string }> = {
-  order_deadline: {
-    icon: Package,
-    color: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  },
-  audit: {
-    icon: CalendarIcon,
-    color: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  },
-  delivery: {
-    icon: Truck,
-    color: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  },
-  meeting: {
-    icon: Users,
-    color: "bg-violet-500/10 text-violet-600 dark:text-violet-400",
-  },
-}
+export function CalendarWidget() {
+  const { data: events, isLoading, error, refetch } = useUpcomingEvents(7)
 
-export function CalendarWidget({ events: initialEvents }: CalendarWidgetProps) {
-  // Mock data - próximos 7 dias
-  const events: CalendarEvent[] = initialEvents || [
-    {
-      date: new Date("2025-10-01"),
-      type: "order_deadline",
-      title: "Encomenda #ENC-003 - Pedro Costa",
-      urgent: true,
-    },
-    {
-      date: new Date("2025-10-02"),
-      type: "delivery",
-      title: "Entrega de insumos - Fornecedor Lúpulo",
-      urgent: false,
-    },
-    {
-      date: new Date("2025-10-03"),
-      type: "audit",
-      title: "Auditoria de Estoque - Câmara Fria",
-      urgent: false,
-    },
-    {
-      date: new Date("2025-10-05"),
-      type: "order_deadline",
-      title: "Encomenda #ENC-001 - João Silva",
-      urgent: true,
-    },
-    {
-      date: new Date("2025-10-07"),
-      type: "meeting",
-      title: "Reunião mensal - Equipe",
-      urgent: false,
-    },
-  ]
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-lg font-semibold">Próximos Eventos</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="flex items-start gap-3 rounded-lg border p-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-  const formatDate = (date: Date) => {
-    const today = new Date()
-    const tomorrow = new Date(today)
-    tomorrow.setDate(tomorrow.getDate() + 1)
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-lg font-semibold">Próximos Eventos</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mb-3" />
+            <p className="text-sm font-medium">Erro ao carregar eventos</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-4">
+              {error.message || 'Tente novamente mais tarde'}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>
+              Tentar novamente
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
-    if (date.toDateString() === today.toDateString()) return "Hoje"
-    if (date.toDateString() === tomorrow.toDateString()) return "Amanhã"
-
-    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" })
+  if (!events || events.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5 text-blue-500" />
+            <CardTitle className="text-lg font-semibold">Próximos Eventos</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <CalendarIcon className="h-12 w-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm font-medium">Nenhum evento próximo</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Você está em dia com suas tarefas
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg font-semibold">Próximos Eventos</CardTitle>
+        <div className="flex items-center gap-2">
+          <CalendarIcon className="h-5 w-5 text-blue-500" />
+          <CardTitle className="text-lg font-semibold">Próximos Eventos</CardTitle>
+        </div>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {events.map((event, index) => {
-            const config = eventConfig[event.type]
-            const Icon = config.icon
+          {events.map((event) => {
+            const Icon = eventIcons[event.type as keyof typeof eventIcons] || CalendarIcon
+            const eventDate = new Date(event.date)
+            
+            let dateLabel = format(eventDate, "dd/MM", { locale: ptBR })
+            if (isToday(eventDate)) {
+              dateLabel = "Hoje"
+            } else if (isTomorrow(eventDate)) {
+              dateLabel = "Amanhã"
+            }
 
             return (
               <div
-                key={index}
+                key={event.id}
                 className={cn(
                   "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50",
-                  event.urgent && "border-amber-500/50 bg-amber-500/5"
+                  priorityColors[event.priority as keyof typeof priorityColors]
                 )}
               >
-                <div className={cn("flex h-10 w-10 items-center justify-center rounded-full", config.color)}>
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-background">
                   <Icon className="h-5 w-5" />
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium">{event.title}</p>
-                    {event.urgent && (
-                      <Badge variant="destructive" className="h-5 text-xs">
+                    {event.priority === 'high' && (
+                      <Badge variant="secondary" className="h-5 bg-red-500/20 text-xs">
                         Urgente
                       </Badge>
                     )}
                   </div>
-                  <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                  <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
-                    <span>{formatDate(event.date)}</span>
+                    <span>{dateLabel}</span>
                   </div>
                 </div>
               </div>

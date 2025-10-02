@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 
+// Tempos de cache otimizados
+const CACHE_TIMES = {
+  REALTIME: 1000 * 60,      // 60s - Dados que mudam frequentemente
+}
+
 export interface Activity {
   id: string
   type: 'sale' | 'inventory' | 'cash' | 'order'
@@ -18,7 +23,7 @@ export function useRecentActivity(limit: number = 10) {
       if (!res.ok) throw new Error('Failed to fetch activity')
       return res.json()
     },
-    refetchInterval: 1000 * 30, // Refetch a cada 30s
-    staleTime: 1000 * 15, // 15 segundos
+    refetchInterval: CACHE_TIMES.REALTIME,
+    staleTime: CACHE_TIMES.REALTIME,
   })
 }

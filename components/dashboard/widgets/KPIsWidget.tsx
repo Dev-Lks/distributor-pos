@@ -2,7 +2,9 @@
 
 import { DollarSign, Receipt, AlertTriangle, Package, TrendingUp, TrendingDown } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
+import { useKPIs } from "@/lib/useKPIs"
 
 interface KPIItem {
   label: string
@@ -12,43 +14,68 @@ interface KPIItem {
   icon: React.ComponentType<{ className?: string }>
 }
 
-interface KPIsWidgetProps {
-  metrics?: {
-    salesToday?: string
-    averageTicket?: string
-    lowStockCount?: number
-    ordersCount?: number
-  }
-}
+export function KPIsWidget() {
+  const { data: kpisData, isLoading, isError } = useKPIs()
 
-export function KPIsWidget({ metrics }: KPIsWidgetProps) {
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <Skeleton className="h-4 w-16" />
+              </div>
+              <Skeleton className="h-4 w-24 mb-2" />
+              <Skeleton className="h-8 w-32" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (isError || !kpisData) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card className="col-span-full">
+          <CardContent className="p-6 text-center text-muted-foreground">
+            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
+            <p className="text-sm">Erro ao carregar KPIs</p>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   const kpis: KPIItem[] = [
     {
       label: "Vendas Hoje",
-      value: metrics?.salesToday || "R$ 0",
-      trend: "+12%",
-      trendDirection: "up",
+      value: kpisData.salesToday.formatted,
+      trend: kpisData.salesToday.trend?.formatted,
+      trendDirection: kpisData.salesToday.trend?.direction,
       icon: DollarSign,
     },
     {
       label: "Ticket Médio",
-      value: metrics?.averageTicket || "R$ 0",
-      trend: "+5%",
-      trendDirection: "up",
+      value: kpisData.averageTicket.formatted,
+      trend: kpisData.averageTicket.trend?.formatted,
+      trendDirection: kpisData.averageTicket.trend?.direction,
       icon: Receipt,
     },
     {
       label: "Estoque Baixo",
-      value: String(metrics?.lowStockCount || 0),
-      trend: "-2",
-      trendDirection: "down",
+      value: kpisData.lowStockCount.formatted,
+      trend: kpisData.lowStockCount.trend?.formatted,
+      trendDirection: kpisData.lowStockCount.trend?.direction,
       icon: AlertTriangle,
     },
     {
       label: "Encomendas",
-      value: String(metrics?.ordersCount || 0),
-      trend: "+4",
-      trendDirection: "up",
+      value: kpisData.ordersCount.formatted,
+      trend: kpisData.ordersCount.trend?.formatted,
+      trendDirection: kpisData.ordersCount.trend?.direction,
       icon: Package,
     },
   ]

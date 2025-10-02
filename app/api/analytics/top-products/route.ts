@@ -32,6 +32,7 @@ export async function GET(request: Request) {
     }
 
     // Buscar vendas do período atual
+    // Query otimizada: groupBy com agregações específicas
     const currentSales = await prisma.saleItem.groupBy({
       by: ['productId'],
       where: {

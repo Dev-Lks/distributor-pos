@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 
+// Tempos de cache otimizados
+const CACHE_TIMES = {
+  FREQUENT: 1000 * 60 * 2,  // 2min - Dados que mudam regularmente
+}
+
 export interface StockAlert {
   productId: string
   productName: string
@@ -31,6 +36,6 @@ export function useStockAlerts() {
       if (!res.ok) throw new Error('Failed to fetch stock alerts')
       return res.json()
     },
-    staleTime: 1000 * 60 * 2, // 2 minutos
+    staleTime: CACHE_TIMES.FREQUENT,
   })
 }

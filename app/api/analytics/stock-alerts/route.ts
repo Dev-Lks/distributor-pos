@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 export async function GET() {
   try {
     // Buscar produtos com inventário baixo ou crítico
+    // Query otimizada: select apenas campos necessários
     const inventories = await prisma.inventory.findMany({
       include: {
         product: {

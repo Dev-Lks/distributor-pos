@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 
+// Tempos de cache otimizados
+const CACHE_TIMES = {
+  STABLE: 1000 * 60 * 10,   // 10min - Dados mais estáveis
+}
+
 export interface UpcomingEvent {
   id: string
   date: string
@@ -19,6 +24,6 @@ export function useUpcomingEvents(days: number = 7) {
       if (!res.ok) throw new Error('Failed to fetch events')
       return res.json()
     },
-    staleTime: 1000 * 60 * 10, // 10 minutos
+    staleTime: CACHE_TIMES.STABLE,
   })
 }

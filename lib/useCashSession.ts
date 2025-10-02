@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { CashSessionSnapshot, CashTransactionTypeLiteral } from '@/types/cash'
 
+// Tempos de cache otimizados
+const CACHE_TIMES = {
+  REALTIME: 1000 * 45,      // 45s - Dados de caixa atualizam frequentemente
+}
+
 interface OpenSessionPayload {
   openingAmount: number
   pointOfSaleId?: string
@@ -47,7 +52,8 @@ export function useCashSession(pointOfSaleId?: string) {
   const query = useQuery<CashSessionSnapshot | null>({
     queryKey: sessionQueryKey(pointOfSaleId),
     queryFn: () => fetchCurrentSession(pointOfSaleId),
-    refetchInterval: 1000 * 30,
+    refetchInterval: CACHE_TIMES.REALTIME,
+    staleTime: CACHE_TIMES.REALTIME,
   })
 
   const openMutation = useMutation({

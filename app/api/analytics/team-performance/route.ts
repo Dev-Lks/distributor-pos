@@ -2,6 +2,15 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { subDays, startOfDay, subWeeks, startOfWeek, subMonths, startOfMonth } from 'date-fns'
 
+function getInitials(name: string): string {
+  return name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
@@ -96,13 +105,4 @@ export async function GET(request: Request) {
       { status: 500 }
     )
   }
-}
-
-function getInitials(name: string): string {
-  return name
-    .split(' ')
-    .map(n => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
 }

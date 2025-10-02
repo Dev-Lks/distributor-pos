@@ -1,21 +1,75 @@
 "use client"
 
 import { useState } from "react"
+import dynamic from "next/dynamic"
 import { DashboardHeader, type DashboardPeriod } from "@/components/dashboard/DashboardHeader"
 import { KPIsWidget } from "@/components/dashboard/widgets/KPIsWidget"
 import { SalesChartWidget } from "@/components/dashboard/widgets/SalesChartWidget"
 import { TopProductsWidget } from "@/components/dashboard/widgets/TopProductsWidget"
 import { StockAlertsWidget } from "@/components/dashboard/widgets/StockAlertsWidget"
-import { RecentOrdersWidget } from "@/components/dashboard/widgets/RecentOrdersWidget"
 import { CashFlowWidget } from "@/components/dashboard/widgets/CashFlowWidget"
-import { CalendarWidget } from "@/components/dashboard/widgets/CalendarWidget"
-import { QuickInsightsWidget } from "@/components/dashboard/widgets/QuickInsightsWidget"
-import { RecentActivityWidget } from "@/components/dashboard/widgets/RecentActivityWidget"
-import { TeamPerformanceWidget } from "@/components/dashboard/widgets/TeamPerformanceWidget"
 import { useSalesMetrics } from "@/lib/useSales"
 import { useProducts } from "@/lib/useProducts"
 import { useCashSession } from "@/lib/useCashSession"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Card, CardContent } from "@/components/ui/card"
+
+// Lazy load widgets menos críticos para melhorar performance inicial
+const QuickInsightsWidget = dynamic(
+  () => import("@/components/dashboard/widgets/QuickInsightsWidget").then(mod => ({ default: mod.QuickInsightsWidget })),
+  { 
+    loading: () => <WidgetSkeleton />,
+    ssr: false,
+  }
+)
+
+const CalendarWidget = dynamic(
+  () => import("@/components/dashboard/widgets/CalendarWidget").then(mod => ({ default: mod.CalendarWidget })),
+  { 
+    loading: () => <WidgetSkeleton />,
+    ssr: false,
+  }
+)
+
+const TeamPerformanceWidget = dynamic(
+  () => import("@/components/dashboard/widgets/TeamPerformanceWidget").then(mod => ({ default: mod.TeamPerformanceWidget })),
+  { 
+    loading: () => <WidgetSkeleton />,
+    ssr: false,
+  }
+)
+
+const RecentActivityWidget = dynamic(
+  () => import("@/components/dashboard/widgets/RecentActivityWidget").then(mod => ({ default: mod.RecentActivityWidget })),
+  { 
+    loading: () => <WidgetSkeleton />,
+    ssr: false,
+  }
+)
+
+const RecentOrdersWidget = dynamic(
+  () => import("@/components/dashboard/widgets/RecentOrdersWidget").then(mod => ({ default: mod.RecentOrdersWidget })),
+  { 
+    loading: () => <WidgetSkeleton />,
+    ssr: false,
+  }
+)
+
+// Skeleton component para widgets lazy loaded
+function WidgetSkeleton() {
+  return (
+    <Card>
+      <CardContent className="p-6">
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
 
 export default function NewDashboardPage() {
   const [period, setPeriod] = useState<DashboardPeriod>("today")
@@ -39,17 +93,6 @@ export default function NewDashboardPage() {
       ? `R$ ${metrics.netRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
       : undefined,
     alertsCount: products.filter(p => (p.inventory?.totalQuantity ?? 0) <= 10).length,
-  }
-
-  const kpiMetrics = {
-    salesToday: metrics?.netRevenue 
-      ? `R$ ${metrics.netRevenue.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-      : "R$ 0",
-    averageTicket: metrics?.averageTicket
-      ? `R$ ${metrics.averageTicket.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
-      : "R$ 0",
-    lowStockCount: products.filter(p => (p.inventory?.totalQuantity ?? 0) <= 10 && (p.inventory?.totalQuantity ?? 0) > 0).length,
-    ordersCount: 0, // TODO: Connect to orders when implemented
   }
 
   if (metricsLoading || productsLoading) {
@@ -79,8 +122,8 @@ export default function NewDashboardPage() {
         quickStats={quickStats}
       />
 
-      {/* KPIs Grid */}
-      <KPIsWidget metrics={kpiMetrics} />
+      {/* KPIs Grid - Agora com dados reais e trends */}
+      <KPIsWidget />
 
       {/* Widgets Grid - Responsive Layout */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

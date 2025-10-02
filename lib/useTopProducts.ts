@@ -1,5 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 
+// Tempos de cache otimizados
+const CACHE_TIMES = {
+  MODERATE: 1000 * 60 * 5,  // 5min - Dados relativamente estáveis
+}
+
 export interface TopProduct {
   id: string
   name: string
@@ -18,6 +23,6 @@ export function useTopProducts(period: 'today' | 'week' | 'month' = 'today') {
       if (!res.ok) throw new Error('Failed to fetch top products')
       return res.json()
     },
-    staleTime: 1000 * 60 * 5, // 5 minutos
+    staleTime: CACHE_TIMES.MODERATE,
   })
 }

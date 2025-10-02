@@ -5,33 +5,100 @@ import { Area, AreaChart, Bar, BarChart, Line, LineChart, ResponsiveContainer, T
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
+import { AlertTriangle, TrendingUp } from "lucide-react"
+import { useSalesMetrics } from "@/lib/useSales"
+import { format, parseISO } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 type ChartType = "area" | "bar" | "line"
 type Period = "today" | "week" | "month"
 type DataType = "revenue" | "quantity" | "margin"
 
-interface SalesChartWidgetProps {
-  data?: Array<{ hour: string; revenue: number; quantity: number; margin: number }>
-}
-
-export function SalesChartWidget({ data: initialData }: SalesChartWidgetProps) {
+export function SalesChartWidget() {
   const [chartType, setChartType] = useState<ChartType>("area")
   const [period, setPeriod] = useState<Period>("today")
   const [dataType, setDataType] = useState<DataType>("revenue")
 
-  // Mock data for demonstration
-  const data = initialData || [
-    { hour: "08:00", revenue: 450, quantity: 12, margin: 180 },
-    { hour: "09:00", revenue: 780, quantity: 18, margin: 312 },
-    { hour: "10:00", revenue: 920, quantity: 24, margin: 368 },
-    { hour: "11:00", revenue: 1200, quantity: 32, margin: 480 },
-    { hour: "12:00", revenue: 1850, quantity: 45, margin: 740 },
-    { hour: "13:00", revenue: 1650, quantity: 38, margin: 660 },
-    { hour: "14:00", revenue: 980, quantity: 22, margin: 392 },
-    { hour: "15:00", revenue: 1100, quantity: 28, margin: 440 },
-    { hour: "16:00", revenue: 1420, quantity: 35, margin: 568 },
-    { hour: "17:00", revenue: 1890, quantity: 48, margin: 756 },
-  ]
+  const { data: metrics, isLoading, error, refetch } = useSalesMetrics(period)
+
+  if (isLoading) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Vendas</CardTitle>
+            <Skeleton className="h-9 w-32" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[300px] w-full" />
+        </CardContent>
+      </Card>
+    )
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold">Vendas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mb-3" />
+            <p className="text-sm font-medium">Erro ao carregar dados de vendas</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-4">
+              {error.message || 'Tente novamente mais tarde'}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>
+              Tentar novamente
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Transformar dados do metrics em formato do gráfico
+  const data = metrics?.hourlyData?.map((hourly) => ({
+    hour: period === 'today' ? `${hourly.hour}:00` : String(hourly.hour),
+    revenue: hourly.revenue,
+    quantity: hourly.sales,
+    margin: hourly.margin || 0,
+  })) || []
+
+  if (data.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg font-semibold">Vendas</CardTitle>
+            <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="week">Semana</SelectItem>
+                <SelectItem value="month">Mês</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <TrendingUp className="h-12 w-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm font-medium">Nenhuma venda no período</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Os dados de vendas aparecerão aqui
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const dataKey = dataType === "revenue" ? "revenue" : dataType === "quantity" ? "quantity" : "margin"
   const label =

@@ -1,9 +1,10 @@
 "use client"
 
-import { Trophy, TrendingUp } from "lucide-react"
+import { Trophy, TrendingUp, AlertTriangle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useTeamPerformance } from "@/lib/useTeamPerformance"
@@ -11,7 +12,7 @@ import { useState } from "react"
 
 export function TeamPerformanceWidget() {
   const [period, setPeriod] = useState<"today" | "week" | "month">("today")
-  const { data: members, isLoading } = useTeamPerformance(period)
+  const { data: members, isLoading, error, refetch } = useTeamPerformance(period)
 
   const getRankColor = (rank: number) => {
     if (rank === 1) return "bg-amber-500/10 text-amber-600 dark:text-amber-400"
@@ -56,6 +57,33 @@ export function TeamPerformanceWidget() {
     )
   }
 
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Trophy className="h-5 w-5 text-amber-500" />
+              <CardTitle className="text-lg font-semibold">Desempenho da Equipe</CardTitle>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertTriangle className="h-12 w-12 text-destructive mb-3" />
+            <p className="text-sm font-medium">Erro ao carregar desempenho</p>
+            <p className="text-xs text-muted-foreground mt-1 mb-4">
+              {error.message || 'Tente novamente mais tarde'}
+            </p>
+            <Button size="sm" variant="outline" onClick={() => refetch()}>
+              Tentar novamente
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
   if (!members || members.length === 0) {
     return (
       <Card>
@@ -94,7 +122,7 @@ export function TeamPerformanceWidget() {
             <Trophy className="h-5 w-5 text-amber-500" />
             <CardTitle className="text-lg font-semibold">Desempenho da Equipe</CardTitle>
           </div>
-          <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
+          <Select value={period} onValueChange={(v) => setPeriod(v as "today" | "week" | "month")}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -110,7 +138,7 @@ export function TeamPerformanceWidget() {
         <div className="space-y-4">
           {members.map((member) => (
             <div
-              key={member.name}
+              key={member.id}
               className="flex items-center gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
             >
               <div className="flex items-center gap-3">

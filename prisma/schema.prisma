@@ -141,6 +141,11 @@ model Product {
   batches Batch[]
   auditItems InventoryAuditItem[]
   orderItems OrderItem[]
+
+  @@index([isActive]) // Para filtrar produtos ativos
+  @@index([category]) // Para filtrar por categoria
+  @@index([updatedAt]) // Para queries de produtos atualizados recentemente
+  @@index([lastPurchaseAt]) // Para análises de compras
 }
 
 model Inventory {
@@ -178,6 +183,8 @@ model Inventory {
 
   @@index([productId])
   @@index([abcClass])
+  @@index([lastSoldAt]) // Para análises de giro de estoque
+  @@index([lastAuditedAt]) // Para controle de auditorias
 }
 
 model ProductPointOfSale {
@@ -228,6 +235,10 @@ model Sale {
 
   @@index([customerId])
   @@index([cashSessionId])
+  @@index([date, pointOfSaleId]) // Para análises de vendas por período e ponto
+  @@index([date, status]) // Para filtros de vendas por data e status
+  @@index([date]) // Para queries ordenadas por data
+  @@index([status]) // Para filtros por status
 }
 
 model Customer {
