@@ -4,154 +4,313 @@ import { useTheme } from '@/components/ThemeProvider'
 import { themes } from '@/lib/themes'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
 
 export function ThemeShowcase() {
   const { theme: currentTheme, setTheme } = useTheme()
 
+  const lightThemes = Object.values(themes).filter(t => t.type === 'light')
+  const darkThemes = Object.values(themes).filter(t => t.type === 'dark')
+
   return (
     <div className="p-6 space-y-8">
       <div>
-        <h1 className="text-3xl font-bold mb-2">Theme Showcase</h1>
-        <p className="text-muted-foreground">
-          Explore all available themes. Click on a theme card to apply it.
+        <h1 className="text-4xl font-bold mb-2">🎨 Theme Gallery</h1>
+        <p className="text-muted-foreground text-lg">
+          Explore all {Object.keys(themes).length} available themes. Click on any theme card to apply it instantly.
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {Object.values(themes).map((theme) => {
-          const isActive = currentTheme === theme.name
-          
-          return (
-            <Card
-              key={theme.name}
-              className={`cursor-pointer transition-all hover:scale-105 ${
-                isActive ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => setTheme(theme.name)}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  {theme.label}
-                  {isActive && (
-                    <span className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded">
-                      Active
-                    </span>
-                  )}
-                </CardTitle>
-                <CardDescription>{theme.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <div 
-                      className="w-12 h-12 rounded border-2"
-                      style={{ backgroundColor: theme.cssVars.background }}
-                      title="Background"
-                    />
-                    <div 
-                      className="w-12 h-12 rounded border-2"
-                      style={{ backgroundColor: theme.cssVars.primary }}
-                      title="Primary"
-                    />
-                    <div 
-                      className="w-12 h-12 rounded border-2"
-                      style={{ backgroundColor: theme.cssVars.secondary }}
-                      title="Secondary"
-                    />
-                    <div 
-                      className="w-12 h-12 rounded border-2"
-                      style={{ backgroundColor: theme.cssVars.accent }}
-                      title="Accent"
-                    />
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <p className="text-sm">
-                      <span className="font-semibold">Type:</span>{' '}
-                      <span className="capitalize">{theme.type}</span>
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-semibold">Border Radius:</span>{' '}
-                      {theme.cssVars.radius}
-                    </p>
-                  </div>
+      {/* Light Themes Section */}
+      <div>
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-2xl font-bold">☀️ Light Themes</h2>
+          <span className="text-sm px-3 py-1 rounded-full bg-muted">
+            {lightThemes.length} themes
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {lightThemes.map((theme) => {
+            const isActive = currentTheme === theme.name
+            
+            return (
+              <Card
+                key={theme.name}
+                className={`cursor-pointer transition-all hover:scale-105 ${
+                  isActive ? 'ring-2 ring-primary shadow-lg' : ''
+                }`}
+                onClick={() => setTheme(theme.name)}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-base">
+                    {theme.label}
+                    {isActive && (
+                      <span className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded">
+                        ✓
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="text-xs">{theme.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {/* Color Palette */}
+                    <div className="grid grid-cols-4 gap-1">
+                      <div 
+                        className="aspect-square rounded border-2"
+                        style={{ backgroundColor: theme.cssVars.background }}
+                        title="Background"
+                      />
+                      <div 
+                        className="aspect-square rounded border-2"
+                        style={{ backgroundColor: theme.cssVars.primary }}
+                        title="Primary"
+                      />
+                      <div 
+                        className="aspect-square rounded border-2"
+                        style={{ backgroundColor: theme.cssVars.secondary }}
+                        title="Secondary"
+                      />
+                      <div 
+                        className="aspect-square rounded border-2"
+                        style={{ backgroundColor: theme.cssVars.accent }}
+                        title="Accent"
+                      />
+                    </div>
+                    
+                    {/* Theme Info */}
+                    <div className="text-xs space-y-1">
+                      <p>
+                        <span className="font-semibold">Radius:</span> {theme.cssVars.radius}
+                      </p>
+                    </div>
 
-                  <Button 
-                    className="w-full mt-4"
-                    variant={isActive ? 'default' : 'outline'}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setTheme(theme.name)
-                    }}
-                  >
-                    {isActive ? 'Current Theme' : 'Apply Theme'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
+                    <Button 
+                      size="sm"
+                      className="w-full"
+                      variant={isActive ? 'default' : 'outline'}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setTheme(theme.name)
+                      }}
+                    >
+                      {isActive ? '✓ Active' : 'Apply'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
       </div>
 
+      <Separator />
+
+      {/* Dark Themes Section */}
+      <div>
+        <div className="flex items-center gap-3 mb-6">
+          <h2 className="text-2xl font-bold">🌙 Dark Themes</h2>
+          <span className="text-sm px-3 py-1 rounded-full bg-muted">
+            {darkThemes.length} themes
+          </span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {darkThemes.map((theme) => {
+            const isActive = currentTheme === theme.name
+            
+            return (
+              <Card
+                key={theme.name}
+                className={`cursor-pointer transition-all hover:scale-105 ${
+                  isActive ? 'ring-2 ring-primary shadow-lg' : ''
+                }`}
+                onClick={() => setTheme(theme.name)}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between text-base">
+                    {theme.label}
+                    {isActive && (
+                      <span className="text-xs px-2 py-1 bg-primary text-primary-foreground rounded">
+                        ✓
+                      </span>
+                    )}
+                  </CardTitle>
+                  <CardDescription className="text-xs">{theme.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {/* Color Palette */}
+                    <div className="grid grid-cols-4 gap-1">
+                      <div 
+                        className="aspect-square rounded border-2"
+                        style={{ backgroundColor: theme.cssVars.background }}
+                        title="Background"
+                      />
+                      <div 
+                        className="aspect-square rounded border-2"
+                        style={{ backgroundColor: theme.cssVars.primary }}
+                        title="Primary"
+                      />
+                      <div 
+                        className="aspect-square rounded border-2"
+                        style={{ backgroundColor: theme.cssVars.secondary }}
+                        title="Secondary"
+                      />
+                      <div 
+                        className="aspect-square rounded border-2"
+                        style={{ backgroundColor: theme.cssVars.accent }}
+                        title="Accent"
+                      />
+                    </div>
+                    
+                    {/* Theme Info */}
+                    <div className="text-xs space-y-1">
+                      <p>
+                        <span className="font-semibold">Radius:</span> {theme.cssVars.radius}
+                      </p>
+                    </div>
+
+                    <Button 
+                      size="sm"
+                      className="w-full"
+                      variant={isActive ? 'default' : 'outline'}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setTheme(theme.name)
+                      }}
+                    >
+                      {isActive ? '✓ Active' : 'Apply'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Features Section */}
       <div className="mt-12">
-        <h2 className="text-2xl font-bold mb-4">Theme Features</h2>
-        <div className="grid gap-4 md:grid-cols-2">
+        <h2 className="text-2xl font-bold mb-6">✨ Theme Highlights</h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader>
-              <CardTitle>Light Minimal</CardTitle>
-              <CardDescription>Clean and minimalist light theme</CardDescription>
+              <CardTitle className="text-lg">🎯 Light Minimal</CardTitle>
+              <CardDescription>Clean and minimalist</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Perfect for a professional, distraction-free work environment with soft colors and subtle shadows.
+                Perfect for professional environments with soft neutral tones and subtle accents.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Light Brutalist</CardTitle>
-              <CardDescription>Bold and high-contrast light theme</CardDescription>
+              <CardTitle className="text-lg">🔥 Light Warm</CardTitle>
+              <CardDescription>Cozy with orange accents</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Features sharp edges, no border radius, strong shadows, and high contrast for a striking visual impact.
+                Brings energy and warmth with beautiful orange tones, perfect for creative work.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Dark Minimal</CardTitle>
-              <CardDescription>Elegant and soft dark theme</CardDescription>
+              <CardTitle className="text-lg">🌊 Light Ocean</CardTitle>
+              <CardDescription>Fresh blue tones</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                A sophisticated dark theme with muted colors, perfect for long coding sessions and reduced eye strain.
+                Calm and productive atmosphere with refreshing blue colors inspired by the ocean.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Dark Brutalist</CardTitle>
-              <CardDescription>High contrast dark with bold elements</CardDescription>
+              <CardTitle className="text-lg">🌸 Light Rose</CardTitle>
+              <CardDescription>Elegant pink and purple</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Maximum contrast with white borders on black background, no transitions, and strong geometric shapes.
+                Sophisticated and modern with beautiful pink and purple accent colors.
               </p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader>
-              <CardTitle>Dark Cyberpunk</CardTitle>
-              <CardDescription>Neon-infused vibrant dark theme</CardDescription>
+              <CardTitle className="text-lg">🖤 Dark Minimal</CardTitle>
+              <CardDescription>Soft and elegant</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Inspired by cyberpunk aesthetics with neon glows, vibrant colors, and futuristic vibes.
+                The perfect dark theme for long work sessions with reduced eye strain.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">💼 Dark Slate</CardTitle>
+              <CardDescription>Professional blue-gray</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Corporate-friendly dark theme with sophisticated blue-gray tones.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">💜 Dark Purple</CardTitle>
+              <CardDescription>Rich violet accents</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Creative and vibrant with beautiful purple and violet colors.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">🌲 Dark Forest</CardTitle>
+              <CardDescription>Natural green tones</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Organic and natural with earthy green colors inspired by the forest.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">⚡ Dark Amber</CardTitle>
+              <CardDescription>Warm gold accents</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Warm and inviting dark theme with beautiful amber and gold highlights.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">💚 Lucao</CardTitle>
+              <CardDescription>Custom green theme</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Your personal custom theme with unique green accents!
               </p>
             </CardContent>
           </Card>
