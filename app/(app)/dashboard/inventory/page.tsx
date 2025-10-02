@@ -60,6 +60,7 @@ import { ProductHealthScore } from "@/components/inventory/ProductHealthScore"
 import { ViewToggle, type ViewType } from "@/components/inventory/ViewToggle"
 import { ProductCard } from "@/components/inventory/ProductCard"
 import { DistributeStockDialog } from "@/components/inventory/DistributeStockDialog"
+import { AddStockDialog } from "@/components/inventory/AddStockDialog"
 
 type Location = "coldRoom" | "house" | "salePoint"
 type ProductInventory = NonNullable<Product["inventory"]>
@@ -189,24 +190,15 @@ export default function InventoryPage() {
   const [historyProductId, setHistoryProductId] = useState<string | null>(null)
   const [viewType, setViewType] = useState<ViewType>("table")
 
-  // Estados existentes
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editingLocation, setEditingLocation] = useState<Location | null>(null)
-  const [editStock, setEditStock] = useState("")
-  const [editingBonifications, setEditingBonifications] = useState<string | null>(null)
-  const [editBonifications, setEditBonifications] = useState("")
+  // Estados de filtros e busca
   const [filterCategory, setFilterCategory] = useState("all")
   const [filterAlert, setFilterAlert] = useState("all")
   const [searchQuery, setSearchQuery] = useState("")
+  
+  // Estados para modais
   const [showAddModal, setShowAddModal] = useState(false)
   const [addProductId, setAddProductId] = useState("")
-  const [addQuantity, setAddQuantity] = useState("")
   const [addProductSearch, setAddProductSearch] = useState("")
-  const [showTransferModal, setShowTransferModal] = useState(false)
-  const [transferProductId, setTransferProductId] = useState("")
-  const [transferFrom, setTransferFrom] = useState<Location>("coldRoom")
-  const [transferTo, setTransferTo] = useState<Location>("house")
-  const [transferQuantity, setTransferQuantity] = useState("")
   const [showImportModal, setShowImportModal] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importing, setImporting] = useState(false)
@@ -362,25 +354,6 @@ export default function InventoryPage() {
     return Array.from(new Set(products.map(p => p.category).filter(Boolean))) as string[]
   }, [products])
 
-  const handleAddModalChange = (open: boolean) => {
-    setShowAddModal(open)
-    if (!open) {
-      setAddProductId("")
-      setAddQuantity("")
-      setAddProductSearch("")
-    }
-  }
-
-  const handleTransferModalChange = (open: boolean) => {
-    setShowTransferModal(open)
-    if (!open) {
-      setTransferProductId("")
-      setTransferQuantity("")
-      setTransferFrom(COLD_ROOM_LOCATION)
-      setTransferTo("house")
-    }
-  }
-
   const handleImportModalChange = (open: boolean) => {
     setShowImportModal(open)
     if (!open) {
@@ -388,29 +361,6 @@ export default function InventoryPage() {
       if (importInputRef.current) {
         importInputRef.current.value = ""
       }
-    }
-  }
-
-  const handleUpdateStock = async (productId: string, location: Location, newStock: number) => {
-    try {
-      const response = await fetch(`/api/inventory`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          productId,
-          location,
-          quantity: newStock
-        })
-      })
-
-      if (!response.ok) throw new Error("Erro ao atualizar estoque")
-
-      toast.success("Estoque atualizado com sucesso")
-      queryClient.invalidateQueries({ queryKey: ["products"] })
-      setEditingId(null)
-      setEditingLocation(null)
-    } catch (error) {
-      toast.error("Erro ao atualizar estoque")
     }
   }
 
@@ -438,38 +388,6 @@ export default function InventoryPage() {
       queryClient.invalidateQueries({ queryKey: ["products"] })
     } catch (error) {
       toast.error("Erro ao adicionar estoque")
-    }
-  }
-
-  const handleTransfer = async () => {
-    try {
-      const quantity = Number.parseInt(transferQuantity, 10)
-      if (!transferProductId || isNaN(quantity) || quantity <= 0) {
-        toast.error("Dados inválidos")
-        return
-      }
-
-      const response = await fetch(`/api/inventory/bulk`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          operation: "transfer",
-          productIds: [transferProductId],
-          params: {
-            fromLocation: transferFrom,
-            toLocation: transferTo,
-            quantity
-          }
-        })
-      })
-
-      if (!response.ok) throw new Error("Erro ao transferir")
-
-      toast.success("Transferência realizada com sucesso")
-      queryClient.invalidateQueries({ queryKey: ["products"] })
-      handleTransferModalChange(false)
-    } catch (error) {
-      toast.error("Erro ao realizar transferência")
     }
   }
 
@@ -560,10 +478,6 @@ export default function InventoryPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setShowTransferModal(true)}>
-            <ArrowLeftRight className="mr-2 size-4" />
-            Transferir
-          </Button>
           <Button variant="outline">
             <ClipboardCheck className="mr-2 size-4" />
             Auditar
@@ -663,13 +577,6 @@ export default function InventoryPage() {
               availableBrands={[]}
             />
             <ViewToggle value={viewType} onChange={setViewType} />
-            <Button
-              variant="outline"
-              onClick={() => setShowTransferModal(true)}
-            >
-              <ArrowLeftRight className="mr-2 size-4" />
-              Transferir
-            </Button>
           </div>
 
           {/* Visualização de Produtos */}
@@ -789,10 +696,6 @@ export default function InventoryPage() {
                                 setShowAddModal(true)
                               }}
                               onTransfer={() => {
-                                setTransferProductId(product.id)
-                                setShowTransferModal(true)
-                              }}
-                              onDistribute={() => {
                                 setDistributeProductId(product.id)
                                 setShowDistributeDialog(true)
                               }}
@@ -833,8 +736,8 @@ export default function InventoryPage() {
                         setShowAddModal(true)
                       }}
                       onTransfer={() => {
-                        setTransferProductId(product.id)
-                        setShowTransferModal(true)
+                        setDistributeProductId(product.id)
+                        setShowDistributeDialog(true)
                       }}
                     />
                   )
@@ -868,8 +771,8 @@ export default function InventoryPage() {
                         setShowAddModal(true)
                       }}
                       onTransfer={() => {
-                        setTransferProductId(product.id)
-                        setShowTransferModal(true)
+                        setDistributeProductId(product.id)
+                        setShowDistributeDialog(true)
                       }}
                     />
                   )
@@ -929,174 +832,19 @@ export default function InventoryPage() {
           onOpenChange={(open) => !open && setHistoryProductId(null)}
         />
       )}
-
-      {/* Modais Existentes (Add, Transfer, Import) */}
-      
-      {/* Modal de Adicionar Estoque */}
-      <Dialog open={showAddModal} onOpenChange={handleAddModalChange}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Adicionar Estoque</DialogTitle>
-            <DialogDescription>
-              Adicione produtos ao estoque em uma localização específica
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="addProduct">Produto</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar produto..."
-                  value={addProductSearch}
-                  onChange={(e) => setAddProductSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-              <div className="max-h-[200px] overflow-y-auto rounded-md border">
-                {products
-                  .filter((p) =>
-                    p.name.toLowerCase().includes(addProductSearch.toLowerCase())
-                  )
-                  .map((product) => (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => {
-                        setAddProductId(product.id)
-                        setAddProductSearch(product.name)
-                      }}
-                      className={cn(
-                        "w-full p-3 text-left hover:bg-muted/50",
-                        addProductId === product.id && "bg-muted"
-                      )}
-                    >
-                      <div className="font-medium">{product.name}</div>
-                      <div className="text-sm text-muted-foreground">
-                        Estoque atual: {product.inventory?.totalQuantity || 0}
-                      </div>
-                    </button>
-                  ))}
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="addQuantity">Quantidade</Label>
-              <Input
-                id="addQuantity"
-                type="number"
-                min="1"
-                value={addQuantity}
-                onChange={(e) => setAddQuantity(e.target.value)}
-                placeholder="Digite a quantidade"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Localização</Label>
-              <LocationSelector
-                value={editingLocation}
-                onChange={setEditingLocation}
-                label=""
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => handleAddModalChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button
-              onClick={async () => {
-                if (!addProductId || !addQuantity || !editingLocation) {
-                  toast.error("Preencha todos os campos")
-                  return
-                }
-                await handleQuickAdd(
-                  addProductId,
-                  editingLocation,
-                  Number.parseInt(addQuantity, 10)
-                )
-                handleAddModalChange(false)
-              }}
-            >
-              Adicionar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal de Transferência */}
-      <Dialog open={showTransferModal} onOpenChange={handleTransferModalChange}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Transferir Estoque</DialogTitle>
-            <DialogDescription>
-              Transfira produtos entre localizações
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="transferProduct">Produto</Label>
-              <Select
-                value={transferProductId}
-                onValueChange={setTransferProductId}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id}>
-                      {product.name} - Estoque: {product.inventory?.totalQuantity || 0}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label>De</Label>
-                <LocationSelector
-                  value={transferFrom}
-                  onChange={setTransferFrom}
-                  label=""
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label>Para</Label>
-                <LocationSelector
-                  value={transferTo}
-                  onChange={setTransferTo}
-                  label=""
-                />
-              </div>
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="transferQuantity">Quantidade</Label>
-              <Input
-                id="transferQuantity"
-                type="number"
-                min="1"
-                value={transferQuantity}
-                onChange={(e) => setTransferQuantity(e.target.value)}
-                placeholder="Digite a quantidade"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => handleTransferModalChange(false)}
-            >
-              Cancelar
-            </Button>
-            <Button onClick={handleTransfer}>
-              Transferir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Modal Melhorado de Adicionar Estoque */}
+      <AddStockDialog
+        open={showAddModal}
+        onOpenChange={setShowAddModal}
+        products={products}
+        preSelectedProductId={addProductId}
+        preSelectedProductName={addProductSearch}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["products"] })
+          setAddProductId("")
+          setAddProductSearch("")
+        }}
+      />
 
       {/* Modal de Importação */}
       <Dialog open={showImportModal} onOpenChange={handleImportModalChange}>
