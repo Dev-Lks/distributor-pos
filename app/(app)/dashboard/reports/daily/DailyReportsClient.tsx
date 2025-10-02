@@ -183,11 +183,60 @@ export function DailyReportsClient({ initialData, initialTotal, pointsOfSale, in
   const total = reportsQuery.data?.total ?? 0
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-10">
+      {/* Header aprimorado */}
+      <Card className="border-none bg-gradient-to-br from-blue-500/5 via-blue-500/10 to-blue-500/5 shadow-sm">
+        <CardHeader>
+          <div className="space-y-2">
+            <CardTitle className="text-2xl md:text-3xl">Relatórios Z - Fechamentos Diários</CardTitle>
+            <CardDescription className="text-base">
+              Gerencie os fechamentos diários do caixa. Gere, visualize e envie relatórios por email automaticamente.
+            </CardDescription>
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Geração de Relatório */}
       <Card>
         <CardHeader>
-          <CardTitle>Relatório Z diário</CardTitle>
-          <CardDescription>Consolide o fechamento por dia, ponto de venda e status de envio.</CardDescription>
+          <CardTitle className="text-base">Gerar Novo Relatório</CardTitle>
+          <CardDescription>Crie um relatório para uma data específica. Ideal para geração manual após fechamento de caixa.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data do relatório</label>
+              <Input
+                type="date"
+                value={generationDate}
+                onChange={(event) => setGenerationDate(event.target.value)}
+                className="w-48"
+              />
+            </div>
+            <Button 
+              type="button" 
+              onClick={() => generateMutation.mutate()} 
+              disabled={generateMutation.isPending}
+              className="gap-2"
+            >
+              {generateMutation.isPending ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Gerando...
+                </>
+              ) : (
+                "Gerar Relatório"
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filtros */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Filtros</CardTitle>
+          <CardDescription>Pesquise relatórios por período, status ou ponto de venda.</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="grid gap-4 md:grid-cols-5" onSubmit={applyFilters}>
@@ -243,29 +292,14 @@ export function DailyReportsClient({ initialData, initialTotal, pointsOfSale, in
         </CardContent>
       </Card>
 
+      {/* Histórico */}
       <Card>
-        <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <CardTitle>Histórico</CardTitle>
+        <CardHeader>
+          <div className="space-y-1">
+            <CardTitle className="text-base">Histórico de Relatórios</CardTitle>
             <CardDescription>
               {reportsQuery.isFetching ? "Atualizando..." : `Mostrando ${reports.length} de ${total} registros.`}
             </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="space-y-1 text-sm">
-              <label className="text-xs uppercase text-muted-foreground">Gerar relatório para</label>
-              <div className="flex items-center gap-2">
-                <Input
-                  type="date"
-                  value={generationDate}
-                  onChange={(event) => setGenerationDate(event.target.value)}
-                  className="w-40"
-                />
-                <Button type="button" onClick={() => generateMutation.mutate()} disabled={generateMutation.isPending}>
-                  {generateMutation.isPending ? "Gerando..." : "Gerar agora"}
-                </Button>
-              </div>
-            </div>
           </div>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -326,19 +360,38 @@ export function DailyReportsClient({ initialData, initialTotal, pointsOfSale, in
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         {report.fileUrl ? (
-                          <Button asChild size="sm" variant="outline">
-                            <a href={report.fileUrl} target="_blank" rel="noopener noreferrer">
-                              PDF
-                            </a>
-                          </Button>
-                        ) : null}
+                          <>
+                            <Button asChild size="sm" variant="outline" className="gap-2">
+                              <a href={report.fileUrl} target="_blank" rel="noopener noreferrer">
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Ver PDF
+                              </a>
+                            </Button>
+                            <Button asChild size="sm" variant="ghost" className="gap-2">
+                              <a href={report.fileUrl} download>
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Download
+                              </a>
+                            </Button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Arquivo não disponível</span>
+                        )}
                         <Button
                           size="sm"
                           variant="ghost"
                           disabled={resendMutation.isPending}
                           onClick={() => resendMutation.mutate(report.id)}
+                          className="gap-2"
                         >
-                          Reenviar
+                          <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                          {resendMutation.isPending ? "Enviando..." : "Enviar Email"}
                         </Button>
                       </div>
                     </TableCell>
@@ -350,10 +403,44 @@ export function DailyReportsClient({ initialData, initialTotal, pointsOfSale, in
         </CardContent>
       </Card>
 
-      <Separator />
-      <p className="text-xs text-muted-foreground">
-        Os arquivos são armazenados na pasta configurada pelo ambiente. Configure variáveis SMTP e destinatários para envio automático.
-      </p>
+      {/* Card informativo sobre o fluxo */}
+      <Card className="border-blue-500/20 bg-blue-500/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <svg className="h-4 w-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Fluxo de Fechamento de Caixa
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ol className="space-y-2 text-sm text-muted-foreground">
+            <li className="flex items-start gap-2">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-semibold text-blue-600">1</span>
+              <span>Feche o caixa no <strong className="text-foreground">PDV</strong> (snapshot salvo automaticamente)</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-semibold text-blue-600">2</span>
+              <span>Gere o <strong className="text-foreground">Relatório Z</strong> nesta página selecionando a data</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-semibold text-blue-600">3</span>
+              <span>O relatório será gerado em PDF e enviado automaticamente por email</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/20 text-xs font-semibold text-blue-600">4</span>
+              <span>Baixe o PDF ou reenvie o email se necessário usando os botões de ação</span>
+            </li>
+          </ol>
+        </CardContent>
+      </Card>
+
+      <div className="rounded-lg border border-border/50 bg-muted/30 p-4">
+        <p className="text-sm text-muted-foreground">
+          <strong>Configuração:</strong> Os arquivos são armazenados na pasta configurada pelo ambiente. 
+          Configure variáveis SMTP (EMAIL_SERVER, EMAIL_FROM) e destinatários no .env para envio automático.
+        </p>
+      </div>
     </div>
   )
 }

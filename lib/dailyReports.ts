@@ -1,4 +1,5 @@
 import { addDays, format, startOfDay } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import { fromZonedTime, toZonedTime } from "date-fns-tz"
 import PDFDocument from "pdfkit"
 
@@ -166,7 +167,13 @@ async function buildPdfBuffer(params: {
   pointOfSaleName?: string | null
   computation: ReportComputation
 }): Promise<Buffer> {
-  const doc = new PDFDocument({ margin: 40 })
+  const doc = new PDFDocument({ 
+    margin: 50,
+    bufferPages: true,
+    autoFirstPage: true,
+    size: 'A4',
+  })
+  
   const chunks: Buffer[] = []
 
   return await new Promise<Buffer>((resolve, reject) => {
@@ -174,47 +181,243 @@ async function buildPdfBuffer(params: {
       chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk)
     })
 
-    doc.on("error", (error: unknown) => reject(error))
+    doc.on("error", (error: unknown) => {
+      console.error("PDF generation error:", error)
+      reject(error)
+    })
 
     doc.on("end", () => {
       resolve(Buffer.concat(chunks))
     })
 
-  const formattedDate = format(toZonedTime(params.reportDate, params.timezone), "dd/MM/yyyy")
+    try {
+      const formattedDate = format(toZonedTime(params.reportDate, params.timezone), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
+      const { computation } = params
+      const pageWidth = doc.page.width
+      const pageHeight = doc.page.height
 
-    doc.fontSize(18).text("Relatório Z - Fechamento Diário", { align: "center" })
-    doc.moveDown(0.5)
+      // ==========================================
+      // HEADER COM DESIGN MODERNO
+      // ==========================================
+      
+      // Retângulo azul no topo
+      doc.rect(0, 0, pageWidth, 80)
+         .fill('#2563eb')
+      
+      // Título branco centralizado
+      doc.fillColor('#ffffff')
+         .fontSize(24)
+         .font('Helvetica-Bold')
+         .text('RELATÓRIO Z', 50, 25, { align: 'center' })
+      
+      doc.fontSize(14)
+         .font('Helvetica')
+         .text('Fechamento Diário', 50, 52, { align: 'center' })
 
-    doc.fontSize(12).text(`Data de referência: ${formattedDate}`)
-    if (params.pointOfSaleName) {
-      doc.text(`Ponto de venda: ${params.pointOfSaleName}`)
+      // Reset cor para preto
+      doc.fillColor('#000000')
+      
+      // ==========================================
+      // INFORMAÇÕES DO RELATÓRIO
+      // ==========================================
+      
+      doc.moveDown(4)
+      
+      // Box com informações gerais
+      const infoBoxY = doc.y
+      doc.rect(50, infoBoxY, pageWidth - 100, 60)
+         .fillAndStroke('#f8fafc', '#e2e8f0')
+      
+      doc.fillColor('#1e293b')
+         .fontSize(11)
+         .font('Helvetica-Bold')
+         .text('Data de Referência:', 60, infoBoxY + 15)
+         .font('Helvetica')
+         .text(formattedDate, 180, infoBoxY + 15)
+      
+      if (params.pointOfSaleName) {
+        doc.font('Helvetica-Bold')
+           .text('Ponto de Venda:', 60, infoBoxY + 35)
+           .font('Helvetica')
+           .text(params.pointOfSaleName, 180, infoBoxY + 35)
+      }
+      
+      doc.moveDown(2)
+
+      // ==========================================
+      // RESUMO FINANCEIRO
+      // ==========================================
+      
+      const summaryY = doc.y + 10
+      
+      // Título da seção
+      doc.fillColor('#0f172a')
+         .fontSize(16)
+         .font('Helvetica-Bold')
+         .text('Resumo Financeiro', 50, summaryY)
+      
+      doc.moveTo(50, summaryY + 22)
+         .lineTo(pageWidth - 50, summaryY + 22)
+         .strokeColor('#3b82f6')
+         .lineWidth(2)
+         .stroke()
+      
+      doc.moveDown(1.5)
+      
+      // Tabela de valores
+      const tableY = doc.y
+      const col1X = 60
+      const col2X = pageWidth - 200
+      
+      const financialItems = [
+        { label: 'Subtotal Bruto', value: computation.subtotal, color: '#64748b' },
+        { label: 'Descontos', value: computation.discountTotal, color: '#ef4444' },
+        { label: 'Impostos', value: computation.taxTotal, color: '#f59e0b' },
+        { label: 'Taxa de Serviço', value: computation.serviceChargeTotal, color: '#8b5cf6' },
+      ]
+      
+      let currentY = tableY
+      
+      financialItems.forEach((item, index) => {
+        // Linha alternada
+        if (index % 2 === 0) {
+          doc.rect(50, currentY - 5, pageWidth - 100, 25)
+             .fill('#f8fafc')
+        }
+        
+        doc.fillColor(item.color)
+           .fontSize(11)
+           .font('Helvetica')
+           .text(item.label, col1X, currentY, { width: 300 })
+        
+        doc.fillColor('#1e293b')
+           .font('Helvetica-Bold')
+           .text(toCurrency(item.value), col2X, currentY, { align: 'right', width: 150 })
+        
+        currentY += 25
+      })
+      
+      // Total Líquido - destaque especial
+      currentY += 5
+      doc.rect(50, currentY - 5, pageWidth - 100, 35)
+         .fill('#dcfce7')
+      
+      doc.fillColor('#059669')
+         .fontSize(14)
+         .font('Helvetica-Bold')
+         .text('Total Líquido', col1X, currentY + 5, { width: 300 })
+      
+      doc.fontSize(16)
+         .text(toCurrency(computation.netTotal), col2X, currentY + 5, { align: 'right', width: 150 })
+      
+      doc.moveDown(3)
+
+      // ==========================================
+      // MÉTODOS DE PAGAMENTO
+      // ==========================================
+      
+      const paymentY = doc.y + 10
+      
+      doc.fillColor('#0f172a')
+         .fontSize(16)
+         .font('Helvetica-Bold')
+         .text('Métodos de Pagamento', 50, paymentY)
+      
+      doc.moveTo(50, paymentY + 22)
+         .lineTo(pageWidth - 50, paymentY + 22)
+         .strokeColor('#3b82f6')
+         .lineWidth(2)
+         .stroke()
+      
+      doc.moveDown(1.5)
+      
+      computation.paymentSummaries.forEach((summary, index) => {
+        const boxY = doc.y
+        
+        // Verificar se precisa de nova página
+        if (boxY > pageHeight - 150) {
+          doc.addPage()
+        }
+        
+        // Box para cada método
+        doc.rect(50, boxY, pageWidth - 100, 90)
+           .fillAndStroke('#ffffff', '#e2e8f0')
+           .lineWidth(1)
+        
+        // Nome do método com badge
+        doc.roundedRect(60, boxY + 10, 100, 25, 3)
+           .fill('#3b82f6')
+        
+        doc.fillColor('#ffffff')
+           .fontSize(11)
+           .font('Helvetica-Bold')
+           .text(summary.method.toUpperCase(), 60, boxY + 16, { width: 100, align: 'center' })
+        
+        // Valores
+        doc.fillColor('#1e293b')
+           .fontSize(10)
+           .font('Helvetica')
+           .text('Previsto:', 180, boxY + 15)
+           .font('Helvetica-Bold')
+           .text(toCurrency(summary.expectedAmount), 240, boxY + 15)
+        
+        doc.font('Helvetica')
+           .text('Recebido:', 350, boxY + 15)
+           .font('Helvetica-Bold')
+           .fillColor('#059669')
+           .text(toCurrency(summary.receivedAmount), 415, boxY + 15)
+        
+        // Estatísticas
+        doc.fillColor('#64748b')
+           .fontSize(9)
+           .font('Helvetica')
+           .text(`Total de Pagamentos: ${summary.paymentsCount}`, 60, boxY + 45)
+        
+        // Status com ícones/bullets
+        const statusY = boxY + 60
+        doc.fontSize(8)
+        
+        const statuses = [
+          { label: 'Pagos', value: summary.statuses[PaymentStatus.PAID] ?? 0, color: '#10b981' },
+          { label: 'Pendentes', value: summary.statuses[PaymentStatus.PENDING] ?? 0, color: '#f59e0b' },
+          { label: 'Parciais', value: summary.statuses[PaymentStatus.PARTIAL] ?? 0, color: '#3b82f6' },
+          { label: 'Atrasados', value: summary.statuses[PaymentStatus.OVERDUE] ?? 0, color: '#ef4444' },
+        ]
+        
+        let statusX = 60
+        statuses.forEach((status) => {
+          if (status.value > 0) {
+            doc.circle(statusX, statusY + 3, 3).fill(status.color)
+            doc.fillColor('#1e293b')
+               .text(`${status.label}: ${status.value}`, statusX + 8, statusY, { width: 80 })
+            statusX += 95
+          }
+        })
+        
+        doc.moveDown(2.5)
+      })
+      
+      // ==========================================
+      // RODAPÉ
+      // ==========================================
+      
+      const footerY = pageHeight - 50
+      
+      doc.fontSize(8)
+         .fillColor('#94a3b8')
+         .font('Helvetica')
+         .text(
+           `Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} · Sistema NitroBeer`, 
+           50, 
+           footerY, 
+           { align: 'center', width: pageWidth - 100 }
+         )
+
+      doc.end()
+    } catch (error) {
+      console.error("Error building PDF:", error)
+      reject(error)
     }
-    doc.moveDown()
-
-    const { computation } = params
-
-    doc.fontSize(14).text("Resumo Financeiro", { underline: true })
-    doc.moveDown(0.5)
-    doc.fontSize(12)
-    doc.text(`Subtotal bruto: ${toCurrency(computation.subtotal)}`)
-    doc.text(`Descontos: ${toCurrency(computation.discountTotal)}`)
-    doc.text(`Impostos: ${toCurrency(computation.taxTotal)}`)
-    doc.text(`Serviço: ${toCurrency(computation.serviceChargeTotal)}`)
-    doc.text(`Total líquido: ${toCurrency(computation.netTotal)}`)
-    doc.moveDown()
-
-    doc.fontSize(14).text("Totais por método de pagamento", { underline: true })
-    doc.moveDown(0.5)
-
-    computation.paymentSummaries.forEach((summary) => {
-      doc.fontSize(12).text(`${summary.method.toUpperCase()}`)
-      doc.fontSize(10)
-      doc.text(`Previsto: ${toCurrency(summary.expectedAmount)} | Recebido: ${toCurrency(summary.receivedAmount)} | Pagamentos: ${summary.paymentsCount}`)
-      doc.text(`Status: Pendente ${summary.statuses[PaymentStatus.PENDING] ?? 0} · Parcial ${summary.statuses[PaymentStatus.PARTIAL] ?? 0} · Pago ${summary.statuses[PaymentStatus.PAID] ?? 0} · Atrasado ${summary.statuses[PaymentStatus.OVERDUE] ?? 0}`)
-      doc.moveDown(0.35)
-    })
-
-    doc.end()
   })
 }
 
