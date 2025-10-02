@@ -103,8 +103,8 @@ export function PaymentPanel({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+      <CardHeader className="pb-2 pt-4">
+        <CardTitle className="flex items-center gap-2 text-lg">
           <Receipt className="h-5 w-5" />
           Pagamento
         </CardTitle>

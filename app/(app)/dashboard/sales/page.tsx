@@ -297,25 +297,25 @@ export default function SalesPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 lg:p-6 space-y-6">
+    <div className="container mx-auto p-4 lg:p-6 space-y-4">
       {/* Header */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">PDV</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl font-bold tracking-tight">PDV</h1>
+          <p className="text-sm text-muted-foreground">
             Ponto de venda rápido e eficiente
           </p>
         </div>
 
         {/* Point of Sale Selector */}
         <Card className="lg:w-80">
-          <CardHeader className="pb-3">
+          <CardHeader className="pb-2 pt-3">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <MapPin className="h-4 w-4" />
               Ponto de Venda
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-3">
             <Select
               value={selectedPointOfSaleId ?? ""}
               onValueChange={(value) => setSelectedPointOfSaleId(value || null)}
@@ -336,9 +336,9 @@ export default function SalesPage() {
       </div>
 
       {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left Column - Products */}
-        <div className="lg:col-span-8 space-y-6">
+        <div className="lg:col-span-8 space-y-4">
           <ProductGrid
             products={products}
             loading={loading}
@@ -350,35 +350,37 @@ export default function SalesPage() {
         </div>
 
         {/* Right Column - Cart, Payment & Cash */}
-        <div className="lg:col-span-4 space-y-6">
-          {/* Cart */}
-          <CartSection
-            cart={cart}
-            onUpdateQuantity={updateQuantity}
-            onRemove={removeFromCart}
-            onClear={clearCart}
-            total={total}
-            itemCount={itemCount}
-          />
+        <div className="lg:col-span-4">
+          <div className="lg:sticky lg:top-4 space-y-3">
+            {/* Cart */}
+            <CartSection
+              cart={cart}
+              onUpdateQuantity={updateQuantity}
+              onRemove={removeFromCart}
+              onClear={clearCart}
+              total={total}
+              itemCount={itemCount}
+            />
 
-          {/* Payment Panel */}
-          <PaymentPanel
-            total={total}
-            paymentMethod={paymentMethod}
-            onPaymentMethodChange={setPaymentMethod}
-            onFinalizeSale={handleFinalizeSale}
-            disabled={cart.length === 0 || !isSessionOpen}
-            loading={isProcessing}
-          />
+            {/* Payment Panel */}
+            <PaymentPanel
+              total={total}
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setPaymentMethod}
+              onFinalizeSale={handleFinalizeSale}
+              disabled={cart.length === 0 || !isSessionOpen}
+              loading={isProcessing}
+            />
 
-          {/* Cash Session Panel */}
-          <CashSessionPanel
-            session={cashSessionControls.session ?? null}
-            loading={cashSessionControls.isLoading}
-            onOpenSession={() => setIsOpenSessionDialogOpen(true)}
-            onRegisterTransaction={() => setIsTransactionDialogOpen(true)}
-            onCloseSession={() => setIsCloseSessionDialogOpen(true)}
-          />
+            {/* Cash Session Panel */}
+            <CashSessionPanel
+              session={cashSessionControls.session ?? null}
+              loading={cashSessionControls.isLoading}
+              onOpenSession={() => setIsOpenSessionDialogOpen(true)}
+              onRegisterTransaction={() => setIsTransactionDialogOpen(true)}
+              onCloseSession={() => setIsCloseSessionDialogOpen(true)}
+            />
+          </div>
         </div>
       </div>
 

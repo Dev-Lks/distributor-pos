@@ -34,7 +34,7 @@ export function CartSection({
 }: CartSectionProps) {
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-2 pt-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <ShoppingCart className="h-5 w-5" />
