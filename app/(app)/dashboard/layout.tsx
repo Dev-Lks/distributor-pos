@@ -2,6 +2,7 @@ import type { ReactNode } from "react"
 
 import { SidebarLayout } from "@/components/SidebarLayout"
 import { PWAInstallPrompt } from "@/components/PWAInstallPrompt"
+import { ThemeProvider } from "@/components/ThemeProvider"
 
 export default function DashboardLayout({
   children,
@@ -9,9 +10,11 @@ export default function DashboardLayout({
   children: ReactNode
 }) {
   return (
-    <SidebarLayout>
-      {children}
-      <PWAInstallPrompt />
-    </SidebarLayout>
+    <ThemeProvider>
+      <SidebarLayout>
+        {children}
+        <PWAInstallPrompt />
+      </SidebarLayout>
+    </ThemeProvider>
   )
 }

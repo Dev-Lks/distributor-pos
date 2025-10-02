@@ -33,7 +33,7 @@ import {
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ThemeToggle } from "./ThemeToggle"
+import { ThemeTogglePopover } from "./ThemeTogglePopover"
 import { signOut, useSession } from "next-auth/react"
 import { useCashSession } from "@/lib/useCashSession"
 import {
@@ -346,11 +346,11 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
             <div className="flex items-center justify-between gap-2 rounded-xl bg-muted/60 px-3 py-3">
               {!isCollapsed && (
                 <div>
-                  <p className="text-sm font-semibold">Modo escuro</p>
-                  <p className="text-xs text-muted-foreground">Personalize a interface</p>
+                  <p className="text-sm font-semibold">Temas</p>
+                  <p className="text-xs text-muted-foreground">Escolha seu estilo</p>
                 </div>
               )}
-              <ThemeToggle />
+              <ThemeTogglePopover />
             </div>
 
             {/* Version */}

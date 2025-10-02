@@ -1,49 +1,73 @@
 'use client'
 
-import { Moon, Sun } from 'lucide-react'
+import { Check, Palette } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useEffect, useState } from 'react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { useTheme } from '@/components/ThemeProvider'
+import { themes, type ThemeName } from '@/lib/themes'
 
 export function ThemeToggle() {
-  const [isDark, setIsDark] = useState(false)
+  const { theme: currentTheme, setTheme } = useTheme()
 
-  useEffect(() => {
-    // Verificar se já está no modo dark
-    const isCurrentlyDark = document.documentElement.classList.contains('dark')
-    setIsDark(isCurrentlyDark)
-    console.log('ThemeToggle initialized, isDark:', isCurrentlyDark)
-  }, [])
-
-  const toggleTheme = () => {
-    const root = document.documentElement
-    const newIsDark = !isDark
-
-    if (newIsDark) {
-      root.classList.add('dark')
-      root.classList.remove('light')
-    } else {
-      root.classList.add('light')
-      root.classList.remove('dark')
-    }
-
-    setIsDark(newIsDark)
-    localStorage.setItem('theme', newIsDark ? 'dark' : 'light')
-    console.log('Theme toggled to:', newIsDark ? 'dark' : 'light')
-  }
+  const lightThemes = Object.values(themes).filter(t => t.type === 'light')
+  const darkThemes = Object.values(themes).filter(t => t.type === 'dark')
 
   return (
-    <Button
-      variant="outline"
-      size="icon"
-      onClick={toggleTheme}
-      className="h-9 w-9"
-    >
-      {isDark ? (
-        <Sun className="h-4 w-4" />
-      ) : (
-        <Moon className="h-4 w-4" />
-      )}
-      <span className="sr-only">Toggle theme</span>
-    </Button>
+    <DropdownMenu modal={false}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+        >
+          <Palette className="h-4 w-4" />
+          <span className="sr-only">Select theme</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-64" sideOffset={8}>
+        <DropdownMenuLabel>Light Themes</DropdownMenuLabel>
+        {lightThemes.map((theme) => (
+          <DropdownMenuItem
+            key={theme.name}
+            onClick={() => setTheme(theme.name as ThemeName)}
+            className="flex items-center justify-between cursor-pointer"
+          >
+            <div className="flex flex-col">
+              <span className="font-medium">{theme.label}</span>
+              <span className="text-xs text-muted-foreground">{theme.description}</span>
+            </div>
+            {currentTheme === theme.name && (
+              <Check className="h-4 w-4 ml-2" />
+            )}
+          </DropdownMenuItem>
+        ))}
+        
+        <DropdownMenuSeparator />
+        
+        <DropdownMenuLabel>Dark Themes</DropdownMenuLabel>
+        {darkThemes.map((theme) => (
+          <DropdownMenuItem
+            key={theme.name}
+            onClick={() => setTheme(theme.name as ThemeName)}
+            className="flex items-center justify-between cursor-pointer"
+          >
+            <div className="flex flex-col">
+              <span className="font-medium">{theme.label}</span>
+              <span className="text-xs text-muted-foreground">{theme.description}</span>
+            </div>
+            {currentTheme === theme.name && (
+              <Check className="h-4 w-4 ml-2" />
+            )}
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
