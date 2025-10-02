@@ -623,10 +623,10 @@ export async function sendDailyReportEmail(reportId: string, options: { recipien
     .filter(Boolean)
     .join("\n")
 
-  const attachments = [
+  const attachments: Array<{ filename: string; content: Buffer; contentType: string }> = [
     {
       filename: pdfFilename,
-      content: report.pdfData,
+      content: Buffer.from(report.pdfData) as Buffer,
       contentType: "application/pdf",
     },
   ]
@@ -635,7 +635,7 @@ export async function sendDailyReportEmail(reportId: string, options: { recipien
   if (report.csvData) {
     attachments.push({
       filename: csvFilename,
-      content: report.csvData,
+      content: Buffer.from(report.csvData) as Buffer,
       contentType: "text/csv",
     })
   }
