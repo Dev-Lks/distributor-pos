@@ -57,7 +57,7 @@ export async function GET(
     }
 
     // Servir o PDF
-    return new NextResponse(report.pdfData, {
+    return new NextResponse(Buffer.from(report.pdfData), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",

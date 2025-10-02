@@ -57,7 +57,12 @@ export async function GET(
     }
 
     // Servir o CSV
-    return new NextResponse(report.csvData, {
+    const csvBody =
+      report.csvData instanceof Uint8Array
+        ? Buffer.from(report.csvData)
+        : report.csvData
+
+    return new NextResponse(csvBody, {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
