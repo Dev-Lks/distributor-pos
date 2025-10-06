@@ -9,8 +9,10 @@ export default withAuth(
     // Rotas públicas
     if (path.startsWith("/login") || path.startsWith("/api/auth")) {
       const response = NextResponse.next();
-      // Adiciona headers para evitar problemas com cache em navegadores Chromium
-      response.headers.set('Cache-Control', 'no-store, must-revalidate');
+      // Headers para evitar problemas com cache em navegadores Chromium
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
       response.headers.set('X-Content-Type-Options', 'nosniff');
       return response;
     }
@@ -20,8 +22,10 @@ export default withAuth(
       const loginUrl = new URL("/login", req.url);
       loginUrl.searchParams.set("callbackUrl", path);
       const response = NextResponse.redirect(loginUrl);
-      // Headers adicionais para redirecionamento mais compatível
-      response.headers.set('Cache-Control', 'no-store, must-revalidate');
+      // Headers para garantir que o redirecionamento funcione corretamente
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      response.headers.set('Pragma', 'no-cache');
+      response.headers.set('Expires', '0');
       return response;
     }
 

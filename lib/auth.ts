@@ -139,6 +139,14 @@ export const authOptions: NextAuthOptions = {
       }
       return session;
     },
+    async redirect({ url, baseUrl }) {
+      // Garantir que redirecionamentos funcionem corretamente no Chrome
+      // Se a URL é relativa ou começa com o baseUrl, usar ela
+      if (url.startsWith("/")) return `${baseUrl}${url}`;
+      else if (url.startsWith(baseUrl)) return url;
+      // Caso contrário, ir para dashboard
+      return `${baseUrl}/dashboard`;
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
 };
