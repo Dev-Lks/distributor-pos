@@ -33,19 +33,28 @@ export default function LoginPage() {
     setErrorMessage(null)
 
     try {
-      // Usar o sistema de redirecionamento nativo do NextAuth
+      // Fazer login sem redirecionamento automático
       const result = await signIn("credentials", {
         email: email.trim(),
         password,
-        redirect: true, // Deixar NextAuth gerenciar o redirecionamento
-        callbackUrl,
+        redirect: false, // Vamos controlar o redirecionamento manualmente
       })
 
-      // Se chegou aqui e result existe, houve erro
+      // Se houve erro
       if (result?.error) {
         setErrorMessage(result.error || "Credenciais inválidas. Verifique e tente novamente.")
         setIsSubmitting(false)
+        return
       }
+
+      // Login bem-sucedido - forçar navegação completa sem cache
+      // Adicionar timestamp para evitar cache
+      const urlWithTimestamp = `${callbackUrl}${callbackUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`
+      
+      // Usar replace em vez de href para substituir a entrada do histórico
+      // Isso força uma navegação completa, especialmente importante no mobile
+      window.location.replace(urlWithTimestamp)
+      
     } catch (error) {
       console.error("Erro ao fazer login:", error)
       setErrorMessage("Erro ao processar login. Tente novamente.")

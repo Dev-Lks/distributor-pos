@@ -6,6 +6,10 @@ import { ThemeProvider } from "@/components/ThemeProvider"
 import { MobileBottomNav } from "@/components/MobileBottomNav"
 import { FloatingActionButton } from "@/components/FloatingActionButton"
 
+// Forçar revalidação para evitar cache
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default function DashboardLayout({
   children,
 }: {
