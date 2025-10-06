@@ -8,12 +8,21 @@ export default withAuth(
 
     // Rotas públicas
     if (path.startsWith("/login") || path.startsWith("/api/auth")) {
-      return NextResponse.next();
+      const response = NextResponse.next();
+      // Adiciona headers para evitar problemas com cache em navegadores Chromium
+      response.headers.set('Cache-Control', 'no-store, must-revalidate');
+      response.headers.set('X-Content-Type-Options', 'nosniff');
+      return response;
     }
 
     // Usuário não autenticado
     if (!token) {
-      return NextResponse.redirect(new URL("/login", req.url));
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", path);
+      const response = NextResponse.redirect(loginUrl);
+      // Headers adicionais para redirecionamento mais compatível
+      response.headers.set('Cache-Control', 'no-store, must-revalidate');
+      return response;
     }
 
     // Proteção de rotas por permissões
