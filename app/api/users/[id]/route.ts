@@ -24,6 +24,14 @@ export async function GET(
           pointOfSale: true,
         },
       },
+      _count: {
+        select: {
+          salesCreated: true,
+          cashSessions: true,
+          inventoryMovements: true,
+          ordersCreated: true,
+        },
+      },
     },
   });
 

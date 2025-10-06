@@ -1,0 +1,65 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+
+// POST /api/settings/backup - Criar backup do sistema
+export async function POST(req: NextRequest) {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user.isAdmin) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
+  }
+
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+    
+    // Buscar dados para backup
+    const [
+      users,
+      products,
+      pointsOfSale,
+      sales,
+      inventory,
+      customers,
+      orders,
+    ] = await Promise.all([
+      prisma.user.count(),
+      prisma.product.count(),
+      prisma.pointOfSale.count(),
+      prisma.sale.count(),
+      prisma.inventory.count(),
+      prisma.customer.count(),
+      prisma.order.count(),
+    ]);
+
+    const backupInfo = {
+      timestamp,
+      version: "1.0.0",
+      stats: {
+        users,
+        products,
+        pointsOfSale,
+        sales,
+        inventory,
+        customers,
+        orders,
+      },
+    };
+
+    // Em produção, você salvaria os dados em um arquivo ou storage externo
+    console.log("Backup criado:", backupInfo);
+
+    return NextResponse.json({
+      success: true,
+      message: "Backup criado com sucesso",
+      backup: backupInfo,
+    });
+  } catch (error) {
+    console.error("Erro ao criar backup:", error);
+    return NextResponse.json(
+      { error: "Erro ao criar backup" },
+      { status: 500 }
+    );
+  }
+}

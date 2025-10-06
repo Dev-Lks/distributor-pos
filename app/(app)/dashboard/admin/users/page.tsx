@@ -5,10 +5,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usePermissions } from "@/lib/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { UserPlus, Search, Edit, Shield } from "lucide-react";
+import { UserPlus, Search, Edit, Shield, Trash2 } from "lucide-react";
 import { redirect, useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
+import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
+import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
 
 export default function UsersPage() {
   const { can } = usePermissions();
@@ -17,6 +19,9 @@ export default function UsersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [adminFilter, setAdminFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [deleteUserName, setDeleteUserName] = useState<string>("");
 
   if (!can.manageUsers) {
     redirect("/unauthorized");
@@ -56,6 +61,28 @@ export default function UsersPage() {
     },
   });
 
+  const deleteUser = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/users/${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Falha ao desativar usuário");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Usuário desativado com sucesso!");
+      setDeleteUserId(null);
+      setDeleteUserName("");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao desativar usuário: ${error.message}`);
+    },
+  });
+
   return (
     <div className="container mx-auto py-8 space-y-6">
       {/* Header */}
@@ -66,7 +93,7 @@ export default function UsersPage() {
             Gerencie usuários, permissões e acessos
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setShowCreateDialog(true)}>
           <UserPlus className="mr-2 h-4 w-4" />
           Novo Usuário
         </Button>
@@ -225,6 +252,20 @@ export default function UsersPage() {
                         >
                           {user.status === "ACTIVE" ? "Desativar" : "Ativar"}
                         </Button>
+                        {user.status !== "INACTIVE" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setDeleteUserId(user.id);
+                              setDeleteUserName(user.fullName || user.email);
+                            }}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" />
+                            Deletar
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -233,6 +274,30 @@ export default function UsersPage() {
           </table>
         </div>
       </div>
+
+      {/* Dialog de Criar Usuário */}
+      <CreateUserDialog
+        open={showCreateDialog}
+        onOpenChange={setShowCreateDialog}
+      />
+
+      {/* Dialog de Deletar Usuário */}
+      <DeleteUserDialog
+        open={!!deleteUserId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleteUserId(null);
+            setDeleteUserName("");
+          }
+        }}
+        onConfirm={() => {
+          if (deleteUserId) {
+            deleteUser.mutate(deleteUserId);
+          }
+        }}
+        userName={deleteUserName}
+        isPending={deleteUser.isPending}
+      />
     </div>
   );
 }

@@ -7,7 +7,9 @@ import { usePermissions } from "@/lib/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PermissionsManager } from "@/components/PermissionsManager";
-import { ArrowLeft, Save, Shield, User } from "lucide-react";
+import { ResetPasswordDialog } from "@/components/admin/ResetPasswordDialog";
+import { HardDeleteUserDialog } from "@/components/admin/HardDeleteUserDialog";
+import { ArrowLeft, Save, Shield, User, KeyRound, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { PermissionKey } from "@prisma/client";
@@ -26,6 +28,9 @@ export default function EditUserPage() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<PermissionKey[]>([]);
   const [status, setStatus] = useState("ACTIVE");
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
+  const [showHardDeleteDialog, setShowHardDeleteDialog] = useState(false);
+  const [userData, setUserData] = useState<any>(null);
 
   // Buscar dados do usuário
   const { data: user, isLoading } = useQuery({
@@ -43,6 +48,7 @@ export default function EditUserPage() {
       setIsAdmin(data.isAdmin || false);
       setStatus(data.status || "ACTIVE");
       setSelectedPermissions(data.permissions?.map((p: any) => p.permission) || []);
+      setUserData(data);
       
       return data;
     },
@@ -70,6 +76,28 @@ export default function EditUserPage() {
     },
     onError: (error: Error) => {
       toast.error(`Erro ao atualizar usuário: ${error.message}`);
+    },
+  });
+
+  // Mutation para deletar permanentemente
+  const hardDeleteUser = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/users/${userId}/permanent`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || "Falha ao deletar usuário");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      toast.success("Usuário deletado permanentemente!");
+      router.push("/dashboard/admin/users");
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao deletar: ${error.message}`);
     },
   });
 
@@ -106,7 +134,7 @@ export default function EditUserPage() {
     <div className="container mx-auto py-8 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Link href="/admin/users">
+        <Link href="/dashboard/admin/users">
           <Button variant="ghost" size="icon">
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -229,21 +257,80 @@ export default function EditUserPage() {
         )}
 
         {/* Ações */}
-        <div className="flex justify-end gap-4">
-          <Link href="/dashboard/admin/users">
-            <Button type="button" variant="outline">
-              Cancelar
+        <div className="space-y-4">
+          {/* Ações principais */}
+          <div className="flex justify-between gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setShowResetPasswordDialog(true)}
+            >
+              <KeyRound className="mr-2 h-4 w-4" />
+              Resetar Senha
             </Button>
-          </Link>
-          <Button
-            type="submit"
-            disabled={updateUser.isPending}
-          >
-            <Save className="mr-2 h-4 w-4" />
-            {updateUser.isPending ? "Salvando..." : "Salvar Alterações"}
-          </Button>
+            
+            <div className="flex gap-4">
+              <Link href="/dashboard/admin/users">
+                <Button type="button" variant="outline">
+                  Cancelar
+                </Button>
+              </Link>
+              <Button
+                type="submit"
+                disabled={updateUser.isPending}
+              >
+                <Save className="mr-2 h-4 w-4" />
+                {updateUser.isPending ? "Salvando..." : "Salvar Alterações"}
+              </Button>
+            </div>
+          </div>
+
+          {/* Zona de perigo */}
+          <div className="border-2 border-red-200 rounded-lg p-4 bg-red-50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-red-900">Zona de Perigo</h3>
+                <p className="text-xs text-red-700 mt-1">
+                  Deletar permanentemente apaga todos os dados do usuário do sistema. Esta ação não pode ser desfeita.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => setShowHardDeleteDialog(true)}
+                className="bg-red-600 hover:bg-red-700"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Deletar Permanentemente
+              </Button>
+            </div>
+          </div>
         </div>
       </form>
+
+      {/* Dialog de Reset de Senha */}
+      <ResetPasswordDialog
+        open={showResetPasswordDialog}
+        onOpenChange={setShowResetPasswordDialog}
+        userId={userId}
+        userName={fullName || email}
+      />
+
+      {/* Dialog de Hard Delete */}
+      <HardDeleteUserDialog
+        open={showHardDeleteDialog}
+        onOpenChange={setShowHardDeleteDialog}
+        onConfirm={() => hardDeleteUser.mutate()}
+        userName={fullName || email}
+        userEmail={email}
+        isPending={hardDeleteUser.isPending}
+        hasData={userData?._count ? {
+          salesCreated: userData._count.salesCreated || 0,
+          cashSessions: userData._count.cashSessions || 0,
+          inventoryMovements: userData._count.inventoryMovements || 0,
+          ordersCreated: userData._count.ordersCreated || 0,
+        } : undefined}
+      />
     </div>
   );
 }
