@@ -27,13 +27,13 @@ export function SalesChartWidget() {
     return (
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Vendas</CardTitle>
-            <Skeleton className="h-9 w-32" />
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base sm:text-lg font-semibold">Vendas</CardTitle>
+            <Skeleton className="h-9 w-full sm:w-32" />
           </div>
         </CardHeader>
         <CardContent>
-          <Skeleton className="h-[300px] w-full" />
+          <Skeleton className="h-[250px] sm:h-[300px] w-full" />
         </CardContent>
       </Card>
     )
@@ -43,12 +43,12 @@ export function SalesChartWidget() {
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg font-semibold">Vendas</CardTitle>
+          <CardTitle className="text-base sm:text-lg font-semibold">Vendas</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <AlertTriangle className="h-12 w-12 text-destructive mb-3" />
-            <p className="text-sm font-medium">Erro ao carregar dados de vendas</p>
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+            <AlertTriangle className="h-10 w-10 sm:h-12 sm:w-12 text-destructive mb-3" />
+            <p className="text-xs sm:text-sm font-medium">Erro ao carregar dados de vendas</p>
             <p className="text-xs text-muted-foreground mt-1 mb-4">
               {error.message || 'Tente novamente mais tarde'}
             </p>
@@ -73,10 +73,10 @@ export function SalesChartWidget() {
     return (
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Vendas</CardTitle>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-base sm:text-lg font-semibold">Vendas</CardTitle>
             <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full sm:w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -88,9 +88,9 @@ export function SalesChartWidget() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <TrendingUp className="h-12 w-12 text-muted-foreground/50 mb-3" />
-            <p className="text-sm font-medium">Nenhuma venda no período</p>
+          <div className="flex flex-col items-center justify-center py-12 sm:py-16 text-center">
+            <TrendingUp className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/50 mb-3" />
+            <p className="text-xs sm:text-sm font-medium">Nenhuma venda no período</p>
             <p className="text-xs text-muted-foreground mt-1">
               Os dados de vendas aparecerão aqui
             </p>
@@ -112,11 +112,23 @@ export function SalesChartWidget() {
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold">Vendas</CardTitle>
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col gap-3 sm:gap-4">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base sm:text-lg font-semibold">Vendas</CardTitle>
+            <Select value={period} onValueChange={(v) => setPeriod(v as Period)}>
+              <SelectTrigger className="w-24 sm:w-32 text-xs sm:text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="week">Semana</SelectItem>
+                <SelectItem value="month">Mês</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-2">
             <Select value={dataType} onValueChange={(v) => setDataType(v as DataType)}>
-              <SelectTrigger className="w-32">
+              <SelectTrigger className="w-full sm:w-32 text-xs sm:text-sm">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -125,18 +137,18 @@ export function SalesChartWidget() {
                 <SelectItem value="margin">Margem</SelectItem>
               </SelectContent>
             </Select>
-            <Tabs value={chartType} onValueChange={(v) => setChartType(v as ChartType)}>
-              <TabsList>
-                <TabsTrigger value="area">Área</TabsTrigger>
-                <TabsTrigger value="bar">Barras</TabsTrigger>
-                <TabsTrigger value="line">Linha</TabsTrigger>
+            <Tabs value={chartType} onValueChange={(v) => setChartType(v as ChartType)} className="w-full sm:w-auto">
+              <TabsList className="grid w-full grid-cols-3 sm:inline-flex">
+                <TabsTrigger value="area" className="text-xs sm:text-sm">Área</TabsTrigger>
+                <TabsTrigger value="bar" className="text-xs sm:text-sm">Barras</TabsTrigger>
+                <TabsTrigger value="line" className="text-xs sm:text-sm">Linha</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={250} className="sm:!h-[300px]">
           {chartType === "area" ? (
             <AreaChart data={data}>
               <defs>
@@ -145,13 +157,14 @@ export function SalesChartWidget() {
                   <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
-              <YAxis stroke="#888888" fontSize={12} tickFormatter={formatValue} />
+              <XAxis dataKey="hour" stroke="#888888" fontSize={10} className="sm:text-xs" />
+              <YAxis stroke="#888888" fontSize={10} className="sm:text-xs" tickFormatter={formatValue} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
+                  fontSize: "12px",
                 }}
                 formatter={(value: number) => [formatValue(value), label]}
               />
@@ -165,13 +178,14 @@ export function SalesChartWidget() {
             </AreaChart>
           ) : chartType === "bar" ? (
             <BarChart data={data}>
-              <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
-              <YAxis stroke="#888888" fontSize={12} tickFormatter={formatValue} />
+              <XAxis dataKey="hour" stroke="#888888" fontSize={10} className="sm:text-xs" />
+              <YAxis stroke="#888888" fontSize={10} className="sm:text-xs" tickFormatter={formatValue} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
+                  fontSize: "12px",
                 }}
                 formatter={(value: number) => [formatValue(value), label]}
               />
@@ -179,13 +193,14 @@ export function SalesChartWidget() {
             </BarChart>
           ) : (
             <LineChart data={data}>
-              <XAxis dataKey="hour" stroke="#888888" fontSize={12} />
-              <YAxis stroke="#888888" fontSize={12} tickFormatter={formatValue} />
+              <XAxis dataKey="hour" stroke="#888888" fontSize={10} className="sm:text-xs" />
+              <YAxis stroke="#888888" fontSize={10} className="sm:text-xs" tickFormatter={formatValue} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--background))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "8px",
+                  fontSize: "12px",
                 }}
                 formatter={(value: number) => [formatValue(value), label]}
               />

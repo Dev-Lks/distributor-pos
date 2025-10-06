@@ -27,26 +27,26 @@ export function OrderCard({ order, className }: OrderCardProps) {
     <Link
       href={`/dashboard/orders/${order.id}`}
       className={cn(
-        "block rounded-lg border bg-card p-4 shadow-sm transition-all hover:shadow-md",
+        "block rounded-lg border bg-card p-3 sm:p-4 shadow-sm transition-all hover:shadow-md active:scale-[0.98]",
         isOverdue && "border-red-300 dark:border-red-800",
         className
       )}
     >
       {/* Header */}
-      <div className="mb-3 flex items-start justify-between">
-        <div>
-          <h3 className="font-semibold text-lg">{order.orderNumber}</h3>
-          <p className="text-sm text-muted-foreground">{order.customerName}</p>
+      <div className="mb-2 sm:mb-3 flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <h3 className="font-semibold text-base sm:text-lg truncate">{order.orderNumber}</h3>
+          <p className="text-xs sm:text-sm text-muted-foreground truncate">{order.customerName}</p>
         </div>
-        <div className="flex flex-col items-end gap-1">
+        <div className="flex flex-col items-end gap-1 shrink-0">
           <OrderStatusBadge status={order.status} />
           <OrderPriorityBadge priority={order.priority} />
         </div>
       </div>
 
       {/* Items Preview */}
-      <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-        <Package className="h-4 w-4" />
+      <div className="mb-2 sm:mb-3 flex items-center gap-2 text-xs sm:text-sm text-muted-foreground">
+        <Package className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
         <span>
           {order.items.length} {order.items.length === 1 ? "item" : "itens"}
         </span>
@@ -55,22 +55,23 @@ export function OrderCard({ order, className }: OrderCardProps) {
           {new Intl.NumberFormat("pt-BR", {
             style: "currency",
             currency: "BRL",
+            minimumFractionDigits: 0,
           }).format(order.total)}
         </span>
       </div>
 
       {/* Info */}
-      <div className="space-y-1.5 text-sm">
+      <div className="space-y-1 sm:space-y-1.5 text-xs sm:text-sm">
         {order.customerPhone && (
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Phone className="h-3.5 w-3.5" />
-            <span>{order.customerPhone}</span>
+            <Phone className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+            <span className="truncate">{order.customerPhone}</span>
           </div>
         )}
 
         {order.customerAddress && (
           <div className="flex items-center gap-2 text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" />
+            <MapPin className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
             <span className="line-clamp-1">{order.customerAddress}</span>
           </div>
         )}
@@ -80,8 +81,8 @@ export function OrderCard({ order, className }: OrderCardProps) {
             "flex items-center gap-2",
             isOverdue ? "text-red-600 dark:text-red-400 font-medium" : "text-muted-foreground"
           )}>
-            <Calendar className="h-3.5 w-3.5" />
-            <span>
+            <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+            <span className="truncate">
               {promisedDate.toLocaleDateString("pt-BR")}
               {daysRemaining !== null && (
                 <span className="ml-1">
@@ -93,8 +94,8 @@ export function OrderCard({ order, className }: OrderCardProps) {
         )}
 
         <div className="flex items-center gap-2 text-muted-foreground">
-          <Clock className="h-3.5 w-3.5" />
-          <span>
+          <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+          <span className="truncate">
             {formatDistanceToNow(new Date(order.orderedAt), {
               addSuffix: true,
               locale: ptBR,

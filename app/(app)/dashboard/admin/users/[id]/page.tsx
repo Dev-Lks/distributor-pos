@@ -131,28 +131,28 @@ export default function EditUserPage() {
   }
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Link href="/dashboard/admin/users">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
             <ArrowLeft className="h-4 w-4" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-3xl font-bold">Editar Usuário</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Editar Usuário</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie as informações e permissões do usuário
           </p>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Informações Básicas */}
-        <div className="border rounded-lg p-6 space-y-4">
+        <div className="border rounded-lg p-4 sm:p-6 space-y-4">
           <div className="flex items-center gap-2 mb-4">
-            <User className="h-5 w-5" />
-            <h2 className="text-xl font-semibold">Informações Básicas</h2>
+            <User className="h-4 w-4 sm:h-5 sm:w-5" />
+            <h2 className="text-lg sm:text-xl font-semibold">Informações Básicas</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -259,25 +259,27 @@ export default function EditUserPage() {
         {/* Ações */}
         <div className="space-y-4">
           {/* Ações principais */}
-          <div className="flex justify-between gap-4">
+          <div className="flex flex-col sm:flex-row justify-between gap-3 sm:gap-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => setShowResetPasswordDialog(true)}
+              className="w-full sm:w-auto"
             >
               <KeyRound className="mr-2 h-4 w-4" />
               Resetar Senha
             </Button>
             
-            <div className="flex gap-4">
-              <Link href="/dashboard/admin/users">
-                <Button type="button" variant="outline">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <Link href="/dashboard/admin/users" className="flex-1 sm:flex-none">
+                <Button type="button" variant="outline" className="w-full">
                   Cancelar
                 </Button>
               </Link>
               <Button
                 type="submit"
                 disabled={updateUser.isPending}
+                className="w-full sm:w-auto"
               >
                 <Save className="mr-2 h-4 w-4" />
                 {updateUser.isPending ? "Salvando..." : "Salvar Alterações"}
@@ -286,11 +288,11 @@ export default function EditUserPage() {
           </div>
 
           {/* Zona de perigo */}
-          <div className="border-2 border-red-200 rounded-lg p-4 bg-red-50">
-            <div className="flex items-center justify-between">
+          <div className="border-2 border-red-200 rounded-lg p-4 bg-red-50 dark:border-red-800 dark:bg-red-900/20">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold text-red-900">Zona de Perigo</h3>
-                <p className="text-xs text-red-700 mt-1">
+                <h3 className="text-sm font-semibold text-red-900 dark:text-red-400">Zona de Perigo</h3>
+                <p className="text-xs text-red-700 dark:text-red-300 mt-1">
                   Deletar permanentemente apaga todos os dados do usuário do sistema. Esta ação não pode ser desfeita.
                 </p>
               </div>
@@ -298,10 +300,11 @@ export default function EditUserPage() {
                 type="button"
                 variant="destructive"
                 onClick={() => setShowHardDeleteDialog(true)}
-                className="bg-red-600 hover:bg-red-700"
+                className="bg-red-600 hover:bg-red-700 w-full sm:w-auto sm:shrink-0"
               >
                 <Trash2 className="mr-2 h-4 w-4" />
-                Deletar Permanentemente
+                <span className="hidden sm:inline">Deletar Permanentemente</span>
+                <span className="sm:hidden">Deletar</span>
               </Button>
             </div>
           </div>

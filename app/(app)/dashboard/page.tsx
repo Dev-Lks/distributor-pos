@@ -114,7 +114,7 @@ export default function NewDashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6 px-4 sm:px-0">
       {/* Header with Greeting & Quick Stats */}
       <DashboardHeader 
         period={period} 
@@ -126,7 +126,7 @@ export default function NewDashboardPage() {
       <KPIsWidget />
 
       {/* Widgets Grid - Responsive Layout */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Sales Chart - Takes 2 columns on large screens */}
         <div className="md:col-span-2">
           <SalesChartWidget />

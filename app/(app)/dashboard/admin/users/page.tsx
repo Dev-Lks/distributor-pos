@@ -84,23 +84,24 @@ export default function UsersPage() {
   });
 
   return (
-    <div className="container mx-auto py-8 space-y-6">
+    <div className="container mx-auto px-4 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div>
-          <h1 className="text-3xl font-bold">Gestão de Usuários</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold">Gestão de Usuários</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie usuários, permissões e acessos
           </p>
         </div>
-        <Button onClick={() => setShowCreateDialog(true)}>
+        <Button onClick={() => setShowCreateDialog(true)} className="w-full sm:w-auto">
           <UserPlus className="mr-2 h-4 w-4" />
-          Novo Usuário
+          <span className="hidden sm:inline">Novo Usuário</span>
+          <span className="sm:hidden">Novo</span>
         </Button>
       </div>
 
       {/* Filtros */}
-      <div className="flex gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -114,7 +115,7 @@ export default function UsersPage() {
         <select
           value={adminFilter}
           onChange={(e) => setAdminFilter(e.target.value)}
-          className="px-4 py-2 border rounded-md"
+          className="px-4 py-2 border rounded-md text-sm"
         >
           <option value="">Todos os tipos</option>
           <option value="true">Administradores</option>
@@ -124,7 +125,7 @@ export default function UsersPage() {
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-4 py-2 border rounded-md"
+          className="px-4 py-2 border rounded-md text-sm"
         >
           <option value="">Todos os status</option>
           <option value="ACTIVE">Ativo</option>
@@ -136,31 +137,31 @@ export default function UsersPage() {
       {/* Tabela */}
       <div className="border rounded-lg">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full min-w-[800px]">
             <thead className="bg-muted">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium">
                   Nome
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium hidden md:table-cell">
                   Email
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium">
                   Tipo
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium hidden lg:table-cell">
                   Permissões
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium">
                   Status
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium hidden xl:table-cell">
                   PDVs
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium">
+                <th className="px-2 sm:px-4 py-3 text-left text-xs sm:text-sm font-medium hidden xl:table-cell">
                   Último Login
                 </th>
-                <th className="px-4 py-3 text-right text-sm font-medium">
+                <th className="px-2 sm:px-4 py-3 text-right text-xs sm:text-sm font-medium">
                   Ações
                 </th>
               </tr>
@@ -183,37 +184,39 @@ export default function UsersPage() {
               {!isLoading &&
                 users?.map((user: any) => (
                   <tr key={user.id} className="border-t hover:bg-muted/50">
-                    <td className="px-4 py-3 text-sm">
-                      {user.fullName || user.name}
+                    <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm">
+                      <div className="font-medium">{user.fullName || user.name}</div>
+                      <div className="text-xs text-muted-foreground md:hidden">{user.email}</div>
                     </td>
-                    <td className="px-4 py-3 text-sm">{user.email}</td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm hidden md:table-cell">{user.email}</td>
+                    <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm">
                       <span
                         className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
                           user.isAdmin
-                            ? "bg-red-100 text-red-800"
-                            : "bg-blue-100 text-blue-800"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                            : "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400"
                         }`}
                       >
                         {user.isAdmin && <Shield className="h-3 w-3" />}
-                        {user.isAdmin ? "Administrador" : "Usuário"}
+                        <span className="hidden sm:inline">{user.isAdmin ? "Administrador" : "Usuário"}</span>
+                        <span className="sm:hidden">{user.isAdmin ? "Admin" : "User"}</span>
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm hidden lg:table-cell">
                       <span className="text-muted-foreground">
                         {user.isAdmin
                           ? "Todas"
                           : `${user.permissions?.length || 0} permissões`}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm">
                       <span
                         className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
                           user.status === "ACTIVE"
-                            ? "bg-green-100 text-green-800"
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
                             : user.status === "SUSPENDED"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-gray-100 text-gray-800"
+                            ? "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400"
+                            : "bg-gray-100 text-gray-800 dark:bg-gray-900/20 dark:text-gray-400"
                         }`}
                       >
                         {user.status === "ACTIVE"
@@ -223,25 +226,26 @@ export default function UsersPage() {
                           : "Inativo"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-sm">
+                    <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm hidden xl:table-cell">
                       {user.userPointsOfSale?.length || 0} PDV(s)
                     </td>
-                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                    <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm text-muted-foreground hidden xl:table-cell">
                       {user.lastLoginAt
-                        ? new Date(user.lastLoginAt).toLocaleString("pt-BR")
+                        ? new Date(user.lastLoginAt).toLocaleString("pt-BR", { dateStyle: 'short', timeStyle: 'short' })
                         : "Nunca"}
                     </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
+                    <td className="px-2 sm:px-4 py-3">
+                      <div className="flex justify-end gap-1 sm:gap-2">
                         <Link href={`/dashboard/admin/users/${user.id}`}>
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4 mr-1" />
-                            Editar
+                          <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3">
+                            <Edit className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Editar</span>
                           </Button>
                         </Link>
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-8 px-2 sm:px-3 hidden md:inline-flex"
                           onClick={() =>
                             toggleUserStatus.mutate({
                               id: user.id,
@@ -256,14 +260,14 @@ export default function UsersPage() {
                           <Button
                             variant="ghost"
                             size="sm"
+                            className="h-8 px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 hidden lg:inline-flex"
                             onClick={() => {
                               setDeleteUserId(user.id);
                               setDeleteUserName(user.fullName || user.email);
                             }}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
                           >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Deletar
+                            <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-1" />
+                            <span className="hidden sm:inline">Deletar</span>
                           </Button>
                         )}
                       </div>

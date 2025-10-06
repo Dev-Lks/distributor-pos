@@ -19,16 +19,16 @@ export function KPIsWidget() {
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {[1, 2, 3, 4].map((i) => (
           <Card key={i}>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <Skeleton className="h-12 w-12 rounded-xl" />
-                <Skeleton className="h-4 w-16" />
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex items-center justify-between mb-3 sm:mb-4">
+                <Skeleton className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl" />
+                <Skeleton className="h-3 w-12 sm:h-4 sm:w-16" />
               </div>
-              <Skeleton className="h-4 w-24 mb-2" />
-              <Skeleton className="h-8 w-32" />
+              <Skeleton className="h-3 w-20 sm:h-4 sm:w-24 mb-2" />
+              <Skeleton className="h-6 w-24 sm:h-8 sm:w-32" />
             </CardContent>
           </Card>
         ))}
@@ -38,11 +38,11 @@ export function KPIsWidget() {
 
   if (isError || !kpisData) {
     return (
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4">
         <Card className="col-span-full">
-          <CardContent className="p-6 text-center text-muted-foreground">
-            <AlertTriangle className="h-8 w-8 mx-auto mb-2" />
-            <p className="text-sm">Erro ao carregar KPIs</p>
+          <CardContent className="p-4 sm:p-6 text-center text-muted-foreground">
+            <AlertTriangle className="h-6 w-6 sm:h-8 sm:w-8 mx-auto mb-2" />
+            <p className="text-xs sm:text-sm">Erro ao carregar KPIs</p>
           </CardContent>
         </Card>
       </div>
@@ -81,7 +81,7 @@ export function KPIsWidget() {
   ]
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
       {kpis.map((kpi) => {
         const Icon = kpi.icon
         return (
@@ -89,10 +89,10 @@ export function KPIsWidget() {
             key={kpi.label}
             className="cursor-pointer transition-all hover:shadow-md"
           >
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center justify-between">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10">
-                  <Icon className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl bg-amber-500/10">
+                  <Icon className="h-5 w-5 sm:h-6 sm:w-6 text-amber-600 dark:text-amber-400" />
                 </div>
                 {kpi.trend && (
                   <div
@@ -109,9 +109,9 @@ export function KPIsWidget() {
                   </div>
                 )}
               </div>
-              <div className="mt-4">
-                <h3 className="text-sm font-medium text-muted-foreground">{kpi.label}</h3>
-                <p className="mt-1 text-2xl font-bold">{kpi.value}</p>
+                            <div className="mt-3 sm:mt-4">
+                <p className="text-xs sm:text-sm text-muted-foreground">{kpi.label}</p>
+                <p className="text-xl sm:text-2xl font-bold mt-1">{kpi.value}</p>
               </div>
             </CardContent>
           </Card>

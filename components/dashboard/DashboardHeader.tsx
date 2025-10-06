@@ -49,14 +49,14 @@ export function DashboardHeader({ period, onPeriodChange, quickStats }: Dashboar
   const firstName = session?.user?.name?.split(" ")[0] || "Operador"
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Greeting and Date */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
             {getGreeting()}, {firstName}! 👋
           </h1>
-          <p className="text-sm text-muted-foreground capitalize">
+          <p className="text-xs sm:text-sm text-muted-foreground capitalize">
             {getCurrentDate()}
           </p>
         </div>
@@ -64,7 +64,7 @@ export function DashboardHeader({ period, onPeriodChange, quickStats }: Dashboar
         {/* Period Selector */}
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={(value) => onPeriodChange(value as DashboardPeriod)}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Selecionar período" />
             </SelectTrigger>
             <SelectContent align="end">
@@ -82,9 +82,9 @@ export function DashboardHeader({ period, onPeriodChange, quickStats }: Dashboar
       </div>
 
       {/* Quick Stats & Actions Bar */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
         {/* Quick Stats */}
-        <div className="flex flex-wrap items-center gap-4 text-sm">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
           {quickStats?.sessionDuration && (
             <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
               <Clock className="h-4 w-4 text-muted-foreground" />
@@ -119,25 +119,25 @@ export function DashboardHeader({ period, onPeriodChange, quickStats }: Dashboar
         </div>
 
         {/* Quick Actions */}
-        <div className="flex flex-wrap gap-2">
-          <Button asChild size="sm" variant="default">
-            <Link href="/dashboard/sales">
-              <ShoppingCart className="mr-2 h-4 w-4" />
-              Nova Venda
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/dashboard/orders/new">
-              <Receipt className="mr-2 h-4 w-4" />
-              Nova Encomenda
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/dashboard/inventory">
-              <Package className="mr-2 h-4 w-4" />
-              Entrada Estoque
-            </Link>
-          </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href="/dashboard/sales">
+            <Button size="sm" variant="outline" className="text-xs sm:text-sm">
+              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Nova Venda</span>
+            </Button>
+          </Link>
+          <Link href="/dashboard/inventory">
+            <Button size="sm" variant="outline" className="text-xs sm:text-sm">
+              <Package className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Estoque</span>
+            </Button>
+          </Link>
+          <Link href="/dashboard/orders">
+            <Button size="sm" variant="outline" className="text-xs sm:text-sm">
+              <Receipt className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Encomendas</span>
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

@@ -67,18 +67,18 @@ export default function PointsOfSalePage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8 px-4 sm:px-0">
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold">Pontos de venda</h1>
-        <p className="text-sm text-muted-foreground md:text-base">
+        <h1 className="text-2xl sm:text-3xl font-bold">Pontos de venda</h1>
+        <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
           Gerencie as unidades ativas e mantenha o mapa de operação sempre atualizado.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
+            <Plus className="h-4 w-4 sm:h-5 sm:w-5" />
             Adicionar ponto de venda
           </CardTitle>
         </CardHeader>

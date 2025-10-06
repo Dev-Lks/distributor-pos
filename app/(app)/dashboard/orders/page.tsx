@@ -35,54 +35,55 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Encomendas</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Encomendas</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Gerencie pedidos especiais e sob encomenda
           </p>
         </div>
         <Link href="/dashboard/orders/new">
-          <Button size="lg">
+          <Button size="lg" className="w-full sm:w-auto">
             <Plus className="mr-2 h-4 w-4" />
-            Nova Encomenda
+            <span className="hidden sm:inline">Nova Encomenda</span>
+            <span className="sm:hidden">Nova</span>
           </Button>
         </Link>
       </div>
 
       {/* Stats */}
       {!statsLoading && stats && (
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-lg border bg-card p-4">
-            <div className="text-sm font-medium text-muted-foreground">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+          <div className="rounded-lg border bg-card p-3 sm:p-4">
+            <div className="text-xs sm:text-sm font-medium text-muted-foreground">
               Total de Encomendas
             </div>
-            <div className="text-2xl font-bold">{stats.totalOrders}</div>
+            <div className="text-xl sm:text-2xl font-bold">{stats.totalOrders}</div>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="text-sm font-medium text-muted-foreground">
+          <div className="rounded-lg border bg-card p-3 sm:p-4">
+            <div className="text-xs sm:text-sm font-medium text-muted-foreground">
               Em Andamento
             </div>
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <div className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
               {stats.pendingOrders + stats.confirmedOrders + stats.preparingOrders}
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="text-sm font-medium text-muted-foreground">
+          <div className="rounded-lg border bg-card p-3 sm:p-4">
+            <div className="text-xs sm:text-sm font-medium text-muted-foreground">
               Prontas
             </div>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+            <div className="text-xl sm:text-2xl font-bold text-green-600 dark:text-green-400">
               {stats.readyOrders}
             </div>
           </div>
-          <div className="rounded-lg border bg-card p-4">
-            <div className="text-sm font-medium text-muted-foreground">
+          <div className="rounded-lg border bg-card p-3 sm:p-4">
+            <div className="text-xs sm:text-sm font-medium text-muted-foreground">
               {stats.overdueOrders > 0 ? "Atrasadas" : "Receita Total"}
             </div>
             <div className={cn(
-              "text-2xl font-bold",
+              "text-xl sm:text-2xl font-bold",
               stats.overdueOrders > 0 ? "text-red-600 dark:text-red-400" : ""
             )}>
               {stats.overdueOrders > 0 ? stats.overdueOrders : (
@@ -98,7 +99,7 @@ export default function OrdersPage() {
       )}
 
       {/* Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -121,64 +122,73 @@ export default function OrdersPage() {
             <SelectItem value="LOW">Baixa</SelectItem>
           </SelectContent>
         </Select>
-        <Button variant="outline">
+        <Button variant="outline" className="w-full sm:w-auto">
           <Download className="mr-2 h-4 w-4" />
-          Exportar
+          <span className="hidden sm:inline">Exportar</span>
+          <span className="sm:hidden">Export</span>
         </Button>
       </div>
 
       {/* Orders List */}
       <Tabs defaultValue="all" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="all">
-            Todas
-            {!ordersLoading && orders && (
-              <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
-                {orders.length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="PENDING">
-            Pendentes
-            {!ordersLoading && orders && (
-              <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
-                {filterOrdersByStatus("PENDING").length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="CONFIRMED">
-            Confirmadas
-            {!ordersLoading && orders && (
-              <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
-                {filterOrdersByStatus("CONFIRMED").length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="PREPARING">
-            Preparando
-            {!ordersLoading && orders && (
-              <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
-                {filterOrdersByStatus("PREPARING").length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="READY">
-            Prontas
-            {!ordersLoading && orders && (
-              <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
-                {filterOrdersByStatus("READY").length}
-              </span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="DELIVERED">
-            Entregues
-            {!ordersLoading && orders && (
-              <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
-                {filterOrdersByStatus("DELIVERED").length}
-              </span>
-            )}
-          </TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="grid w-full min-w-[600px] grid-cols-6">
+            <TabsTrigger value="all" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Todas</span>
+              <span className="sm:hidden">All</span>
+              {!ordersLoading && orders && (
+                <span className="ml-1 sm:ml-1.5 rounded-full bg-muted px-1.5 sm:px-2 py-0.5 text-xs">
+                  {orders.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="PENDING" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Pendentes</span>
+              <span className="sm:hidden">Pend</span>
+              {!ordersLoading && orders && (
+                <span className="ml-1 sm:ml-1.5 rounded-full bg-muted px-1.5 sm:px-2 py-0.5 text-xs">
+                  {filterOrdersByStatus("PENDING").length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="CONFIRMED" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Confirmadas</span>
+              <span className="sm:hidden">Conf</span>
+              {!ordersLoading && orders && (
+                <span className="ml-1 sm:ml-1.5 rounded-full bg-muted px-1.5 sm:px-2 py-0.5 text-xs">
+                  {filterOrdersByStatus("CONFIRMED").length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="PREPARING" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Preparando</span>
+              <span className="sm:hidden">Prep</span>
+              {!ordersLoading && orders && (
+                <span className="ml-1 sm:ml-1.5 rounded-full bg-muted px-1.5 sm:px-2 py-0.5 text-xs">
+                  {filterOrdersByStatus("PREPARING").length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="READY" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Prontas</span>
+              <span className="sm:hidden">Ready</span>
+              {!ordersLoading && orders && (
+                <span className="ml-1 sm:ml-1.5 rounded-full bg-muted px-1.5 sm:px-2 py-0.5 text-xs">
+                  {filterOrdersByStatus("READY").length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="DELIVERED" className="text-xs sm:text-sm">
+              <span className="hidden sm:inline">Entregues</span>
+              <span className="sm:hidden">Entr</span>
+              {!ordersLoading && orders && (
+                <span className="ml-1 sm:ml-1.5 rounded-full bg-muted px-1.5 sm:px-2 py-0.5 text-xs">
+                  {filterOrdersByStatus("DELIVERED").length}
+                </span>
+              )}
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         {ordersLoading ? (
           <div className="flex items-center justify-center py-12">
