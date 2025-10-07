@@ -5,7 +5,7 @@
 ## 🎯 Progresso Geral
 
 - [x] Fase 1: Limpeza e Otimização (2/3) ✅
-- [x] Fase 2: TypeScript e Segurança (2/4) ✅
+- [x] Fase 2: TypeScript e Segurança (3/4) ✅ 75%
 - [ ] Fase 3: Refatoração (0/3)
 - [ ] Fase 4: Testes (0/3)
 - [ ] Fase 5: Documentação (0/2)
@@ -48,13 +48,13 @@
 - [x] Criar types/index.ts
 - [x] Commit
 
-### Sprint 2.2: Eliminar any - Components
-- [ ] admin/users/page.tsx
-- [ ] admin/users/[id]/page.tsx
-- [ ] inventory/page.tsx
-- [ ] sales/hooks/useCheckout.ts
-- [ ] sales/hooks/useCashSessionControls.ts
-- [ ] Commit
+### Sprint 2.2: Eliminar any - Components ✅
+- [x] admin/users/page.tsx
+- [x] admin/users/[id]/page.tsx
+- [x] inventory/page.tsx
+- [x] sales/hooks/useCheckout.ts
+- [x] sales/hooks/useCashSessionControls.ts
+- [x] Commit
 
 ### Sprint 2.3: Eliminar any - API
 - [ ] reports/[id]/csv/route.ts
