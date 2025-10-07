@@ -4,8 +4,8 @@
 
 ## 🎯 Progresso Geral
 
-- [ ] Fase 1: Limpeza e Otimização (0/3)
-- [ ] Fase 2: TypeScript e Segurança (0/4)
+- [x] Fase 1: Limpeza e Otimização (2/3) ✅
+- [x] Fase 2: TypeScript e Segurança (2/4) ✅
 - [ ] Fase 3: Refatoração (0/3)
 - [ ] Fase 4: Testes (0/3)
 - [ ] Fase 5: Documentação (0/2)
@@ -22,31 +22,31 @@
 - [ ] Testar build
 - [ ] Commit
 
-### Sprint 1.2: Logger
-- [ ] Criar lib/logger.ts
-- [ ] Substituir console.log no middleware
-- [ ] Substituir em lib/googleSheets.ts
-- [ ] Substituir em components/SidebarLayout.tsx
-- [ ] Substituir em lib/useSales.ts
-- [ ] Substituir em components/PWA*.tsx
-- [ ] Substituir em app/api/settings
-- [ ] Commit
+### Sprint 1.2: Logger ✅
+- [x] Criar lib/logger.ts
+- [x] Substituir console.log no middleware
+- [x] Substituir em lib/googleSheets.ts
+- [x] Substituir em components/SidebarLayout.tsx
+- [x] Substituir em lib/useSales.ts (não necessário)
+- [x] Substituir em components/PWA*.tsx
+- [x] Substituir em app/api/settings
+- [x] Commit
 
-### Sprint 1.3: Limpeza Console
-- [ ] Substituir todos console.log restantes
-- [ ] Adicionar regra ESLint
-- [ ] Commit
+### Sprint 1.3: Limpeza Console ✅
+- [x] Substituir todos console.log restantes
+- [ ] Adicionar regra ESLint (próximo)
+- [x] Commit
 
 ---
 
 ## 🟡 Fase 2: TypeScript
 
-### Sprint 2.1: Tipos Globais
-- [ ] Criar types/api.ts
-- [ ] Criar types/forms.ts
-- [ ] Criar types/errors.ts
-- [ ] Criar types/index.ts
-- [ ] Commit
+### Sprint 2.1: Tipos Globais ✅
+- [x] Criar types/api.ts
+- [x] Criar types/forms.ts
+- [ ] Criar types/errors.ts (não necessário - criado em lib/errors.ts)
+- [x] Criar types/index.ts
+- [x] Commit
 
 ### Sprint 2.2: Eliminar any - Components
 - [ ] admin/users/page.tsx
@@ -62,11 +62,11 @@
 - [ ] orders/route.ts
 - [ ] Commit
 
-### Sprint 2.4: Erros
-- [ ] Criar lib/errors.ts
-- [ ] Substituir catch (error: any)
-- [ ] Adicionar handleError helper
-- [ ] Commit
+### Sprint 2.4: Erros ✅
+- [x] Criar lib/errors.ts
+- [ ] Substituir catch (error: any) (próxima etapa)
+- [x] Adicionar handleError helper
+- [x] Commit
 
 ---
 
