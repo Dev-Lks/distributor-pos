@@ -1,5 +1,6 @@
 "use client"
 
+import { memo, useMemo, useCallback } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -18,7 +19,8 @@ interface ProductCardProps {
 const formatCurrency = (value?: number) =>
   value !== undefined ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "--"
 
-export function ProductCard({
+// Memo evita re-render se props não mudaram
+export const ProductCard = memo(function ProductCard({
   product,
   onEdit,
   onDelete,
@@ -27,8 +29,20 @@ export function ProductCard({
   showMargin = true,
 }: ProductCardProps) {
   const tags = Array.isArray(product.tags) ? product.tags : []
-  const margin = product.salePrice - product.cost
-  const marginPercent = product.cost > 0 ? (margin / product.cost) * 100 : undefined
+  
+  // useMemo para cálculos pesados
+  const { margin, marginPercent, formattedPrice } = useMemo(() => {
+    const margin = product.salePrice - product.cost
+    const marginPercent = product.cost > 0 ? (margin / product.cost) * 100 : undefined
+    const formattedPrice = formatCurrency(product.salePrice)
+    
+    return { margin, marginPercent, formattedPrice }
+  }, [product.salePrice, product.cost])
+
+  // useCallback para callbacks (evita quebrar memo do parent)
+  const handleEdit = useCallback(() => onEdit(product), [onEdit, product])
+  const handleDelete = useCallback(() => onDelete(product), [onDelete, product])
+  const handleAllocate = useCallback(() => onAllocateStock(product), [onAllocateStock, product])
 
   return (
     <Card className="group relative overflow-hidden transition-all hover:shadow-lg">
@@ -52,7 +66,7 @@ export function ProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onAllocateStock(product)}
+                onClick={handleAllocate}
                 title="Distribuir estoque"
                 className="h-8 w-8 p-0"
               >
@@ -61,7 +75,7 @@ export function ProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onEdit(product)}
+                onClick={handleEdit}
                 title="Editar"
                 className="h-8 w-8 p-0"
               >
@@ -70,7 +84,7 @@ export function ProductCard({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => onDelete(product)}
+                onClick={handleDelete}
                 title="Excluir"
                 className="h-8 w-8 p-0"
               >
@@ -100,7 +114,7 @@ export function ProductCard({
           <div className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/30 p-3">
             <div>
               <p className="text-xs text-muted-foreground">Preço</p>
-              <p className="text-lg font-bold">{formatCurrency(product.salePrice)}</p>
+              <p className="text-lg font-bold">{formattedPrice}</p>
             </div>
             {showMargin && (
               <div>
@@ -134,4 +148,4 @@ export function ProductCard({
       </CardContent>
     </Card>
   )
-}
+})

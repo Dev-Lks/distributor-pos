@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useCallback } from "react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { useProducts, type Product } from "@/lib/useProducts"
 import { usePointsOfSale } from "@/lib/usePointsOfSale"
 import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { useDebounce } from "@/lib/useDebounce"
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 import { StockAllocationDialog } from "@/components/inventory/StockAllocationDialog"
 import { 
@@ -58,8 +59,9 @@ export default function ProductsPage() {
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>("card")
   
-  // Filters
+  // Filters (com debounce para search)
   const [searchTerm, setSearchTerm] = useState("")
+  const debouncedSearch = useDebounce(searchTerm, 300) // Debounce de 300ms
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedSize, setSelectedSize] = useState("all")
   const [stockFilter, setStockFilter] = useState("all")
@@ -115,32 +117,34 @@ export default function ProductsPage() {
     [products]
   )
 
-  const filteredProducts = products.filter((product: Product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.sku?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (Array.isArray(product.tags) && product.tags.some((tag: string) => 
-        tag.toLowerCase().includes(searchTerm.toLowerCase())
-      ))
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
-    const matchesSize = selectedSize === "all" || product.size === selectedSize
-    return matchesSearch && matchesCategory && matchesSize
-  })
+  const filteredProducts = useMemo(() => {
+    return products.filter((product: Product) => {
+      const matchesSearch =
+        product.name.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        product.sku?.toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+        (Array.isArray(product.tags) && product.tags.some((tag: string) => 
+          tag.toLowerCase().includes(debouncedSearch.toLowerCase())
+        ))
+      const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
+      const matchesSize = selectedSize === "all" || product.size === selectedSize
+      return matchesSearch && matchesCategory && matchesSize
+    })
+  }, [products, debouncedSearch, selectedCategory, selectedSize])
 
-  // Handlers
-  const handleAddProduct = async () => {
+  // Handlers com useCallback para memoization
+  const handleAddProduct = useCallback(async () => {
     const success = await createForm.submitForm("/api/products", "POST")
     if (success) {
       createForm.resetForm()
     }
-  }
+  }, [createForm])
 
-  const handleEditProduct = async () => {
+  const handleEditProduct = useCallback(async () => {
     if (!editingProduct) return
     await editForm.submitForm("/api/products", "PATCH", editingProduct.id)
-  }
+  }, [editForm, editingProduct])
 
-  const handleDeleteProduct = async (productId: string) => {
+  const handleDeleteProduct = useCallback(async (productId: string) => {
     try {
       const response = await fetch("/api/products", {
         method: "DELETE",
@@ -159,9 +163,9 @@ export default function ProductsPage() {
       console.error("Error deleting product:", error)
       toast.error(error instanceof Error ? error.message : "Falha ao excluir produto.")
     }
-  }
+  }, [refetch])
 
-  const handleDuplicateProduct = (product: Product) => {
+  const handleDuplicateProduct = useCallback((product: Product) => {
     const formData = mapProductToForm(product)
     // Adiciona (Cópia) ao nome
     formData.name = `${formData.name} (Cópia)`
@@ -185,9 +189,9 @@ export default function ProductsPage() {
     
     setShowCreatePanel(true)
     toast.success("Produto duplicado para edição")
-  }
+  }, [createForm])
 
-  const openEditDialog = (product: Product) => {
+  const openEditDialog = useCallback((product: Product) => {
     setEditingProduct(product)
     // Reset form with product data
     const formData = mapProductToForm(product)
@@ -195,14 +199,14 @@ export default function ProductsPage() {
       editForm.handleFieldChange(key as keyof ProductFormState, value)
     })
     setIsEditDialogOpen(true)
-  }
+  }, [editForm])
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
     setSearchTerm("")
     setSelectedCategory("all")
     setSelectedSize("all")
     setStockFilter("all")
-  }
+  }, [])
 
   if (isLoading) {
     return (

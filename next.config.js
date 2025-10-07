@@ -1,7 +1,30 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  swcMinify: true, // Minifier mais rápido do SWC
+  
+  compiler: {
+    // Remove console.logs em produção (mantém error e warn)
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+  
+  // Otimizar imagens
+  images: {
+    formats: ['image/avif', 'image/webp'],
+    deviceSizes: [640, 768, 1024, 1280, 1536],
+    imageSizes: [16, 32, 48, 64, 96],
+  },
+  
   experimental: {
     serverComponentsExternalPackages: ['pdfkit'],
+    // Otimizar imports de bibliotecas grandes
+    optimizePackageImports: [
+      'lucide-react',
+      '@radix-ui/react-icons',
+      'date-fns',
+    ],
   },
   async headers() {
     return [
