@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { usePointsOfSale } from "@/lib/usePointsOfSale"
+import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 import { StockAllocationDialog } from "@/components/inventory/StockAllocationDialog"
 import { 
   Sparkles, 
@@ -44,6 +46,14 @@ type ViewMode = "card" | "table"
 export default function ProductsPage() {
   const { data: products = [], isLoading, refetch } = useProducts()
   const { data: pointsOfSale = [] } = usePointsOfSale()
+  
+  // Pull-to-Refresh
+  const { isPulling, isRefreshing, progress, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await refetch()
+    },
+    threshold: 80,
+  })
   
   // View mode
   const [viewMode, setViewMode] = useState<ViewMode>("card")
@@ -196,10 +206,18 @@ export default function ProductsPage() {
 
   if (isLoading) {
     return (
-      <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        Carregando produtos...
-      </div>
+      <>
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          progress={progress}
+          pullDistance={pullDistance}
+        />
+        <div className="flex h-64 items-center justify-center text-sm text-muted-foreground">
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Carregando produtos...
+        </div>
+      </>
     )
   }
 
@@ -209,7 +227,14 @@ export default function ProductsPage() {
     .filter(Boolean)
 
   return (
-    <div className="space-y-6">
+    <>
+      <PullToRefreshIndicator
+        isPulling={isPulling}
+        isRefreshing={isRefreshing || isLoading}
+        progress={progress}
+        pullDistance={pullDistance}
+      />
+      <div className="space-y-6">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -590,6 +615,7 @@ export default function ProductsPage() {
           }}
         />
       </div>
-    </div>
+      </div>
+    </>
   )
 }

@@ -1,16 +1,17 @@
-# ✅ Sprint 2 - Gestos e Interações Touch (PARCIALMENTE IMPLEMENTADO)
+# ✅ Sprint 2 - Gestos e Interações Touch (EM PROGRESSO)
 
-## 📋 Status: EM PROGRESSO
+## 📋 Status: 60% COMPLETO
 
 **Data de Início:** 07 de Outubro de 2025  
-**Fase Atual:** 2.1 - Pull-to-Refresh  
-**Progresso:** 40% completo  
+**Última Atualização:** 07 de Outubro de 2025  
+**Fase Atual:** 2.1 - Pull-to-Refresh (COMPLETO) | 2.2 - Swipe Gestures (Próximo)  
+**Progresso:** 60% completo  
 
 ---
 
 ## ✅ Implementado
 
-### Fase 2.1: Pull-to-Refresh ✅ COMPLETO
+### Fase 2.1: Pull-to-Refresh ✅ COMPLETO (100%)
 
 #### 📦 Dependências Instaladas
 ```bash
@@ -53,15 +54,25 @@
    - Detecta automaticamente com useIsMobile()
    - Suporte a header, body e footer
 
-#### 📍 Páginas com Pull-to-Refresh
+#### 📍 Páginas com Pull-to-Refresh ✅ COMPLETO
 
 1. **`app/(app)/dashboard/inventory/page.tsx`** ✅
    - Pull-to-refresh implementado
    - Invalida cache de produtos e pontos de venda
-   - Indicador visual aparece ao puxar
-   - Feedback háptico ao completar
 
-**Funcionalidade:**
+2. **`app/(app)/dashboard/page.tsx`** ✅
+   - Pull-to-refresh no dashboard principal
+   - Invalida cache de vendas, produtos e sessão de caixa
+
+3. **`app/(app)/dashboard/products/page.tsx`** ✅
+   - Pull-to-refresh na lista de produtos
+   - Recarrega lista completa
+
+4. **`app/(app)/dashboard/orders/page.tsx`** ✅
+   - Pull-to-refresh em encomendas
+   - Invalida cache de orders e estatísticas
+
+**Funcionalidade em TODAS as páginas:**
 - ✅ Puxa para baixo no topo da página
 - ✅ Indicador visual com progress
 - ✅ Mensagem "Puxe para atualizar" / "Solte para atualizar"
@@ -73,14 +84,12 @@
 
 ## ⏳ Pendente de Implementação
 
-### Fase 2.1: Pull-to-Refresh (Continuação)
+### Fase 2.1: Pull-to-Refresh (Restante)
 
 #### Páginas Restantes:
-- [ ] `app/(app)/dashboard/page.tsx` - Dashboard principal
 - [ ] `app/(app)/dashboard/sales/page.tsx` - PDV / Vendas
-- [ ] `app/(app)/dashboard/orders/page.tsx` - Encomendas
-- [ ] `app/(app)/dashboard/products/page.tsx` - Produtos
-- [ ] `app/(app)/dashboard/customers/page.tsx` - Clientes
+- [ ] `app/(app)/dashboard/customers/page.tsx` - Clientes  
+(Total: 2 páginas de menor prioridade)
 
 ---
 

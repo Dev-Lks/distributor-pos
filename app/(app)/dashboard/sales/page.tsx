@@ -10,6 +10,9 @@ import { useSales } from "@/lib/useSales"
 import { usePointsOfSale, type PointOfSale } from "@/lib/usePointsOfSale"
 import { toast } from "sonner"
 import { MapPin } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 
 // Componentes modulares
 import { CartSection } from "./components/CartSection"
@@ -30,6 +33,17 @@ import { useCashSessionControls } from "./hooks/useCashSessionControls"
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 
 export default function SalesPage() {
+  const queryClient = useQueryClient()
+
+  // Pull to refresh
+  const { isPulling, isRefreshing, progress, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["products"] })
+      await queryClient.invalidateQueries({ queryKey: ["points"] })
+      await queryClient.invalidateQueries({ queryKey: ["cash-session"] })
+    },
+  })
+
   // Data fetching
   const { data: products = [], isLoading: loading } = useProducts()
   const { data: pointsData = [], isLoading: pointsLoading } = usePointsOfSale()
@@ -290,14 +304,29 @@ export default function SalesPage() {
 
   if (pointsLoading) {
     return (
-      <div className="container mx-auto">
-        <p className="text-muted-foreground">Carregando...</p>
-      </div>
+      <>
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          progress={progress}
+          pullDistance={pullDistance}
+        />
+        <div className="container mx-auto">
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </>
     )
   }
 
   return (
-    <div className="container mx-auto space-y-4">
+    <>
+      <PullToRefreshIndicator
+        isPulling={isPulling}
+        isRefreshing={isRefreshing}
+        progress={progress}
+        pullDistance={pullDistance}
+      />
+      <div className="container mx-auto space-y-4">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div>
@@ -416,5 +445,6 @@ export default function SalesPage() {
         loading={cashSessionControls.isClosing}
       />
     </div>
+    </>
   )
 }

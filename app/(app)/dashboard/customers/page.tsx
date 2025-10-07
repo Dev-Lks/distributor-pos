@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Plus, Edit, Trash2, Loader2, Gift, Users } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -127,6 +130,16 @@ const formatDate = (isoDate: string) => {
 const mapProductsToString = (products: string[]) => (products.length ? products.join(", ") : "—")
 
 export default function CustomersPage() {
+  const queryClient = useQueryClient()
+
+  // Pull to refresh
+  const { isPulling, isRefreshing, progress, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["customers"] })
+      await queryClient.invalidateQueries({ queryKey: ["customer-bonifications"] })
+    },
+  })
+
   const [activeTab, setActiveTab] = useState<"customers" | "bonifications">("customers")
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -326,7 +339,14 @@ export default function CustomersPage() {
   const isSavingBonification = createBonification.isPending || updateBonification.isPending
 
   return (
-    <div className="space-y-6">
+    <>
+      <PullToRefreshIndicator
+        isPulling={isPulling}
+        isRefreshing={isRefreshing}
+        progress={progress}
+        pullDistance={pullDistance}
+      />
+      <div className="space-y-6">
       <Card className="border-dashed bg-muted/40">
         <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -750,5 +770,6 @@ export default function CustomersPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+    </>
   )
 }

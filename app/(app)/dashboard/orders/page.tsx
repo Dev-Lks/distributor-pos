@@ -2,6 +2,9 @@
 
 import { useState } from "react"
 import { useOrders, useOrderStats, OrderStatus, OrderPriority } from "@/lib/useOrders"
+import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
+import { useQueryClient } from "@tanstack/react-query"
 import { OrderCard } from "@/components/orders/OrderCard"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,11 +24,23 @@ export default function OrdersPage() {
   const [search, setSearch] = useState("")
   const [priorityFilter, setPriorityFilter] = useState<OrderPriority | "ALL">("ALL")
   const [viewMode, setViewMode] = useState<"all" | "kanban" | "list">("all")
+  const queryClient = useQueryClient()
 
   const { data: stats, isLoading: statsLoading } = useOrderStats()
   const { data: orders, isLoading: ordersLoading } = useOrders({
     search: search || undefined,
     priority: priorityFilter !== "ALL" ? priorityFilter : undefined,
+  })
+
+  // Pull-to-Refresh
+  const { isPulling, isRefreshing, progress, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["orders"] }),
+        queryClient.invalidateQueries({ queryKey: ["order-stats"] }),
+      ])
+    },
+    threshold: 80,
   })
 
   const filterOrdersByStatus = (status: OrderStatus | "ALL") => {
@@ -35,7 +50,14 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-4 sm:space-y-6">
+    <>
+      <PullToRefreshIndicator
+        isPulling={isPulling}
+        isRefreshing={isRefreshing || ordersLoading}
+        progress={progress}
+        pullDistance={pullDistance}
+      />
+      <div className="container mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -227,6 +249,7 @@ export default function OrdersPage() {
           </>
         )}
       </Tabs>
-    </div>
+      </div>
+    </>
   )
 }

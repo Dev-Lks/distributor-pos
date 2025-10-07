@@ -13,6 +13,9 @@ import { useProducts } from "@/lib/useProducts"
 import { useCashSession } from "@/lib/useCashSession"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Card, CardContent } from "@/components/ui/card"
+import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
+import { useQueryClient } from "@tanstack/react-query"
 
 // Lazy load widgets menos críticos para melhorar performance inicial
 const QuickInsightsWidget = dynamic(
@@ -73,10 +76,23 @@ function WidgetSkeleton() {
 
 export default function NewDashboardPage() {
   const [period, setPeriod] = useState<DashboardPeriod>("today")
+  const queryClient = useQueryClient()
   
   const { data: metrics, isLoading: metricsLoading } = useSalesMetrics(period)
   const { data: products = [], isLoading: productsLoading } = useProducts()
   const { session: cashSession } = useCashSession()
+
+  // Pull-to-Refresh
+  const { isPulling, isRefreshing, progress, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["sales"] }),
+        queryClient.invalidateQueries({ queryKey: ["products"] }),
+        queryClient.invalidateQueries({ queryKey: ["cashSession"] }),
+      ])
+    },
+    threshold: 80,
+  })
 
   // Format quick stats for header
   const formatDuration = (openedAt: string | Date) => {
@@ -97,24 +113,39 @@ export default function NewDashboardPage() {
 
   if (metricsLoading || productsLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-32 w-full" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
+      <>
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          progress={progress}
+          pullDistance={pullDistance}
+        />
+        <div className="space-y-6">
+          <Skeleton className="h-32 w-full" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Skeleton key={i} className="h-80" />
+            ))}
+          </div>
         </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-80" />
-          ))}
-        </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <>
+      <PullToRefreshIndicator
+        isPulling={isPulling}
+        isRefreshing={isRefreshing}
+        progress={progress}
+        pullDistance={pullDistance}
+      />
+      <div className="space-y-4 sm:space-y-6">
       {/* Header with Greeting & Quick Stats */}
       <DashboardHeader 
         period={period} 
@@ -158,6 +189,7 @@ export default function NewDashboardPage() {
           <TeamPerformanceWidget />
         </div>
       </div>
-    </div>
+      </div>
+    </>
   )
 }

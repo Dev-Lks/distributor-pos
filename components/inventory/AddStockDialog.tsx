@@ -1,14 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { ResponsiveDialog } from "@/components/ResponsiveDialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -146,20 +139,34 @@ export function AddStockDialog({
   const canAdd = selectedProductId && quantity && parseInt(quantity) > 0
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Plus className="h-5 w-5" />
-            Adicionar Estoque à Câmara Fria
-          </DialogTitle>
-          <DialogDescription>
-            Dê entrada de novos produtos na câmara fria para depois distribuir aos PDVs
-          </DialogDescription>
-        </DialogHeader>
-
-        <ScrollArea className="flex-1 pr-4">
-          <div className="space-y-4">
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      title="Adicionar Estoque à Câmara Fria"
+      description="Dê entrada de novos produtos na câmara fria para depois distribuir aos PDVs"
+      footer={
+        <>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isAdding}>
+            Cancelar
+          </Button>
+          <Button onClick={handleAddStock} disabled={!canAdd || isAdding}>
+            {isAdding ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Adicionando...
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" />
+                Adicionar Estoque
+              </>
+            )}
+          </Button>
+        </>
+      }
+    >
+      <ScrollArea className="max-h-[60vh]">
+        <div className="space-y-4">
           {/* Busca de Produto */}
           <div className="space-y-2">
             <Label htmlFor="product-search">Produto</Label>
@@ -331,27 +338,7 @@ export function AddStockDialog({
             </>
           )}
         </div>
-        </ScrollArea>
-
-        <DialogFooter className="mt-4">
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isAdding}>
-            Cancelar
-          </Button>
-          <Button onClick={handleAddStock} disabled={!canAdd || isAdding}>
-            {isAdding ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Adicionando...
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Adicionar Estoque
-              </>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </ScrollArea>
+    </ResponsiveDialog>
   )
 }
