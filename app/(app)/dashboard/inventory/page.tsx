@@ -62,6 +62,10 @@ import { ProductCard } from "@/components/inventory/ProductCard"
 import { DistributeStockDialog } from "@/components/inventory/DistributeStockDialog"
 import { AddStockDialog } from "@/components/inventory/AddStockDialog"
 
+// Sprint 2: Pull-to-Refresh e Gestos
+import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
+
 type Location = "coldRoom" | "house" | "salePoint"
 type ProductInventory = NonNullable<Product["inventory"]>
 
@@ -210,6 +214,16 @@ export default function InventoryPage() {
 
   // Estado para filtros avançados
   const [advancedFilters, setAdvancedFilters] = useState<any>({})
+
+  // Sprint 2: Pull-to-Refresh
+  const { isPulling, isRefreshing, progress, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["products"] })
+      await queryClient.invalidateQueries({ queryKey: ["points"] })
+    },
+    threshold: 80,
+    enabled: true,
+  })
 
   const products = useMemo(
     () =>
@@ -455,20 +469,37 @@ export default function InventoryPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
+      <>
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing || loading}
+          progress={progress}
+          pullDistance={pullDistance}
+        />
+        <div className="space-y-6">
+          <Skeleton className="h-10 w-64" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton key={i} className="h-32" />
+            ))}
+          </div>
+          <Skeleton className="h-96" />
         </div>
-        <Skeleton className="h-96" />
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <>
+      {/* Sprint 2: Pull-to-Refresh Indicator */}
+      <PullToRefreshIndicator
+        isPulling={isPulling}
+        isRefreshing={isRefreshing || loading}
+        progress={progress}
+        pullDistance={pullDistance}
+      />
+      
+      <div className="space-y-6">
       {/* Cabeçalho Melhorado */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -911,6 +942,7 @@ export default function InventoryPage() {
           setDistributeProductId(null)
         }}
       />
-    </div>
+      </div>
+    </>
   )
 }
