@@ -6,6 +6,7 @@ import "./globals.css"
 import { AuthSessionProvider } from "@/components/AuthSessionProvider"
 import { QueryProvider } from "@/components/QueryProvider"
 import { PWAInstall } from "@/components/PWAInstall"
+import { ProgressBar } from "@/components/ProgressBar"
 import { Toaster } from "@/components/ui/sonner"
 import { authOptions } from "@/lib/auth"
 
@@ -40,6 +41,7 @@ export default async function RootLayout({
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
+        <ProgressBar />
         <AuthSessionProvider session={session}>
           <QueryProvider>{children}</QueryProvider>
           <PWAInstall />
