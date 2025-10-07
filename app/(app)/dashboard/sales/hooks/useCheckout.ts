@@ -1,5 +1,7 @@
 import { useState, useCallback } from "react"
 import { toast } from "sonner"
+import { handleError } from "@/lib/errors"
+import { logger } from "@/lib/logger"
 import type { CartItem } from "./useCart"
 
 interface CheckoutOptions {
@@ -12,7 +14,7 @@ interface CheckoutOptions {
     address?: string
   }
   onSuccess: () => void
-  createSale: (data: any) => Promise<any>
+  createSale: (data: unknown) => Promise<unknown>
 }
 
 /**
@@ -78,10 +80,11 @@ export function useCheckout() {
       })
 
       onSuccess()
-    } catch (error: any) {
-      console.error("Erro ao finalizar venda:", error)
+    } catch (error) {
+      const { message } = handleError(error)
+      logger.error("Erro ao finalizar venda", { error, pointOfSaleId })
       toast.error("Erro ao finalizar venda", {
-        description: error.message || "Tente novamente",
+        description: message || "Tente novamente",
       })
     } finally {
       setIsProcessing(false)

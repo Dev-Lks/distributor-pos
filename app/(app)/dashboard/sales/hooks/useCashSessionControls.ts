@@ -1,5 +1,7 @@
 import { useCallback } from "react"
 import { toast } from "sonner"
+import { handleError } from "@/lib/errors"
+import { logger } from "@/lib/logger"
 import { useCashSession } from "@/lib/useCashSession"
 import type { CashTransactionTypeLiteral } from "@/types/cash"
 
@@ -27,10 +29,11 @@ export function useCashSessionControls(pointOfSaleId: string | null) {
       })
       toast.success("Caixa aberto com sucesso!")
       return true
-    } catch (error: any) {
-      console.error("Erro ao abrir caixa:", error)
+    } catch (error) {
+      const { message } = handleError(error)
+      logger.error("Erro ao abrir caixa", { error, pointOfSaleId })
       toast.error("Erro ao abrir caixa", {
-        description: error.message || "Tente novamente",
+        description: message || "Tente novamente",
       })
       return false
     }
@@ -65,10 +68,11 @@ export function useCashSessionControls(pointOfSaleId: string | null) {
 
       toast.success(`${labels[type]} registrado com sucesso!`)
       return true
-    } catch (error: any) {
-      console.error("Erro ao registrar transação:", error)
+    } catch (error) {
+      const { message } = handleError(error)
+      logger.error("Erro ao registrar transação", { error, type, sessionId: cashSession.session?.id })
       toast.error("Erro ao registrar transação", {
-        description: error.message || "Tente novamente",
+        description: message || "Tente novamente",
       })
       return false
     }
@@ -91,10 +95,11 @@ export function useCashSessionControls(pointOfSaleId: string | null) {
       })
       toast.success("Caixa fechado com sucesso!")
       return true
-    } catch (error: any) {
-      console.error("Erro ao fechar caixa:", error)
+    } catch (error) {
+      const { message } = handleError(error)
+      logger.error("Erro ao fechar caixa", { error, sessionId: cashSession.session?.id })
       toast.error("Erro ao fechar caixa", {
-        description: error.message || "Tente novamente",
+        description: message || "Tente novamente",
       })
       return false
     }

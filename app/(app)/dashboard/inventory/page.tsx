@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { handleError } from "@/lib/errors"
+import { logger } from "@/lib/logger"
 import {
   AlertTriangle,
   ArrowLeftRight,
@@ -460,8 +462,10 @@ export default function InventoryPage() {
       }
 
       handleImportModalChange(false)
-    } catch (error: any) {
-      toast.error(error.message || "Erro ao importar arquivo")
+    } catch (error) {
+      const { message } = handleError(error)
+      logger.error("Erro ao importar arquivo", { error })
+      toast.error(message || "Erro ao importar arquivo")
     } finally {
       setImporting(false)
     }

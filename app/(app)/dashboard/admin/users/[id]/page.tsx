@@ -13,6 +13,7 @@ import { ArrowLeft, Save, Shield, User, KeyRound, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import type { PermissionKey } from "@prisma/client";
+import type { User as UserType, UpdateUserData, UserPermission } from "@/types";
 
 export default function EditUserPage() {
   const params = useParams();
@@ -27,10 +28,10 @@ export default function EditUserPage() {
   const [cpf, setCpf] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
   const [selectedPermissions, setSelectedPermissions] = useState<PermissionKey[]>([]);
-  const [status, setStatus] = useState("ACTIVE");
+  const [status, setStatus] = useState<"ACTIVE" | "INACTIVE" | "SUSPENDED">("ACTIVE");
   const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
   const [showHardDeleteDialog, setShowHardDeleteDialog] = useState(false);
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<UserType | null>(null);
 
   // Buscar dados do usuário
   const { data: user, isLoading } = useQuery({
@@ -47,7 +48,7 @@ export default function EditUserPage() {
       setCpf(data.cpf || "");
       setIsAdmin(data.isAdmin || false);
       setStatus(data.status || "ACTIVE");
-      setSelectedPermissions(data.permissions?.map((p: any) => p.permission) || []);
+      setSelectedPermissions(data.permissions?.map((p: UserPermission) => p.permission) || []);
       setUserData(data);
       
       return data;
@@ -57,7 +58,7 @@ export default function EditUserPage() {
 
   // Mutation para atualizar usuário
   const updateUser = useMutation({
-    mutationFn: async (data: any) => {
+    mutationFn: async (data: UpdateUserData) => {
       const res = await fetch(`/api/users/${userId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -201,7 +202,7 @@ export default function EditUserPage() {
               <label className="text-sm font-medium">Status</label>
               <select
                 value={status}
-                onChange={(e) => setStatus(e.target.value)}
+                onChange={(e) => setStatus(e.target.value as "ACTIVE" | "INACTIVE" | "SUSPENDED")}
                 className="w-full px-3 py-2 border rounded-md"
               >
                 <option value="ACTIVE">Ativo</option>

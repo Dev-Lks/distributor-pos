@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { CreateUserDialog } from "@/components/admin/CreateUserDialog";
 import { DeleteUserDialog } from "@/components/admin/DeleteUserDialog";
+import type { User } from "@/types";
 
 export default function UsersPage() {
   const { can } = usePermissions();
@@ -182,7 +183,7 @@ export default function UsersPage() {
                 </tr>
               )}
               {!isLoading &&
-                users?.map((user: any) => (
+                users?.map((user: User) => (
                   <tr key={user.id} className="border-t hover:bg-muted/50">
                     <td className="px-2 sm:px-4 py-3 text-xs sm:text-sm">
                       <div className="font-medium">{user.fullName || user.name}</div>
