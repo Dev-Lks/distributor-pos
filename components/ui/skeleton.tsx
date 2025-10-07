@@ -64,3 +64,105 @@ export function CardSkeleton() {
     </div>
   )
 }
+
+// Skeleton de Tabela
+export function TableSkeleton({ rows = 5, cols = 4 }: { rows?: number; cols?: number }) {
+  return (
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="flex gap-4 border-b pb-2">
+        {Array.from({ length: cols }).map((_, i) => (
+          <Skeleton key={`header-${i}`} className="h-4 flex-1" />
+        ))}
+      </div>
+      {/* Rows */}
+      {Array.from({ length: rows }).map((_, rowIndex) => (
+        <div key={`row-${rowIndex}`} className="flex gap-4">
+          {Array.from({ length: cols }).map((_, colIndex) => (
+            <Skeleton key={`cell-${rowIndex}-${colIndex}`} className="h-4 flex-1" />
+          ))}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Skeleton de Lista
+export function ListSkeleton({ items = 5 }: { items?: number }) {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: items }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-3 rounded-lg border">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-3 w-2/3" />
+          </div>
+          <Skeleton className="h-8 w-20" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Skeleton de Dashboard/Métricas
+export function MetricsSkeleton({ count = 4 }: { count?: number }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="rounded-lg border bg-card p-6 space-y-2">
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-3 w-3/4" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Skeleton de Formulário
+export function FormSkeleton({ fields = 4 }: { fields?: number }) {
+  return (
+    <div className="space-y-4">
+      {Array.from({ length: fields }).map((_, i) => (
+        <div key={i} className="space-y-2">
+          <Skeleton className="h-4 w-24" /> {/* Label */}
+          <Skeleton className="h-10 w-full" /> {/* Input */}
+        </div>
+      ))}
+      <div className="flex gap-2 justify-end">
+        <Skeleton className="h-10 w-24" />
+        <Skeleton className="h-10 w-24" />
+      </div>
+    </div>
+  )
+}
+
+// Skeleton de Produto/Item
+export function ProductSkeleton() {
+  return (
+    <div className="rounded-lg border bg-card overflow-hidden">
+      <Skeleton className="h-48 w-full" /> {/* Image */}
+      <div className="p-4 space-y-3">
+        <Skeleton className="h-5 w-3/4" /> {/* Title */}
+        <Skeleton className="h-4 w-full" /> {/* Description line 1 */}
+        <Skeleton className="h-4 w-2/3" /> {/* Description line 2 */}
+        <div className="flex items-center justify-between pt-2">
+          <Skeleton className="h-6 w-20" /> {/* Price */}
+          <Skeleton className="h-9 w-24" /> {/* Button */}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Grid de Produtos
+export function ProductGridSkeleton({ count = 6 }: { count?: number }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: count }).map((_, i) => (
+        <ProductSkeleton key={i} />
+      ))}
+    </div>
+  )
+}
