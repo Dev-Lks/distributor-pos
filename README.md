@@ -1,6 +1,11 @@
-# 🍺 NitroBeer - Sistema Completo de Gestão
+# 🍺 Claudiao - Sistema Completo de Gestão
 
 Sistema completo de ponto de venda (POS) e gestão de inventário para bares e restaurantes, desenvolvido com Next.js, Prisma e PostgreSQL.
+
+[![CI/CD](https://github.com/Dev-Lks/claudiao/workflows/CI%2FCD%20Pipeline/badge.svg)](https://github.com/Dev-Lks/claudiao/actions)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 ## ✨ Funcionalidades Principais
 
@@ -9,6 +14,7 @@ Sistema completo de ponto de venda (POS) e gestão de inventário para bares e r
 - Sistema de carrinho com bonificações
 - Múltiplos métodos de pagamento
 - Impressão de comandas
+- Gestão de caixa
 
 ### 📦 Gestão Avançada de Inventário
 - **Dashboard com 8 KPIs** em tempo real
@@ -20,84 +26,186 @@ Sistema completo de ponto de venda (POS) e gestão de inventário para bares e r
 - **Operações em Massa** (preços, transferências, tags)
 - **Filtros Avançados** multi-critério
 - **Histórico Completo** de movimentos
+- **Importação/Exportação** via Excel
 
 ### 📊 Relatórios e Análises
-- Histórico de vendas
-- Métricas de performance
-- Relatórios de inventário
+- Histórico de vendas completo
+- Métricas de performance em tempo real
+- Relatórios de inventário detalhados
 - Análises de lucratividade
+- Exportação para Excel/CSV
 
-## 🛠️ Tecnologias
+### � Gestão de Usuários
+- Sistema de permissões granular
+- Controle de acesso por rota
+- Auditoria de ações
+- Múltiplos níveis de acesso
+
+## �🛠️ Tecnologias
 
 ### Frontend
 - **Next.js 14** - App Router com React Server Components
 - **React 19** - Última versão
-- **TypeScript** - Type safety completa
-- **Tailwind CSS** - Utility-first CSS
-- **shadcn/ui** - Component library moderna
-- **TanStack Query** - Data fetching e caching
-- **Lucide React** - Ícones SVG
+- **TypeScript 5** - Type safety completa
+- **Tailwind CSS 4** - Utility-first CSS
+- **Radix UI** - Componentes acessíveis
+- **React Query** - Data fetching e caching
+- **React Hook Form** - Gestão de formulários
+- **Zod** - Validação de schemas
 
 ### Backend
 - **Next.js API Routes** - Backend serverless
-- **NextAuth.js** - Autenticação
-- **Prisma ORM** - Type-safe database access
-- **PostgreSQL** - Database (Neon)
+- **NextAuth.js 4** - Autenticação e sessões
+- **Prisma ORM 6** - Type-safe database access
+- **PostgreSQL** - Database principal
+- **IndexedDB** - Storage client-side
 
-## 🚀 Instalação
+### Ferramentas de Desenvolvimento
+- **ESLint** - Linting
+- **Prettier** - Formatação de código
+- **TypeScript** - Type checking
+- **GitHub Actions** - CI/CD
+
+## 🚀 Instalação Rápida
+
+### Pré-requisitos
+- Node.js 18+ ou 20+
+- pnpm 8+
+- PostgreSQL 14+
 
 ### 1. Clone e Instale
 ```bash
+git clone https://github.com/Dev-Lks/claudiao.git
+cd claudiao
 pnpm install
 ```
 
 ### 2. Configure o Ambiente
 ```bash
-# Copiar .env.example para .env
 cp .env.example .env
-
-# Configurar DATABASE_URL (PostgreSQL/Neon)
-DATABASE_URL="postgresql://user:password@localhost:5432/nitrobeer"
-
-# Configurar autenticação
-NEXTAUTH_SECRET="gerar-com-openssl-rand-base64-32"
-NEXTAUTH_URL="http://localhost:3000"
+# Edite .env com suas configurações
 ```
 
 ### 3. Setup do Banco de Dados
 ```bash
-# Aplicar schema
-npx prisma db push
-
-# Ou criar migration
-npx prisma migrate dev --name init
-
-# Popular com dados iniciais
-pnpm tsx prisma/seed.ts
-
-# (Opcional) Abrir Prisma Studio
-npx prisma studio
+pnpm prisma generate
+pnpm prisma migrate dev
+pnpm prisma db seed
 ```
 
-### 4. Iniciar Desenvolvimento
+### 4. Inicie o Servidor
 ```bash
 pnpm dev
 ```
 
-Acesse: http://localhost:3000
+Acesse: **http://localhost:3000**
+
+📚 **Documentação Completa:** [SETUP.md](docs/SETUP.md)
 
 ## 📖 Documentação
 
-### Arquivos de Referência
-- **PROJECT_COMPLETE.md** - Visão geral completa do projeto
-- **INVENTORY_PROGRESS.md** - Checklist detalhado de implementação
-- **PHASE3_SUMMARY.md** - Resumo das APIs (Fase 3)
-- **PHASE4_COMPLETE.md** - Resumo da integração (Fase 4)
-- **DEPLOY_GUIDE.md** - Guia completo de deploy
+- 📘 [Setup Guide](docs/SETUP.md) - Guia completo de instalação
+- 🏗️ [Architecture](docs/ARCHITECTURE.md) - Arquitetura do sistema
+- 🔌 [API Documentation](docs/API.md) - Documentação da API
+- 🤝 [Contributing](docs/CONTRIBUTING.md) - Como contribuir
+- 📋 [Improvement Checklist](docs/IMPROVEMENT_CHECKLIST.md) - Progresso das melhorias
 
-### Estrutura do Projeto
+## 🎯 Roadmap
+
+### ✅ Concluído
+- [x] Sistema de logging centralizado
+- [x] Tipos TypeScript globais
+- [x] Sistema de tratamento de erros
+- [x] Refatoração do middleware (67% redução)
+- [x] Componentes modulares
+- [x] Remoção de dependências não utilizadas
+- [x] Configuração ESLint/Prettier
+- [x] Documentação completa
+- [x] CI/CD Pipeline
+
+### 🚧 Em Progresso
+- [ ] Testes unitários (Sprint 4.1)
+- [ ] Testes de integração (Sprint 4.2)
+
+### 📅 Planejado
+- [ ] PWA completo
+- [ ] Modo offline
+- [ ] Sincronização em background
+- [ ] Relatórios avançados
+- [ ] Multi-tenancy
+
+## 🧪 Testes
+
+```bash
+# Executar testes
+pnpm test
+
+# Modo watch
+pnpm test:watch
+
+# Coverage
+pnpm test:coverage
 ```
-app/
+
+## 🏗️ Build e Deploy
+
+### Build Local
+```bash
+pnpm build
+pnpm start
+```
+
+### Deploy Vercel
+```bash
+vercel deploy --prod
+```
+
+### Deploy Docker
+```bash
+docker build -t claudiao .
+docker run -p 3000:3000 claudiao
+```
+
+📚 **Guia Completo:** [Deployment Guide](docs/DEPLOY_GUIDE.md)
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor, leia o [guia de contribuição](docs/CONTRIBUTING.md) antes de enviar um PR.
+
+### Processo
+1. Fork o projeto
+2. Crie uma branch (`git checkout -b feature/amazing`)
+3. Commit suas mudanças (`git commit -m 'feat: add amazing feature'`)
+4. Push para a branch (`git push origin feature/amazing`)
+5. Abra um Pull Request
+
+## 📄 Licença
+
+Este projeto está sob a licença MIT. Veja o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+## 👨‍💻 Autores
+
+- **Dev-Lks** - [GitHub](https://github.com/Dev-Lks)
+
+## 🙏 Agradecimentos
+
+- Next.js team
+- Prisma team
+- Radix UI team
+- Vercel
+- Toda a comunidade open source
+
+## 📞 Suporte
+
+- 📧 Email: support@claudiao.com
+- 💬 Discord: [Join our server](https://discord.gg/claudiao)
+- 🐛 Issues: [GitHub Issues](https://github.com/Dev-Lks/claudiao/issues)
+
+---
+
+⭐ Se este projeto te ajudou, considere dar uma estrela!
+
+Made with ❤️ by [Dev-Lks](https://github.com/Dev-Lks)
   (app)/dashboard/    # Páginas protegidas
   (auth)/login/       # Login
   api/                # API routes
