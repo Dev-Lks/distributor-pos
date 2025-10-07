@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import type { UserWhereInput } from "@/types";
 
 // GET /api/users - Listar usuários com filtros
 export async function GET(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
   const status = searchParams.get("status");
   const isAdmin = searchParams.get("isAdmin");
 
-  const where: any = {};
+  const where: UserWhereInput = {};
 
   if (search) {
     where.OR = [
@@ -27,7 +28,7 @@ export async function GET(req: NextRequest) {
     ];
   }
 
-  if (status) where.status = status;
+  if (status) where.status = status as "ACTIVE" | "INACTIVE" | "SUSPENDED";
   if (isAdmin !== null && isAdmin !== undefined) {
     where.isAdmin = isAdmin === "true";
   }

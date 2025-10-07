@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { handleError } from "@/lib/errors"
+import { logger } from "@/lib/logger"
+import type { OrderWhereInput } from "@/types"
 import { z } from "zod"
 
 // Schema de validação para criar ordem
@@ -55,7 +58,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate")
     const endDate = searchParams.get("endDate")
 
-    const where: any = {}
+    const where: OrderWhereInput = {}
 
     if (statuses.length > 0) {
       where.status = { in: statuses }
@@ -122,9 +125,10 @@ export async function GET(request: NextRequest) {
       ],
     })
 
-    return NextResponse.json(orders)
+    return NextResponse.json(result)
   } catch (error) {
-    console.error("Error fetching orders:", error)
+    const { message } = handleError(error)
+    logger.error("Erro ao criar pedido", { error })
     return NextResponse.json(
       { error: "Erro ao buscar encomendas" },
       { status: 500 }

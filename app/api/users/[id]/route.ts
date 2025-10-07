@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
+import type { Prisma } from "@prisma/client";
 
 // GET /api/users/[id] - Buscar usuário por ID
 export async function GET(
@@ -60,7 +61,7 @@ export async function PATCH(
   const { fullName, phone, cpf, isAdmin, status, pointsOfSaleIds, newPassword, permissions } =
     body;
 
-  const updateData: any = {};
+  const updateData: Prisma.UserUpdateInput = {};
   if (fullName) {
     updateData.fullName = fullName;
     updateData.name = fullName; // Compatibilidade legado
