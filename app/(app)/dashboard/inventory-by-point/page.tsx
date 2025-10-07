@@ -91,7 +91,7 @@ export default function InventoryByPointPage() {
   }
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6">
       <Card className="border-none bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-none">
         <CardHeader className="pb-4">
           <div className="space-y-2">

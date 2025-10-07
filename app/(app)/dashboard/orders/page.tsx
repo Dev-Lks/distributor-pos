@@ -35,7 +35,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-4 sm:py-6 space-y-4 sm:space-y-6">
+    <div className="container mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -131,9 +131,9 @@ export default function OrdersPage() {
 
       {/* Orders List */}
       <Tabs defaultValue="all" className="space-y-4">
-        <div className="overflow-x-auto">
-          <TabsList className="grid w-full min-w-[600px] grid-cols-6">
-            <TabsTrigger value="all" className="text-xs sm:text-sm">
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="inline-flex h-auto w-full justify-start overflow-x-auto overflow-y-hidden whitespace-nowrap rounded-lg p-1 md:grid md:w-full md:grid-cols-6">
+            <TabsTrigger value="all" className="text-xs sm:text-sm shrink-0">
               <span className="hidden sm:inline">Todas</span>
               <span className="sm:hidden">All</span>
               {!ordersLoading && orders && (
@@ -142,7 +142,7 @@ export default function OrdersPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="PENDING" className="text-xs sm:text-sm">
+            <TabsTrigger value="PENDING" className="text-xs sm:text-sm shrink-0">
               <span className="hidden sm:inline">Pendentes</span>
               <span className="sm:hidden">Pend</span>
               {!ordersLoading && orders && (
@@ -151,7 +151,7 @@ export default function OrdersPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="CONFIRMED" className="text-xs sm:text-sm">
+            <TabsTrigger value="CONFIRMED" className="text-xs sm:text-sm shrink-0">
               <span className="hidden sm:inline">Confirmadas</span>
               <span className="sm:hidden">Conf</span>
               {!ordersLoading && orders && (
@@ -160,7 +160,7 @@ export default function OrdersPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="PREPARING" className="text-xs sm:text-sm">
+            <TabsTrigger value="PREPARING" className="text-xs sm:text-sm shrink-0">
               <span className="hidden sm:inline">Preparando</span>
               <span className="sm:hidden">Prep</span>
               {!ordersLoading && orders && (
@@ -169,7 +169,7 @@ export default function OrdersPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="READY" className="text-xs sm:text-sm">
+            <TabsTrigger value="READY" className="text-xs sm:text-sm shrink-0">
               <span className="hidden sm:inline">Prontas</span>
               <span className="sm:hidden">Ready</span>
               {!ordersLoading && orders && (
@@ -178,7 +178,7 @@ export default function OrdersPage() {
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="DELIVERED" className="text-xs sm:text-sm">
+            <TabsTrigger value="DELIVERED" className="text-xs sm:text-sm shrink-0">
               <span className="hidden sm:inline">Entregues</span>
               <span className="sm:hidden">Entr</span>
               {!ordersLoading && orders && (

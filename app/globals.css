@@ -2,6 +2,43 @@
 @import "tw-animate-css";
 @tailwind base;
 
+@layer base {
+  /* ========================================
+     MOBILE TOUCH OPTIMIZATIONS
+     ======================================== */
+  
+  * {
+    /* Remove destaque azul no tap (iOS/Android) */
+    -webkit-tap-highlight-color: transparent;
+    
+    /* Previne double-tap zoom em botões */
+    touch-action: manipulation;
+  }
+  
+  html {
+    /* Smooth scrolling nativo */
+    scroll-behavior: smooth;
+    
+    /* Otimiza scrolling em iOS */
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  body {
+    /* Previne bounce scroll em iOS */
+    overscroll-behavior-y: none;
+    
+    /* Otimiza rendering de fontes */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Áreas scrolláveis com momentum */
+  .scroll-container {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

@@ -101,7 +101,7 @@ export function CartSection({
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="min-h-[36px] min-w-[36px] active:scale-90"
                       onClick={() => onUpdateQuantity(item.productId, item.quantity - 1)}
                     >
                       <Minus className="h-3 w-3" />
@@ -120,7 +120,7 @@ export function CartSection({
                     <Button
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="min-h-[36px] min-w-[36px] active:scale-90"
                       onClick={() => onUpdateQuantity(item.productId, item.quantity + 1)}
                       disabled={item.quantity >= item.stock}
                     >

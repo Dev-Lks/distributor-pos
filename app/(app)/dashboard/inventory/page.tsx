@@ -455,7 +455,7 @@ export default function InventoryPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         <Skeleton className="h-10 w-64" />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => (
@@ -468,7 +468,7 @@ export default function InventoryPage() {
   }
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6">
       {/* Cabeçalho Melhorado */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -499,34 +499,41 @@ export default function InventoryPage() {
 
       {/* Sistema de Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="overview" className="gap-2">
+        <TabsList className="inline-flex h-auto w-full justify-start overflow-x-auto overflow-y-hidden whitespace-nowrap rounded-lg p-1 md:grid md:grid-cols-7">
+          <TabsTrigger value="overview" className="gap-2 shrink-0">
             <Package className="size-4" />
-            Visão Geral
+            <span className="hidden sm:inline">Visão Geral</span>
+            <span className="sm:hidden">Geral</span>
           </TabsTrigger>
-          <TabsTrigger value="abc" className="gap-2">
+          <TabsTrigger value="abc" className="gap-2 shrink-0">
             <BarChart3 className="size-4" />
-            Análise ABC
+            <span className="hidden sm:inline">Análise ABC</span>
+            <span className="sm:hidden">ABC</span>
           </TabsTrigger>
-          <TabsTrigger value="forecast" className="gap-2">
+          <TabsTrigger value="forecast" className="gap-2 shrink-0">
             <TrendingUp className="size-4" />
-            Previsões
+            <span className="hidden sm:inline">Previsões</span>
+            <span className="sm:hidden">Previsão</span>
           </TabsTrigger>
-          <TabsTrigger value="expiration" className="gap-2">
+          <TabsTrigger value="expiration" className="gap-2 shrink-0">
             <Calendar className="size-4" />
-            Vencimentos
+            <span className="hidden sm:inline">Vencimentos</span>
+            <span className="sm:hidden">Venc.</span>
           </TabsTrigger>
-          <TabsTrigger value="batches" className="gap-2">
+          <TabsTrigger value="batches" className="gap-2 shrink-0">
             <Package className="size-4" />
-            Lotes
+            <span className="hidden sm:inline">Lotes</span>
+            <span className="sm:hidden">Lotes</span>
           </TabsTrigger>
-          <TabsTrigger value="audits" className="gap-2">
+          <TabsTrigger value="audits" className="gap-2 shrink-0">
             <ClipboardCheck className="size-4" />
-            Auditorias
+            <span className="hidden sm:inline">Auditorias</span>
+            <span className="sm:hidden">Audit.</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
+          <TabsTrigger value="history" className="gap-2 shrink-0">
             <History className="size-4" />
-            Histórico
+            <span className="hidden sm:inline">Histórico</span>
+            <span className="sm:hidden">Hist.</span>
           </TabsTrigger>
         </TabsList>
 

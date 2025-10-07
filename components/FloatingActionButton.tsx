@@ -72,14 +72,14 @@ export function FloatingActionButton() {
       {/* Backdrop */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-[60] bg-black/20 backdrop-blur-sm md:hidden"
           onClick={() => setIsOpen(false)}
           aria-hidden="true"
         />
       )}
 
       {/* FAB Container */}
-      <div className="fixed bottom-20 right-4 z-50 md:hidden">
+      <div className="fixed bottom-24 right-4 z-[70] md:hidden">
         {/* Quick Actions Menu */}
         <div
           className={cn(
@@ -119,9 +119,9 @@ export function FloatingActionButton() {
         <Button
           size="lg"
           className={cn(
-            "h-14 w-14 rounded-full shadow-xl transition-all",
+            "h-14 w-14 rounded-full shadow-xl transition-all duration-200",
             "bg-primary hover:bg-primary/90",
-            "hover:scale-110 active:scale-95",
+            "hover:scale-110 active:scale-90",
             isOpen && "rotate-45"
           )}
           onClick={toggleMenu}

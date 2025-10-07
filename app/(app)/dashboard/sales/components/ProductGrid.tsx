@@ -196,7 +196,7 @@ export function ProductGrid({
                   key={product.id}
                   variant="outline"
                   className={cn(
-                    "h-auto flex-col items-start gap-2 p-3 hover:bg-accent transition-all",
+                    "h-auto flex-col items-start gap-2 p-3 hover:bg-accent transition-all duration-150 active:scale-[0.97]",
                     quickMode && "p-2"
                   )}
                   onClick={() => onAddToCart(product)}

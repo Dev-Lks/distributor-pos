@@ -27,7 +27,7 @@ export function OrderCard({ order, className }: OrderCardProps) {
     <Link
       href={`/dashboard/orders/${order.id}`}
       className={cn(
-        "block rounded-lg border bg-card p-3 sm:p-4 shadow-sm transition-all hover:shadow-md active:scale-[0.98]",
+        "block rounded-lg border bg-card p-3 sm:p-4 shadow-sm transition-all duration-150 hover:shadow-md active:scale-[0.98] active:shadow-sm",
         isOverdue && "border-red-300 dark:border-red-800",
         className
       )}

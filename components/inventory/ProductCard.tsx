@@ -38,7 +38,11 @@ export function ProductCard({
   })
 
   return (
-    <Card className={cn("transition-all hover:shadow-md", isSelected && "ring-2 ring-primary", className)}>
+    <Card className={cn(
+      "transition-all duration-150 hover:shadow-md active:scale-[0.98] active:shadow-sm",
+      isSelected && "ring-2 ring-primary",
+      className
+    )}>
       <CardContent className="p-4">
         <div className="space-y-3">
           {/* Header */}

@@ -521,7 +521,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
           </div>
         </header>
 
-        <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+        <main className="flex-1 px-4 py-6 pb-32 md:px-8 md:py-8 md:pb-8">
           <div className="mx-auto w-full max-w-7xl space-y-6">
             {children}
           </div>

@@ -185,7 +185,7 @@ export default function SettingsPage() {
   const isAdmin = can.manageSettings;
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-6">
       <Card className="border-none bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-none">
         <CardHeader className="flex flex-col gap-4 pb-6 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">

@@ -23,9 +23,9 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
+  minimumScale: 1,
   themeColor: "#fbbf24",
+  viewportFit: "cover",
 }
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })

@@ -76,11 +76,11 @@ export function MobileBottomNav() {
   return (
     <>
       {/* Spacer para evitar que o conteúdo fique por baixo da bottom nav */}
-      <div className="h-16 md:hidden" />
+      <div className="h-20 md:hidden" />
       
       {/* Bottom Navigation */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-50 border-t shadow-lg bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-safe md:hidden"
         role="navigation"
         aria-label="Navegação principal"
       >
@@ -96,8 +96,8 @@ export function MobileBottomNav() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors",
-                  "hover:bg-accent/50 active:bg-accent",
+                  "relative flex flex-col items-center justify-center flex-1 min-h-[56px] gap-1 transition-all duration-150",
+                  "hover:bg-accent/50 active:scale-95 active:bg-accent",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground"

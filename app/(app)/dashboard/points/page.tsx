@@ -67,7 +67,7 @@ export default function PointsOfSalePage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6 pb-6 sm:pb-8 px-4 sm:px-0">
+    <div className="space-y-4 sm:space-y-6">
       <div className="space-y-2">
         <h1 className="text-2xl sm:text-3xl font-bold">Pontos de venda</h1>
         <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
