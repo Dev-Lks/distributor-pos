@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     const where: InventoryMovementWhereInput = {};
 
     if (type) {
-      where.type = type;
+      where.type = type as any; // Type assertion necessária para enum do Prisma
     }
 
     if (productId) {
@@ -32,8 +32,8 @@ export async function GET(request: NextRequest) {
 
     if (location) {
       where.OR = [
-        { fromLocation: location },
-        { toLocation: location },
+        { fromLocation: location as any },
+        { toLocation: location as any },
       ];
     }
 

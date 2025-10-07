@@ -4,7 +4,7 @@ import { handleError } from "@/lib/errors"
 import { logger } from "@/lib/logger"
 import type { CartItem } from "./useCart"
 
-interface CheckoutOptions {
+interface CheckoutOptions<T = unknown> {
   cart: CartItem[]
   paymentMethod: "cash" | "card" | "pix"
   pointOfSaleId: string
@@ -14,7 +14,7 @@ interface CheckoutOptions {
     address?: string
   }
   onSuccess: () => void
-  createSale: (data: unknown) => Promise<unknown>
+  createSale: (data: T) => Promise<unknown>
 }
 
 /**
@@ -43,14 +43,14 @@ export function useCheckout() {
   /**
    * Finaliza a venda
    */
-  const finalizeSale = useCallback(async ({
+  const finalizeSale = useCallback(async <T = unknown>({
     cart,
     paymentMethod,
     pointOfSaleId,
     customerData,
     onSuccess,
     createSale,
-  }: CheckoutOptions) => {
+  }: CheckoutOptions<T>) => {
     // Validação
     if (!validateCheckout(cart, pointOfSaleId)) {
       return
@@ -71,7 +71,7 @@ export function useCheckout() {
         pointOfSaleId,
         total,
         customerData: customerData?.name ? customerData : undefined,
-      }
+      } as T
 
       await createSale(saleData)
 

@@ -61,11 +61,11 @@ export async function GET(request: NextRequest) {
     const where: OrderWhereInput = {}
 
     if (statuses.length > 0) {
-      where.status = { in: statuses }
+      where.status = { in: statuses as any } // Type assertion para enum do Prisma
     }
 
     if (priorities.length > 0) {
-      where.priority = { in: priorities }
+      where.priority = { in: priorities as any } // Type assertion para enum do Prisma
     }
 
     if (customerId) {
@@ -125,7 +125,7 @@ export async function GET(request: NextRequest) {
       ],
     })
 
-    return NextResponse.json(result)
+    return NextResponse.json(orders)
   } catch (error) {
     const { message } = handleError(error)
     logger.error("Erro ao criar pedido", { error })
