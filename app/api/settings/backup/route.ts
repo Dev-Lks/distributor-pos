@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 // POST /api/settings/backup - Criar backup do sistema
 export async function POST(req: NextRequest) {
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
     };
 
     // Em produção, você salvaria os dados em um arquivo ou storage externo
-    console.log("Backup criado:", backupInfo);
+    logger.info("Backup criado", { timestamp: backupInfo.timestamp, userId: session.user.id });
 
     return NextResponse.json({
       success: true,
@@ -56,7 +57,7 @@ export async function POST(req: NextRequest) {
       backup: backupInfo,
     });
   } catch (error) {
-    console.error("Erro ao criar backup:", error);
+    logger.error("Erro ao criar backup", { error, userId: session.user.id });
     return NextResponse.json(
       { error: "Erro ao criar backup" },
       { status: 500 }

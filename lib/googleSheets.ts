@@ -1,4 +1,6 @@
 // Utilitário para integração com Google Sheets via API Route
+import { logger } from '@/lib/logger';
+
 const API_BASE = process.env.NODE_ENV === 'production'
   ? process.env.NEXT_PUBLIC_API_URL || ''
   : ''
@@ -61,10 +63,10 @@ export class GoogleSheetsBackup {
       }
 
       const result = await response.json();
-      console.log(`✅ Venda salva no Google Sheets (Ponto: ${pointOfSale}):`, result.saleId);
+      logger.info('Venda salva no Google Sheets', { pointOfSale, saleId: result.saleId });
       return true;
     } catch (error) {
-      console.error('❌ Erro ao salvar venda no Google Sheets:', error);
+      logger.error('Erro ao salvar venda no Google Sheets', { error, pointOfSale });
       return false;
     }
   }

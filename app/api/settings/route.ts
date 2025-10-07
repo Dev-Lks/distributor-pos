@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logger } from "@/lib/logger";
 
 // GET /api/settings - Buscar configurações do sistema
 export async function GET(req: NextRequest) {
@@ -82,7 +83,7 @@ export async function PATCH(req: NextRequest) {
     // Aqui você salvaria as configurações no banco
     // Por enquanto, apenas validar e retornar
     
-    console.log("Configurações atualizadas:", body);
+    logger.info("Configurações atualizadas", { userId: session.user.id });
     
     return NextResponse.json({
       success: true,
@@ -90,7 +91,7 @@ export async function PATCH(req: NextRequest) {
       settings: body,
     });
   } catch (error) {
-    console.error("Erro ao atualizar configurações:", error);
+    logger.error("Erro ao atualizar configurações", { error, userId: session.user.id });
     return NextResponse.json(
       { error: "Erro ao atualizar configurações" },
       { status: 500 }

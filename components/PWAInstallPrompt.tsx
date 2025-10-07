@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
 import { Download, X } from 'lucide-react'
 
@@ -24,7 +25,7 @@ export function PWAInstallPrompt() {
     if (deferredPrompt) {
       deferredPrompt.prompt()
       const { outcome } = await deferredPrompt.userChoice
-      console.log(`User ${outcome} the install prompt`)
+      logger.info('PWA install prompt interaction', { outcome })
       setDeferredPrompt(null)
       setShowPrompt(false)
     }

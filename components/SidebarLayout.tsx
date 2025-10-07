@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from "react"
 import { useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { logger } from "@/lib/logger"
 import {
   BarChart3,
   Building2,
@@ -199,8 +200,8 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
   const { can, isAdmin } = usePermissions()
   const [isOnline, setIsOnline] = useState(true)
 
-  // DEBUG: Verificar permissões (REMOVER DEPOIS)
-  console.log("🔍 SidebarLayout Debug:", {
+  // Debug: Verificar permissões
+  logger.debug("SidebarLayout render", {
     isAdmin,
     email: session?.user?.email,
     permissionsCount: session?.user?.permissions?.length || 0,

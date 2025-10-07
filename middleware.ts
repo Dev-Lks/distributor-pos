@@ -1,5 +1,6 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 export default withAuth(
   function middleware(req) {
@@ -33,13 +34,13 @@ export default withAuth(
     const isAdmin = token.isAdmin as boolean;
     const permissions = (token.permissions as string[]) || [];
 
-    // DEBUG: Log para verificar permissões (REMOVER DEPOIS)
+    // Debug: Log para verificar permissões
     if (!isAdmin && path.startsWith("/dashboard")) {
-      console.log("🔍 DEBUG Middleware:", {
+      logger.debug("Middleware permission check", {
         path,
         isAdmin,
         email: token.email,
-        permissions: permissions.length > 0 ? permissions : "VAZIO!",
+        permissions: permissions.length > 0 ? permissions : "EMPTY",
       });
     }
 
