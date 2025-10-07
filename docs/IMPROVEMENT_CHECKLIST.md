@@ -4,8 +4,8 @@
 
 ## 🎯 Progresso Geral
 
-- [x] Fase 1: Limpeza e Otimização (2/3) ✅
-- [x] Fase 2: TypeScript e Segurança (3/4) ✅ 75%
+- [x] Fase 1: Limpeza e Otimização (2/3) ✅ 67%
+- [x] Fase 2: TypeScript e Segurança (4/4) ✅ 100% 🎉
 - [ ] Fase 3: Refatoração (0/3)
 - [ ] Fase 4: Testes (0/3)
 - [ ] Fase 5: Documentação (0/2)
@@ -56,11 +56,14 @@
 - [x] sales/hooks/useCashSessionControls.ts
 - [x] Commit
 
-### Sprint 2.3: Eliminar any - API
-- [ ] reports/[id]/csv/route.ts
-- [ ] sales/route.ts
-- [ ] orders/route.ts
-- [ ] Commit
+### Sprint 2.3: Eliminar any - API ✅
+- [x] reports/[id]/csv/route.ts
+- [x] sales/route.ts
+- [x] orders/route.ts
+- [x] users/route.ts
+- [x] users/[id]/route.ts
+- [x] inventory/movements/route.ts
+- [x] Commit
 
 ### Sprint 2.4: Erros ✅
 - [x] Criar lib/errors.ts

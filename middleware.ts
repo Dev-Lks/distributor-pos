@@ -1,40 +1,34 @@
 import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import { checkRoutePermission } from "@/lib/middleware/permissions";
+import {
+  isPublicRoute,
+  createNoCacheResponse,
+  redirectToLogin,
+  redirectToUnauthorized,
+} from "@/lib/middleware/utils";
 
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
 
-    // Rotas públicas
-    if (path.startsWith("/login") || path.startsWith("/api/auth")) {
-      const response = NextResponse.next();
-      // Headers para evitar problemas com cache em navegadores Chromium
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      response.headers.set('Pragma', 'no-cache');
-      response.headers.set('Expires', '0');
-      response.headers.set('X-Content-Type-Options', 'nosniff');
-      return response;
+    // Public routes - allow with no-cache headers
+    if (isPublicRoute(path)) {
+      return createNoCacheResponse(NextResponse.next());
     }
 
-    // Usuário não autenticado
+    // Unauthenticated user - redirect to login
     if (!token) {
-      const loginUrl = new URL("/login", req.url);
-      loginUrl.searchParams.set("callbackUrl", path);
-      const response = NextResponse.redirect(loginUrl);
-      // Headers para garantir que o redirecionamento funcione corretamente
-      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-      response.headers.set('Pragma', 'no-cache');
-      response.headers.set('Expires', '0');
-      return response;
+      return redirectToLogin(req);
     }
 
-    // Proteção de rotas por permissões
+    // Extract user info from token
     const isAdmin = token.isAdmin as boolean;
     const permissions = (token.permissions as string[]) || [];
 
-    // Debug: Log para verificar permissões
+    // Debug log for non-admin dashboard access
     if (!isAdmin && path.startsWith("/dashboard")) {
       logger.debug("Middleware permission check", {
         path,
@@ -44,101 +38,16 @@ export default withAuth(
       });
     }
 
-    // Helper para verificar permissão
-    const hasPermission = (permission: string) => {
-      return isAdmin || permissions.includes(permission);
-    };
+    // Check route permissions
+    const permissionCheck = checkRoutePermission(path, isAdmin, permissions);
 
-    // Rotas exclusivas do ADMIN (legado - manter para compatibilidade)
-    if (path.startsWith("/admin") && !path.startsWith("/dashboard/admin")) {
-      if (!isAdmin) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Rotas de administração dentro do dashboard
-    if (path.startsWith("/dashboard/admin")) {
-      if (!isAdmin) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Dashboard root - sempre permitido (é o layout pai)
-    // As rotas filhas (/dashboard/sales, /dashboard/products, etc.) são verificadas abaixo
-
-    // Vendas - CREATE_SALES ou VIEW_OWN_SALES ou VIEW_ALL_SALES
-    if (path.startsWith("/dashboard/sales") || path.startsWith("/sales") || path.startsWith("/pdv")) {
-      if (!hasPermission("CREATE_SALES") && !hasPermission("VIEW_OWN_SALES") && !hasPermission("VIEW_ALL_SALES")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Produtos - VIEW_PRODUCTS
-    if (path.startsWith("/dashboard/products") || path.startsWith("/products")) {
-      if (!hasPermission("VIEW_PRODUCTS")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Inventário - VIEW_INVENTORY
-    if (path.startsWith("/dashboard/inventory") || path.startsWith("/inventory")) {
-      // Edição requer MANAGE_INVENTORY
-      if (path.includes("/edit") || path.includes("/create")) {
-        if (!hasPermission("MANAGE_INVENTORY")) {
-          return NextResponse.redirect(new URL("/unauthorized", req.url));
-        }
-      }
-      // Visualização requer VIEW_INVENTORY
-      else if (!hasPermission("VIEW_INVENTORY")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Inventário por ponto - VIEW_INVENTORY
-    if (path.startsWith("/dashboard/inventory-by-point") || path.startsWith("/inventory-by-point")) {
-      if (!hasPermission("VIEW_INVENTORY")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Clientes - VIEW_CUSTOMERS
-    if (path.startsWith("/dashboard/customers") || path.startsWith("/customers")) {
-      if (!hasPermission("VIEW_CUSTOMERS")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Encomendas - VIEW_ORDERS
-    if (path.startsWith("/dashboard/orders") || path.startsWith("/orders")) {
-      if (!hasPermission("VIEW_ORDERS")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Pontos de Venda - VIEW_POINTS_OF_SALE
-    if (path.startsWith("/dashboard/points") || path.startsWith("/points")) {
-      if (!hasPermission("VIEW_POINTS_OF_SALE")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Relatórios - VIEW_REPORTS
-    if (path.startsWith("/dashboard/reports") || path.startsWith("/reports")) {
-      if (!hasPermission("VIEW_REPORTS")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Configurações - VIEW_SETTINGS
-    if (path.startsWith("/dashboard/settings") || path.startsWith("/settings")) {
-      if (!hasPermission("VIEW_SETTINGS")) {
-        return NextResponse.redirect(new URL("/unauthorized", req.url));
-      }
-    }
-
-    // Temas - sempre permitido para usuários autenticados
-    if (path.startsWith("/dashboard/themes")) {
-      return NextResponse.next();
+    if (!permissionCheck.allowed) {
+      logger.warn("Access denied", {
+        path,
+        email: token.email,
+        reason: permissionCheck.reason,
+      });
+      return redirectToUnauthorized(req);
     }
 
     return NextResponse.next();
