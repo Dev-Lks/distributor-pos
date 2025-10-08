@@ -23,7 +23,9 @@ export default function NitroBeerLinktree() {
 
   useEffect(() => {
     setCurrentUrl(window.location.href)
-    
+  }, [])
+
+  useEffect(() => {
     // Redirecionar para dashboard se estiver autenticado
     if (status === 'authenticated' && session) {
       setIsRedirecting(true)
@@ -32,8 +34,8 @@ export default function NitroBeerLinktree() {
     }
   }, [session, status, router])
 
-  // Se estiver redirecionando em modo PWA, mostrar loading discreto
-  if (isRedirecting) {
+  // Mostrar loading enquanto verifica autenticação ou durante redirecionamento
+  if (status === 'loading' || isRedirecting) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-800 flex items-center justify-center">
         <div className="text-center">
