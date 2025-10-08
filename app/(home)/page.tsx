@@ -24,18 +24,11 @@ export default function NitroBeerLinktree() {
   useEffect(() => {
     setCurrentUrl(window.location.href)
     
-    // Redirecionar discretamente para dashboard se estiver autenticado e em modo PWA
+    // Redirecionar para dashboard se estiver autenticado
     if (status === 'authenticated' && session) {
-      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
-                    (window.navigator as any).standalone === true
-      
-      if (isPWA) {
-        // Mostrar indicador discreto e redirecionar
-        setIsRedirecting(true)
-        setTimeout(() => {
-          router.replace('/dashboard')
-        }, 500)
-      }
+      setIsRedirecting(true)
+      // Redirecionamento imediato para melhor UX
+      router.replace('/dashboard')
     }
   }, [session, status, router])
 
