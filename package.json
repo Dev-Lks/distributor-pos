@@ -1,7 +1,12 @@
 {
-  "name": "my-v0-project",
-  "version": "0.1.0",
+  "name": "nitrobeer",
+  "version": "1.0",
   "private": true,
+  "pnpm": {
+    "overrides": {
+      "react-is": "19.0.0-rc.1"
+    }
+  },
   "scripts": {
     "dev": "next dev",
     "build": "prisma generate && next build",
@@ -79,12 +84,12 @@
     "@types/node": "^22",
     "@types/nodemailer": "^6.4.15",
     "@types/pdfkit": "^0.12.7",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "npm:types-react@rc",
+    "@types/react-dom": "npm:types-react-dom@rc",
     "@types/xlsx": "^0.0.36",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.25",
+    "eslint-config-next": "15.5.4",
     "postcss": "^8.5",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.20.5",
@@ -92,3 +97,4 @@
     "typescript": "^5"
   }
 }
+
