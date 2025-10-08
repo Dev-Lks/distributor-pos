@@ -118,7 +118,7 @@ export function ProductGrid({
 
   return (
     <Card className="flex flex-col h-full">
-      <CardHeader className="pb-3 space-y-4">
+      <CardHeader className="pb-3 space-y-4 relative z-10">
         <div className="flex items-center justify-between gap-4">
           <CardTitle className="flex items-center gap-2">
             <Package className="h-5 w-5" />
@@ -171,7 +171,7 @@ export function ProductGrid({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 overflow-y-auto">
+      <CardContent className="flex-1 overflow-y-auto relative z-10">
         {filteredProducts.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground py-8">
             <Package className="h-16 w-16 mb-4 opacity-20" />
@@ -182,10 +182,10 @@ export function ProductGrid({
           </div>
         ) : (
           <div className={cn(
-            "grid gap-3",
+            "grid gap-4",
             quickMode
               ? "grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
-              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+              : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3"
           )}>
             {filteredProducts.map((product) => {
               const stock = getProductStock(product)
@@ -195,50 +195,56 @@ export function ProductGrid({
                 <Button
                   key={product.id}
                   variant="outline"
+                  data-product-id={product.id}
                   className={cn(
-                    "h-auto flex-col items-start gap-2 p-3 hover:bg-accent transition-all duration-150 active:scale-[0.97]",
-                    quickMode && "p-2"
+                    "relative h-auto flex-col items-start gap-3 p-4 md:p-5 hover:bg-accent transition-all duration-150 active:scale-[0.97] cursor-pointer select-none z-10 min-h-[120px] md:min-h-[140px]",
+                    quickMode && "p-3 md:p-4 min-h-[100px]"
                   )}
-                  onClick={() => onAddToCart(product)}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onAddToCart(product)
+                  }}
+                  style={{ WebkitTapHighlightColor: 'transparent' }}
                 >
                   <div className="w-full">
                     <div className="flex items-start justify-between gap-2">
                       <h4 className={cn(
-                        "font-medium text-left line-clamp-2",
-                        quickMode ? "text-xs" : "text-sm"
+                        "font-semibold text-left line-clamp-2",
+                        quickMode ? "text-sm md:text-base" : "text-base md:text-lg"
                       )}>
                         {product.name}
                       </h4>
                       {isLowStock && (
-                        <AlertTriangle className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                        <AlertTriangle className="h-5 w-5 md:h-6 md:w-6 text-orange-500 flex-shrink-0" />
                       )}
                     </div>
 
                     {!quickMode && product.size && (
-                      <Badge variant="secondary" className="mt-1 text-xs">
+                      <Badge variant="secondary" className="mt-2 text-xs md:text-sm px-2 py-0.5">
                         {product.size}
                       </Badge>
                     )}
                   </div>
 
-                  <div className="w-full flex items-end justify-between gap-2">
+                  <div className="w-full flex items-end justify-between gap-2 mt-auto">
                     <div className="text-left">
                       <div className={cn(
                         "font-bold text-primary",
-                        quickMode ? "text-sm" : "text-lg"
+                        quickMode ? "text-lg md:text-xl" : "text-xl md:text-2xl"
                       )}>
                         {currencyFormatter.format(product.salePrice)}
                       </div>
                       <div className={cn(
-                        "text-muted-foreground",
-                        quickMode ? "text-[10px]" : "text-xs"
+                        "text-muted-foreground font-medium",
+                        quickMode ? "text-xs md:text-sm" : "text-sm md:text-base"
                       )}>
                         Estoque: {stock}
                       </div>
                     </div>
 
                     {product.isBonified && (
-                      <Badge variant="default" className="text-[10px] px-1">
+                      <Badge variant="default" className="text-xs md:text-sm px-2 py-1">
                         Bônus
                       </Badge>
                     )}

@@ -10,9 +10,13 @@
   * {
     /* Remove destaque azul no tap (iOS/Android) */
     -webkit-tap-highlight-color: transparent;
-    
-    /* Previne double-tap zoom em botões */
-    touch-action: manipulation;
+  }
+  
+  /* Previne double-tap zoom em botões apenas em dispositivos touch */
+  @media (hover: none) and (pointer: coarse) {
+    * {
+      touch-action: manipulation;
+    }
   }
   
   html {
