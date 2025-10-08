@@ -12,12 +12,13 @@ async function requireUser() {
   }
 }
 
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
     await requireUser()
 
     const report = await prisma.dailyReport.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         pointOfSale: true,
         cashSession: true,

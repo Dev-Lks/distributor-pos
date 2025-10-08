@@ -6,15 +6,16 @@ import { prisma } from "@/lib/prisma";
 // DELETE /api/users/[id]/permanent - Deletar usuário permanentemente (hard delete)
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user.isAdmin) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
 
-  const userId = params.id;
+  const userId = id;
 
   // Não permitir que o admin delete a si mesmo
   if (userId === session.user.id) {

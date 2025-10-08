@@ -18,10 +18,11 @@ const updateSaleSchema = z.object({
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
-    const saleId = params.id
+    const saleId = id
 
     // Get the sale to restore inventory
     const sale = await prisma.sale.findUnique({
@@ -132,10 +133,11 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
-    const saleId = params.id
+    const saleId = id
     const payload = await request.json()
     const parsed = updateSaleSchema.safeParse(payload)
 

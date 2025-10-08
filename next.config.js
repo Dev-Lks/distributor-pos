@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true, // Minifier mais rápido do SWC
+  // swcMinify is now the default in Next.js 15 and no longer needed
   
   compiler: {
     // Remove console.logs em produção (mantém error e warn)
@@ -17,8 +17,10 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96],
   },
   
+  // Moved from experimental in Next.js 15
+  serverExternalPackages: ['pdfkit'],
+  
   experimental: {
-    serverComponentsExternalPackages: ['pdfkit'],
     // Otimizar imports de bibliotecas grandes
     optimizePackageImports: [
       'lucide-react',

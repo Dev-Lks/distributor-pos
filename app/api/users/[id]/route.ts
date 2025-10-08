@@ -8,8 +8,9 @@ import type { Prisma } from "@prisma/client";
 // GET /api/users/[id] - Buscar usuário por ID
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -17,7 +18,7 @@ export async function GET(
   }
 
   const user = await prisma.user.findUnique({
-    where: { id: params.id },
+    where: { id: id },
     include: {
       permissions: true,
       userPointsOfSale: {
@@ -49,8 +50,9 @@ export async function GET(
 // PATCH /api/users/[id] - Atualizar usuário
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user.isAdmin) {
@@ -80,7 +82,7 @@ export async function PATCH(
   }
 
   const user = await prisma.user.update({
-    where: { id: params.id },
+    where: { id: id },
     data: updateData,
   });
 
@@ -88,13 +90,13 @@ export async function PATCH(
   if (pointsOfSaleIds) {
     // Remover vinculações antigas
     await prisma.userPointOfSale.deleteMany({
-      where: { userId: params.id },
+      where: { userId: id },
     });
 
     // Criar novas vinculações
     await prisma.userPointOfSale.createMany({
       data: pointsOfSaleIds.map((posId: string, index: number) => ({
-        userId: params.id,
+        userId: id,
         pointOfSaleId: posId,
         isPrimary: index === 0,
         assignedBy: session.user.id,
@@ -106,13 +108,13 @@ export async function PATCH(
   if (permissions) {
     // Remover permissões antigas
     await prisma.userPermission.deleteMany({
-      where: { userId: params.id },
+      where: { userId: id },
     });
 
     // Criar novas permissões
     await prisma.userPermission.createMany({
       data: permissions.map((perm: string) => ({
-        userId: params.id,
+        userId: id,
         permission: perm,
         granted: true,
         grantedBy: session.user.id,
@@ -126,8 +128,9 @@ export async function PATCH(
 // DELETE /api/users/[id] - Desativar usuário (soft delete)
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user.isAdmin) {
@@ -135,7 +138,7 @@ export async function DELETE(
   }
 
   // Não permitir que o admin delete a si mesmo
-  if (params.id === session.user.id) {
+  if (id === session.user.id) {
     return NextResponse.json(
       { error: "Você não pode desativar sua própria conta" },
       { status: 400 }
@@ -143,7 +146,7 @@ export async function DELETE(
   }
 
   const user = await prisma.user.update({
-    where: { id: params.id },
+    where: { id: id },
     data: { 
       status: "INACTIVE",
       isActive: false // Compatibilidade legado

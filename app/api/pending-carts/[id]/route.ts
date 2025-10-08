@@ -36,12 +36,13 @@ async function requireUser() {
   return session.user
 }
 
-export async function GET(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
     await requireUser()
 
     const cart = await prisma.pendingCart.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         items: {
           include: {
@@ -74,7 +75,8 @@ export async function GET(_request: NextRequest, { params }: { params: { id: str
   }
 }
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
     await requireUser()
 
@@ -86,7 +88,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       return NextResponse.json({ error: issue?.message ?? "Invalid payload" }, { status: 400 })
     }
 
-    const cart = await updatePendingCart(params.id, parsed.data)
+    const cart = await updatePendingCart(id, parsed.data)
 
     return NextResponse.json(cart)
   } catch (error) {
@@ -107,11 +109,12 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 }
 
-export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
     await requireUser()
 
-    await cancelPendingCart(params.id)
+    await cancelPendingCart(id)
 
     return NextResponse.json({ success: true })
   } catch (error) {

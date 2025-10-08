@@ -23,13 +23,14 @@ async function requireUser() {
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireUser()
+    const { id } = await params
 
     const session = await prisma.cashSession.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         userId: true,
@@ -58,10 +59,11 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const user = await requireUser()
+    const { id } = await params
 
     const body = await request.json()
     const parsed = closeSchema.safeParse(body)
@@ -78,7 +80,7 @@ export async function PATCH(
     }
 
     const snapshot = await closeCashSession({
-      sessionId: params.id,
+      sessionId: id,
       userId: user.id,
       closingAmount: parsed.data.closingAmount,
       notes: parsed.data.notes,

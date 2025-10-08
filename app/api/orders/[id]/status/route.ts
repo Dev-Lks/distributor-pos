@@ -23,8 +23,9 @@ const allowedTransitions: Record<string, string[]> = {
 // PATCH /api/orders/[id]/status - Atualizar status da encomenda
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
@@ -36,7 +37,7 @@ export async function PATCH(
 
     // Buscar ordem existente
     const existingOrder = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     })
 
     if (!existingOrder) {
@@ -76,7 +77,7 @@ export async function PATCH(
         updateData.deliveredAt = now
         // Atualizar todos os itens como entregues
         await prisma.orderItem.updateMany({
-          where: { orderId: params.id },
+          where: { orderId: id },
           data: { status: "delivered" },
         })
         break
@@ -116,7 +117,7 @@ export async function PATCH(
 
     // Atualizar ordem
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         customer: {

@@ -32,8 +32,9 @@ const updateOrderSchema = z.object({
 // GET /api/orders/[id] - Buscar encomenda específica
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
@@ -41,7 +42,7 @@ export async function GET(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         customer: {
           select: {
@@ -94,8 +95,9 @@ export async function GET(
 // PATCH /api/orders/[id] - Atualizar encomenda
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
@@ -107,7 +109,7 @@ export async function PATCH(
 
     // Buscar ordem existente
     const existingOrder = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: { items: true },
     })
 
@@ -142,7 +144,7 @@ export async function PATCH(
     }
 
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         customer: {
@@ -194,8 +196,9 @@ export async function PATCH(
 // DELETE /api/orders/[id] - Deletar encomenda
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions)
     if (!session?.user) {
@@ -203,7 +206,7 @@ export async function DELETE(
     }
 
     const order = await prisma.order.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     })
 
     if (!order) {
@@ -222,7 +225,7 @@ export async function DELETE(
     }
 
     await prisma.order.delete({
-      where: { id: params.id },
+      where: { id: id },
     })
 
     // Atualizar estatísticas do cliente se vinculado

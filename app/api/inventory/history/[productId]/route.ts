@@ -6,8 +6,9 @@ import { authOptions } from '@/lib/auth';
 // GET /api/inventory/history/[productId] - Histórico de movimentações
 export async function GET(
   request: NextRequest,
-  { params }: { params: { productId: string } }
+  { params }: { params: Promise<{ productId: string }> }
 ) {
+  const { productId } = await params
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -21,7 +22,7 @@ export async function GET(
     const endDate = searchParams.get('endDate');
 
     const where: any = {
-      productId: params.productId,
+      productId: productId,
     };
 
     if (type) {

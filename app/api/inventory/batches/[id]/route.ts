@@ -6,8 +6,9 @@ import { authOptions } from '@/lib/auth';
 // GET /api/inventory/batches/[id] - Buscar lote específico
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -15,7 +16,7 @@ export async function GET(
     }
 
     const batch = await prisma.batch.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         product: true,
         inventoryMovements: {
@@ -44,8 +45,9 @@ export async function GET(
 // PATCH /api/inventory/batches/[id] - Atualizar lote
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -55,7 +57,7 @@ export async function PATCH(
     const data = await request.json();
 
     const batch = await prisma.batch.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         supplier: data.supplier,
         notes: data.notes,
@@ -86,8 +88,9 @@ export async function PATCH(
 // DELETE /api/inventory/batches/[id] - Deletar lote
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions);
     if (!session || !session.user?.isAdmin) {
@@ -95,7 +98,7 @@ export async function DELETE(
     }
 
     await prisma.batch.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     return NextResponse.json({ success: true });

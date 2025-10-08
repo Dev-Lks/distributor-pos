@@ -6,8 +6,9 @@ import { authOptions } from '@/lib/auth';
 // POST /api/inventory/audits/[id]/items - Adicionar item auditado
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -26,7 +27,7 @@ export async function POST(
 
     // Verificar se a auditoria existe e está em progresso
     const audit = await prisma.inventoryAudit.findUnique({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     if (!audit) {
@@ -62,7 +63,7 @@ export async function POST(
     // Criar item da auditoria
     const auditItem = await prisma.inventoryAuditItem.create({
       data: {
-        auditId: params.id,
+        auditId: id,
         productId: data.productId,
         batchId: data.batchId,
         expectedQuantity,

@@ -7,8 +7,9 @@ import { hash } from "bcryptjs";
 // POST /api/users/[id]/reset-password - Resetar senha de usuário
 export async function POST(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -20,7 +21,7 @@ export async function POST(
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
 
-  const userId = params.id;
+  const userId = id;
   const body = await req.json();
   const { newPassword } = body;
 

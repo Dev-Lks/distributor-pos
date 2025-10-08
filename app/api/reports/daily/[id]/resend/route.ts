@@ -17,7 +17,8 @@ async function requireUser() {
   }
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   try {
     await requireUser()
 
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
     }
 
     const report = await resendDailyReport({
-      reportId: params.id,
+      reportId: id,
       recipients: parsed.data.recipients,
     })
 

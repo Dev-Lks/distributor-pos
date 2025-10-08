@@ -33,8 +33,9 @@ async function requireUser() {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const { id } = await params
   try {
     const user = await requireUser()
     const body = await request.json()
@@ -54,7 +55,7 @@ export async function POST(
   const data = parsed.data as CreateTransactionInput
 
     const session = await prisma.cashSession.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       select: {
         id: true,
         userId: true,
@@ -75,7 +76,7 @@ export async function POST(
     }
 
     const snapshot = await createCashTransaction({
-      sessionId: params.id,
+      sessionId: id,
       type: data.type,
       amount: data.amount,
       description: data.description,

@@ -6,8 +6,9 @@ import { authOptions } from '@/lib/auth';
 // GET /api/inventory/audits/[id] - Buscar auditoria específica
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -15,7 +16,7 @@ export async function GET(
     }
 
     const audit = await prisma.inventoryAudit.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         items: {
           include: {
@@ -53,8 +54,9 @@ export async function GET(
 // PATCH /api/inventory/audits/[id] - Atualizar auditoria
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
@@ -66,7 +68,7 @@ export async function PATCH(
     // Se estiver completando a auditoria, calcular estatísticas
     if (data.status === 'COMPLETED') {
       const items = await prisma.inventoryAuditItem.findMany({
-        where: { auditId: params.id },
+        where: { auditId: id },
       });
 
       const totalItems = items.length;
@@ -74,14 +76,14 @@ export async function PATCH(
       const accuracyRate = totalItems > 0 ? ((totalItems - itemsWithDifference) / totalItems) * 100 : 0;
       
       const totalValueDifference = await prisma.inventoryAuditItem.aggregate({
-        where: { auditId: params.id },
+        where: { auditId: id },
         _sum: {
           difference: true,
         },
       });
 
       const audit = await prisma.inventoryAudit.update({
-        where: { id: params.id },
+        where: { id: id },
         data: {
           status: 'COMPLETED',
           completedAt: new Date(),
@@ -120,7 +122,7 @@ export async function PATCH(
     }
 
     const audit = await prisma.inventoryAudit.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         status: data.status,
         notes: data.notes,

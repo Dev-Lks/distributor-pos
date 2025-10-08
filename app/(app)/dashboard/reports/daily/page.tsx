@@ -9,10 +9,11 @@ export const metadata = {
 }
 
 type PageProps = {
-  searchParams?: Record<string, string | string[] | undefined>
+  searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
 
 export default async function DailyReportsPage({ searchParams }: PageProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const filters = {
     status: "all" as const,
   }
