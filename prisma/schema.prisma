@@ -251,7 +251,8 @@ model Product {
   expirationDate DateTime? // Data de validade
   batchNumber String? // Número do lote
   supplierProductCode String? // Código do fornecedor
-  barcode String? // Código de barras
+  barcode String? @unique // Código de barras (agora único e indexado)
+  barcodeType String? // EAN13, EAN8, CODE128, etc
   weight Float? // Peso em kg
   volume Float? // Volume em litros
   image String? // URL da imagem
@@ -287,6 +288,7 @@ model Product {
   @@index([category]) // Para filtrar por categoria
   @@index([updatedAt]) // Para queries de produtos atualizados recentemente
   @@index([lastPurchaseAt]) // Para análises de compras
+  @@index([barcode]) // Para busca rápida por código de barras
 }
 
 model Inventory {
@@ -368,6 +370,11 @@ model Sale {
   metadata Json?
   createdById   String?
   
+  // Campos para impressão térmica
+  printedAt     DateTime?
+  printJobId    String?
+  printStatus   String?   // pending, success, failed
+  
   items     SaleItem[]
   payments  SalePayment[]
   pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
@@ -384,6 +391,7 @@ model Sale {
   @@index([date, status]) // Para filtros de vendas por data e status
   @@index([date]) // Para queries ordenadas por data
   @@index([status]) // Para filtros por status
+  @@index([printStatus]) // Para filtrar por status de impressão
 }
 
 model Customer {
@@ -483,6 +491,7 @@ model PointOfSale {
   dailyReports DailyReport[]
   orders Order[]
   userPointsOfSale UserPointOfSale[]
+  hardwareConfig HardwareConfig?
 }
 
 model SalePayment {
@@ -884,4 +893,49 @@ model OrderItem {
   
   @@index([orderId])
   @@index([productId])
+}
+
+// Modelo para trabalhos de impressão
+model PrintJob {
+  id            String   @id @default(cuid())
+  type          String   // sale, cash-transaction, report
+  data          Json
+  status        String   // pending, printing, completed, failed
+  error         String?
+  createdAt     DateTime @default(now())
+  completedAt   DateTime?
+  retryCount    Int      @default(0)
+  
+  @@index([status])
+  @@index([createdAt])
+}
+
+// Modelo para configurações de hardware (scanner e impressora)
+model HardwareConfig {
+  id            String   @id @default(cuid())
+  pointOfSaleId String   @unique
+  pointOfSale   PointOfSale @relation(fields: [pointOfSaleId], references: [id], onDelete: Cascade)
+  
+  // Scanner
+  scannerEnabled Boolean @default(false)
+  scannerAutoAdd Boolean @default(true)
+  scannerPrefix  String?
+  scannerSuffix  String?
+  
+  // Printer
+  printerEnabled Boolean @default(false)
+  printerType    String  @default("USB") // USB, Network, Serial
+  printerConnection String?
+  printerWidth   Int     @default(48)
+  printerEncoding String @default("UTF-8")
+  autoPrint      Boolean @default(true)
+  
+  // Logo e customização
+  logoUrl        String?
+  footerMessage  String?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  @@index([pointOfSaleId])
 }
