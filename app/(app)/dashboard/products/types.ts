@@ -11,6 +11,7 @@ export type ProductFormState = {
   supplier: string
   bonifications: string
   sku: string
+  barcode: string
   packaging: string
   origin: string
   abv: string
@@ -31,6 +32,7 @@ export const initialFormState: ProductFormState = {
   supplier: "",
   bonifications: "0",
   sku: "",
+  barcode: "",
   packaging: "",
   origin: "",
   abv: "",
@@ -49,6 +51,7 @@ export const fieldTabMap: Record<keyof ProductFormState, TabKey> = {
   supplier: "pricing",
   bonifications: "pricing",
   sku: "identity",
+  barcode: "identity",
   packaging: "identity",
   origin: "identity",
   abv: "identity",

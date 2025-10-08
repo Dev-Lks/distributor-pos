@@ -12,6 +12,7 @@ export interface Product {
   supplier?: string
   isActive: boolean
   sku?: string
+  barcode?: string
   brand?: string
   origin?: string
   packaging?: string

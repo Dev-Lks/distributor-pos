@@ -38,6 +38,7 @@ export const buildProductPayload = (form: ProductFormState) => {
     tags,
     supplier: form.supplier.trim() || undefined,
     sku: form.sku.trim() || undefined,
+    barcode: form.barcode.trim() || undefined,
     bonifications,
     isBonified: bonifications > 0,
     packaging: form.packaging.trim() || undefined,
@@ -78,6 +79,22 @@ export const validateProductForm = (form: ProductFormState) => {
     errors.bonifications = "Bonificações não podem ser negativas."
   }
   
+  // Validação do código de barras
+  if (form.barcode.trim()) {
+    const barcode = form.barcode.trim()
+    // Verificar se contém apenas números
+    if (!/^\d+$/.test(barcode)) {
+      errors.barcode = "Código de barras deve conter apenas números."
+    }
+    // Verificar comprimento (EAN-8, EAN-13, UPC-A, etc)
+    else if (barcode.length < 8) {
+      errors.barcode = "Código de barras deve ter pelo menos 8 dígitos."
+    }
+    else if (barcode.length > 13 && barcode.length !== 14) {
+      errors.barcode = "Código de barras inválido (use EAN-8, EAN-13 ou GTIN-14)."
+    }
+  }
+  
   return errors
 }
 
@@ -112,6 +129,7 @@ export const mapProductToForm = (product: Product): ProductFormState => ({
   supplier: product.supplier ?? "",
   bonifications: product.bonifications?.toString() ?? "0",
   sku: product.sku ?? "",
+  barcode: product.barcode ?? "",
   packaging: product.packaging ?? "",
   origin: product.origin ?? "",
   abv: product.abv !== null && product.abv !== undefined ? product.abv.toString() : "",

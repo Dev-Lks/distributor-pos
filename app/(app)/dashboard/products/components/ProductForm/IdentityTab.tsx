@@ -2,7 +2,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Tag as TagIcon } from "lucide-react"
+import { Tag as TagIcon, Barcode, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { ProductFormState, FieldChangeHandler } from "../../../products/types"
 
 interface IdentityTabProps {
@@ -42,6 +43,34 @@ export function IdentityTab({
             placeholder="Ex: NB-LAGER-600"
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="product-barcode" className="flex items-center gap-2">
+            <Barcode className="h-4 w-4" />
+            Código de Barras (EAN/UPC)
+          </Label>
+          <Input
+            id="product-barcode"
+            value={formData.barcode || ""}
+            onChange={(event) => onFieldChange("barcode", event.target.value)}
+            placeholder="Ex: 7891234567890"
+            maxLength={13}
+          />
+          {formData.barcode && formData.barcode.length < 8 && (
+            <Alert variant="destructive" className="py-2">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription className="text-xs">
+                Código de barras deve ter pelo menos 8 dígitos
+              </AlertDescription>
+            </Alert>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Escaneie ou digite o código EAN-13, EAN-8 ou UPC
+          </p>
+          <FieldError message={errors?.barcode} />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="product-packaging">Embalagem</Label>
           <Input

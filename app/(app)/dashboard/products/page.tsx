@@ -23,7 +23,8 @@ import {
   List, 
   Upload, 
   Copy,
-  LayoutGrid
+  LayoutGrid,
+  Barcode
 } from "lucide-react"
 
 // Componentes modulares
@@ -34,6 +35,7 @@ import { BasicTab } from "./components/ProductForm/BasicTab"
 import { PricingTab } from "./components/ProductForm/PricingTab"
 import { IdentityTab } from "./components/ProductForm/IdentityTab"
 import { ImportDialog } from "./components/ImportDialog"
+import { QuickBarcodeCreate } from "@/components/products/QuickBarcodeCreate"
 
 // Hook e tipos
 import { useProductForm, mapProductToForm } from "./hooks/useProductForm"
@@ -72,6 +74,7 @@ export default function ProductsPage() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isStockAllocationOpen, setIsStockAllocationOpen] = useState(false)
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false)
+  const [isQuickBarcodeCreateOpen, setIsQuickBarcodeCreateOpen] = useState(false)
   
   // State
   const [editingProduct, setEditingProduct] = useState<Product | null>(null)
@@ -249,6 +252,16 @@ export default function ProductsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsQuickBarcodeCreateOpen(true)}
+              className="text-xs sm:text-sm border-dashed"
+            >
+              <Barcode className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Cadastro Rápido</span>
+              <span className="sm:hidden">Barcode</span>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -616,6 +629,15 @@ export default function ProductsPage() {
           onImportComplete={() => {
             refetch()
             setIsImportDialogOpen(false)
+          }}
+        />
+
+        {/* Quick Barcode Create Dialog */}
+        <QuickBarcodeCreate
+          open={isQuickBarcodeCreateOpen}
+          onOpenChange={setIsQuickBarcodeCreateOpen}
+          onSuccess={() => {
+            refetch()
           }}
         />
       </div>
