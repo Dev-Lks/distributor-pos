@@ -1,6 +1,6 @@
 'use client'
 
-import { Instagram, Facebook, Phone, MapPin, ExternalLink } from "lucide-react"
+import { Instagram, Facebook, Phone, MapPin, ExternalLink, LayoutDashboard, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Image from "next/image"
@@ -8,6 +8,7 @@ import { useState, useEffect } from "react"
 import QRCode from "react-qr-code"
 import { ExternalLink as LinkIcon, Maximize2, Minimize2 } from 'lucide-react'
 import { useSession } from "next-auth/react"
+import Link from "next/link"
 
 
 export default function NitroBeerLinktree() {
@@ -15,6 +16,7 @@ export default function NitroBeerLinktree() {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [showFAB, setShowFAB] = useState(true)
   const { data: session, status } = useSession()
 
 
@@ -207,6 +209,48 @@ export default function NitroBeerLinktree() {
           </p>
         </div>
       </div>
+
+      {/* Floating Dashboard Button - Only visible when authenticated */}
+      {status === 'authenticated' && session && showFAB && (
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
+          {/* Close FAB button */}
+          <button
+            onClick={() => setShowFAB(false)}
+            className="ml-auto mb-1 p-1 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 hover:bg-background transition-all"
+            aria-label="Ocultar botão"
+          >
+            <X className="w-4 h-4 text-muted-foreground" />
+          </button>
+          
+          {/* Dashboard FAB */}
+          <Link href="/dashboard">
+            <div className="group relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-primary to-primary/50 rounded-full blur opacity-75 group-hover:opacity-100 transition duration-300 animate-pulse" />
+              <button className="relative flex items-center justify-center w-16 h-16 bg-primary hover:bg-primary/90 text-primary-foreground rounded-full shadow-2xl transition-all duration-300 hover:scale-110 active:scale-95">
+                <LayoutDashboard className="w-7 h-7" />
+              </button>
+            </div>
+          </Link>
+          
+          {/* Label */}
+          <div className="text-center">
+            <span className="text-xs font-medium text-foreground bg-background/80 backdrop-blur-sm px-2 py-1 rounded-full border border-border/50">
+              Dashboard
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* Show FAB again button - appears when FAB is hidden */}
+      {status === 'authenticated' && session && !showFAB && (
+        <button
+          onClick={() => setShowFAB(true)}
+          className="fixed bottom-6 right-6 z-50 p-3 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/50 hover:bg-primary/30 transition-all"
+          aria-label="Mostrar botão dashboard"
+        >
+          <LayoutDashboard className="w-5 h-5 text-primary" />
+        </button>
+      )}
     </div>
   )
 }
