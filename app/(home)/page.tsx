@@ -8,7 +8,6 @@ import { useState, useEffect } from "react"
 import QRCode from "react-qr-code"
 import { ExternalLink as LinkIcon, Maximize2, Minimize2 } from 'lucide-react'
 import { useSession } from "next-auth/react"
-import { useRouter } from "next/navigation"
 
 
 export default function NitroBeerLinktree() {
@@ -16,43 +15,12 @@ export default function NitroBeerLinktree() {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
-  const [isRedirecting, setIsRedirecting] = useState(false)
   const { data: session, status } = useSession()
-  const router = useRouter()
 
 
   useEffect(() => {
     setCurrentUrl(window.location.href)
   }, [])
-
-  useEffect(() => {
-    // Redirecionar para dashboard se estiver autenticado
-    if (status === 'authenticated' && session) {
-      setIsRedirecting(true)
-      // Redirecionamento imediato para melhor UX
-      router.replace('/dashboard')
-    }
-  }, [session, status, router])
-
-  // Mostrar loading enquanto verifica autenticação ou durante redirecionamento
-  if (status === 'loading' || isRedirecting) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-20 h-20 mx-auto mb-4 relative">
-            <Image
-              src="/MANUAL NITROBEER ID VISUAL.svg"
-              alt="NitroBeer Logo"
-              fill
-              className="object-contain animate-pulse"
-              priority
-            />
-          </div>
-          <p className="text-muted-foreground text-sm">Carregando...</p>
-        </div>
-      </div>
-    )
-  }
 
   const socialLinks = [
     {

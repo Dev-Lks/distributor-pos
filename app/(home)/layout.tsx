@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata } from "next"
 import { AuthSessionProvider } from "@/components/AuthSessionProvider"
+import { HomeRedirect } from "./HomeRedirect"
 
 export const metadata: Metadata = {
   title: "NitroBeer - Chopp Artesanal",
@@ -16,6 +17,7 @@ export default function HomeLayout({
     <html lang="pt-BR" className="dark">
       <body className="antialiased dark">
         <AuthSessionProvider>
+          <HomeRedirect />
           {children}
         </AuthSessionProvider>
       </body>
