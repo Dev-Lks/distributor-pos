@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/lib/usePermissions";
+import { usePWAInstall } from "@/lib/usePWAInstall";
 import {
   BellRing,
   KeyRound,
@@ -72,6 +73,7 @@ export default function SettingsPage() {
   const { can } = usePermissions();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { isInstallable, isInstalled, promptInstall, canPrompt } = usePWAInstall();
 
   // Estados
   const [businessName, setBusinessName] = useState("");
@@ -468,6 +470,100 @@ export default function SettingsPage() {
                     Gerenciar Usuários
                   </Button>
                 </Link>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Instalação PWA */}
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Smartphone className="h-5 w-5" />
+                Instalação do App
+              </CardTitle>
+              <CardDescription>
+                Instale o NitroBeer POS como um aplicativo nativo.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isInstalled ? (
+                <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-4 text-sm">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-green-900 dark:text-green-100">
+                        App Instalado com Sucesso
+                      </p>
+                      <p className="text-xs text-green-700 dark:text-green-300 mt-1">
+                        O NitroBeer POS está instalado e rodando como aplicativo nativo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 p-3 text-sm">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Download className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <p className="font-semibold">
+                          Progressive Web App (PWA)
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Instale o app para acesso rápido, funcionamento offline e melhor desempenho.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span>Funciona offline</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span>Acesso mais rápido</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span>Notificações push</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm">
+                      <CheckCircle2 className="h-4 w-4 text-green-600" />
+                      <span>Experiência nativa</span>
+                    </div>
+                  </div>
+
+                  {canPrompt ? (
+                    <Button 
+                      className="w-full gap-2"
+                      onClick={async () => {
+                        const success = await promptInstall()
+                        if (success) {
+                          toast.success('App instalado com sucesso!')
+                        } else {
+                          toast.info('Instalação cancelada')
+                        }
+                      }}
+                    >
+                      <Download className="h-4 w-4" />
+                      Instalar Aplicativo
+                    </Button>
+                  ) : (
+                    <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
+                      {isInstallable ? (
+                        <p>A instalação estará disponível em breve. Recarregue a página se necessário.</p>
+                      ) : (
+                        <p>Este navegador não suporta instalação PWA ou o app já está instalado.</p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

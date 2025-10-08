@@ -7,6 +7,8 @@ import Image from "next/image"
 import { useState, useEffect } from "react"
 import QRCode from "react-qr-code"
 import { ExternalLink as LinkIcon, Maximize2, Minimize2 } from 'lucide-react'
+import { useSession } from "next-auth/react"
+import { useRouter } from "next/navigation"
 
 
 export default function NitroBeerLinktree() {
@@ -14,11 +16,48 @@ export default function NitroBeerLinktree() {
   const [mapLoaded, setMapLoaded] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const [imageLoaded, setImageLoaded] = useState(false)
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  const { data: session, status } = useSession()
+  const router = useRouter()
 
 
   useEffect(() => {
     setCurrentUrl(window.location.href)
-  }, [])
+    
+    // Redirecionar discretamente para dashboard se estiver autenticado e em modo PWA
+    if (status === 'authenticated' && session) {
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                    (window.navigator as any).standalone === true
+      
+      if (isPWA) {
+        // Mostrar indicador discreto e redirecionar
+        setIsRedirecting(true)
+        setTimeout(() => {
+          router.replace('/dashboard')
+        }, 500)
+      }
+    }
+  }, [session, status, router])
+
+  // Se estiver redirecionando em modo PWA, mostrar loading discreto
+  if (isRedirecting) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-black to-slate-800 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-20 h-20 mx-auto mb-4 relative">
+            <Image
+              src="/MANUAL NITROBEER ID VISUAL.svg"
+              alt="NitroBeer Logo"
+              fill
+              className="object-contain animate-pulse"
+              priority
+            />
+          </div>
+          <p className="text-muted-foreground text-sm">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
 
   const socialLinks = [
     {
@@ -73,6 +112,21 @@ export default function NitroBeerLinktree() {
             {"✨ Chopp premium, vibes únicas, para quem não aceita a mesmice! 🍻"}
           </p>
         </div>
+
+        {/* Dashboard Access Button for Authenticated Users */}
+        {status === 'authenticated' && session && (
+          <div className="mb-6 sm:mb-8 animate-fade-in">
+            <Button
+              asChild
+              className="w-full h-12 sm:h-14 gap-2 bg-primary/90 hover:bg-primary text-primary-foreground"
+            >
+              <a href="/dashboard">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                Acessar Dashboard
+              </a>
+            </Button>
+          </div>
+        )}
      
 
         {/* Social Links */}

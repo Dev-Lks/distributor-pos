@@ -2,7 +2,7 @@
   "name": "NitroBeer POS",
   "short_name": "NitroBeer",
   "description": "Sistema de Ponto de Venda para NitroBeer",
-  "start_url": "/",
+  "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#1a1a2e",
   "theme_color": "#fbbf24",
