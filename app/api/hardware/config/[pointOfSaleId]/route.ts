@@ -4,10 +4,10 @@ import { prisma } from '@/lib/prisma'
 // GET - Buscar configuração de hardware por ponto de venda
 export async function GET(
   request: NextRequest,
-  { params }: { params: { pointOfSaleId: string } }
+  { params }: { params: Promise<{ pointOfSaleId: string }> }
 ) {
   try {
-    const { pointOfSaleId } = params
+    const { pointOfSaleId } = await params
 
     const config = await prisma.hardwareConfig.findUnique({
       where: { pointOfSaleId },

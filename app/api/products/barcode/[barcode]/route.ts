@@ -3,10 +3,10 @@ import { prisma } from '@/lib/prisma'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { barcode: string } }
+  { params }: { params: Promise<{ barcode: string }> }
 ) {
   try {
-    const barcode = params.barcode
+    const { barcode } = await params
 
     if (!barcode) {
       return NextResponse.json(
