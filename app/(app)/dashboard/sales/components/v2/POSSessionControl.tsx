@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DollarSign, Lock, Unlock, AlertCircle } from "lucide-react"
 import { useState } from "react"
+import { useCashSession } from "@/lib/useCashSession"
 import {
   OpenSessionDialog,
   TransactionDialog,
   CloseSessionDialog,
 } from "../CashDialogs"
+import type { CashTransactionTypeLiteral } from "@/types/cash"
 
 interface POSSessionControlProps {
   session: any
@@ -25,7 +27,51 @@ export function POSSessionControl({
   const [transactionDialogOpen, setTransactionDialogOpen] = useState(false)
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
 
+  // Cash session mutations
+  const {
+    openSession,
+    closeSession,
+    registerTransaction,
+    isOpening,
+    isClosing,
+    isRegisteringTransaction,
+  } = useCashSession(pointOfSaleId)
+
   const isOpen = session?.status === "OPEN"
+
+  // Handlers
+  const handleOpenSession = async (amount: number, notes?: string) => {
+    try {
+      await openSession({ openingAmount: amount, pointOfSaleId, notes })
+      setOpenDialogOpen(false)
+    } catch (error) {
+      console.error('Error opening session:', error)
+    }
+  }
+
+  const handleCloseSession = async (closingAmount: number, notes?: string) => {
+    if (!session?.id) return
+    try {
+      await closeSession({ sessionId: session.id, closingAmount, notes })
+      setCloseDialogOpen(false)
+    } catch (error) {
+      console.error('Error closing session:', error)
+    }
+  }
+
+  const handleTransaction = async (
+    type: Exclude<CashTransactionTypeLiteral, "OPENING">,
+    amount: number,
+    description?: string
+  ) => {
+    if (!session?.id) return
+    try {
+      await registerTransaction({ sessionId: session.id, type, amount, description })
+      setTransactionDialogOpen(false)
+    } catch (error) {
+      console.error('Error registering transaction:', error)
+    }
+  }
 
   if (isLoading) {
     return null
@@ -110,17 +156,21 @@ export function POSSessionControl({
       <OpenSessionDialog
         open={openDialogOpen}
         onOpenChange={setOpenDialogOpen}
-        pointOfSaleId={pointOfSaleId}
+        onConfirm={handleOpenSession}
+        loading={isOpening}
       />
       <TransactionDialog
         open={transactionDialogOpen}
         onOpenChange={setTransactionDialogOpen}
-        session={session}
+        onConfirm={handleTransaction}
+        loading={isRegisteringTransaction}
       />
       <CloseSessionDialog
         open={closeDialogOpen}
         onOpenChange={setCloseDialogOpen}
+        onConfirm={handleCloseSession}
         session={session}
+        loading={isClosing}
       />
     </>
   )
