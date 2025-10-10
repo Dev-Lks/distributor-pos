@@ -5,7 +5,9 @@
   "pnpm": {
     "overrides": {
       "react-is": "19.0.0-rc.1"
-    }
+    },
+    "allowNonAppliedPatches": true,
+    "onlyBuiltDependencies": []
   },
   "scripts": {
     "dev": "next dev",
