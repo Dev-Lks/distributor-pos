@@ -41,6 +41,10 @@ import { QuickBarcodeCreate } from "@/components/products/QuickBarcodeCreate"
 import { useProductForm, mapProductToForm } from "./hooks/useProductForm"
 import { type ProductFormState, initialFormState } from "./types"
 
+// Hardware
+import { useBarcodeScanner } from "@/lib/hardware/useBarcodeScanner"
+import { BarcodeInput } from "@/components/hardware/BarcodeInput"
+
 const formatCurrency = (value?: number) =>
   value !== undefined ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "--"
 
@@ -211,6 +215,27 @@ export default function ProductsPage() {
     setStockFilter("all")
   }, [])
 
+  // Hardware: Barcode Scanner para buscar produtos
+  const handleBarcodeScan = useCallback((barcode: string) => {
+    const product = products.find(p => p.barcode === barcode)
+    
+    if (product) {
+      // Abrir dialog de edição com o produto encontrado
+      openEditDialog(product)
+      toast.success(`Produto encontrado: ${product.name}`)
+    } else {
+      // Abrir cadastro rápido com o código de barras pré-preenchido
+      setIsQuickBarcodeCreateOpen(true)
+      toast.info("Produto não encontrado. Cadastre agora!")
+    }
+  }, [products, openEditDialog])
+
+  const { isScanning, scanHistory } = useBarcodeScanner({
+    enabled: true,
+    onScan: handleBarcodeScan,
+    onError: (error) => toast.error(error),
+  })
+
   if (isLoading) {
     return (
       <>
@@ -300,6 +325,16 @@ export default function ProductsPage() {
             )}
           </div>
         </div>
+
+        {/* Barcode Scanner para buscar produtos */}
+        <BarcodeInput
+          onScan={handleBarcodeScan}
+          onError={(error) => toast.error(error)}
+          enabled={true}
+          isScanning={isScanning}
+          scanHistory={scanHistory}
+          showHistory={true}
+        />
 
         {/* Create Panel */}
         {showCreatePanel && (

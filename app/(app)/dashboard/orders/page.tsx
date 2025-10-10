@@ -20,11 +20,18 @@ import { Plus, Search, Filter, Download, Calendar as CalendarIcon } from "lucide
 import Link from "next/link"
 import { cn } from "@/lib/utils"
 
+// Hardware
+import { useThermalPrinter } from "@/lib/hardware/useThermalPrinter"
+import { PrinterStatus } from "@/components/hardware/PrinterStatus"
+
 export default function OrdersPage() {
   const [search, setSearch] = useState("")
   const [priorityFilter, setPriorityFilter] = useState<OrderPriority | "ALL">("ALL")
   const [viewMode, setViewMode] = useState<"all" | "kanban" | "list">("all")
   const queryClient = useQueryClient()
+
+  // Hardware: Thermal Printer
+  const { status: printerStatus, isPrinting, print: printReceipt } = useThermalPrinter()
 
   const { data: stats, isLoading: statsLoading } = useOrderStats()
   const { data: orders, isLoading: ordersLoading } = useOrders({
@@ -66,13 +73,20 @@ export default function OrdersPage() {
             Gerencie pedidos especiais e sob encomenda
           </p>
         </div>
-        <Link href="/dashboard/orders/new">
-          <Button size="lg" className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            <span className="hidden sm:inline">Nova Encomenda</span>
-            <span className="sm:hidden">Nova</span>
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          {/* Printer Status */}
+          <PrinterStatus 
+            status={printerStatus} 
+            isPrinting={isPrinting}
+          />
+          <Link href="/dashboard/orders/new">
+            <Button size="lg" className="w-full sm:w-auto">
+              <Plus className="mr-2 h-4 w-4" />
+              <span className="hidden sm:inline">Nova Encomenda</span>
+              <span className="sm:hidden">Nova</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}

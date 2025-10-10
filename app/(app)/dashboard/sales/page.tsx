@@ -32,6 +32,12 @@ import { useCheckout } from "./hooks/useCheckout"
 import { useCashSessionControls } from "./hooks/useCashSessionControls"
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 
+// Hardware integrations
+import { useBarcodeScanner } from "@/lib/hardware/useBarcodeScanner"
+import { useThermalPrinter } from "@/lib/hardware/useThermalPrinter"
+import { BarcodeInput } from "@/components/hardware/BarcodeInput"
+import { PrinterStatus } from "@/components/hardware/PrinterStatus"
+
 export default function SalesPage() {
   const queryClient = useQueryClient()
 
@@ -167,6 +173,28 @@ export default function SalesPage() {
     }))
   }, [products, selectedPointOfSaleId])
 
+  // Hardware: Barcode Scanner
+  const handleBarcodeScan = useCallback((barcode: string) => {
+    // Buscar produto pelo código de barras
+    const product = enrichedProducts.find(p => p.barcode === barcode)
+    
+    if (product) {
+      addToCart(product)
+      toast.success(`Produto adicionado: ${product.name}`)
+    } else {
+      toast.error("Produto não encontrado")
+    }
+  }, [enrichedProducts])
+
+  const { isScanning, scanHistory } = useBarcodeScanner({
+    enabled: true,
+    onScan: handleBarcodeScan,
+    onError: (error) => toast.error(error),
+  })
+
+  // Hardware: Thermal Printer
+  const { status: printerStatus, isPrinting, print: printReceipt } = useThermalPrinter()
+
   // Add to cart with visual feedback
   const addToCart = useCallback(
     (product: Product) => {
@@ -191,7 +219,7 @@ export default function SalesPage() {
   )
 
   // Handle sale finalization
-  const handleFinalizeSale = useCallback(() => {
+  const handleFinalizeSale = useCallback(async () => {
     if (!isSessionOpen) {
       toast.error("Abra o caixa antes de registrar a venda.")
       return
@@ -200,14 +228,24 @@ export default function SalesPage() {
     if (customerPromptEnabled) {
       setCustomerDialogOpen(true)
     } else {
-      finalizeSale({
+      await finalizeSale({
         cart,
         paymentMethod,
         pointOfSaleId: selectedPointOfSaleId!,
-        onSuccess: () => {
+        onSuccess: async (sale) => {
           clearCart()
           const audio = new Audio("/alert.mp3")
           audio.play().catch(() => {})
+          
+          // Imprimir recibo automaticamente
+          if (printerStatus.connected) {
+            try {
+              await printReceipt(sale, 'sale')
+              toast.success("Recibo impresso!")
+            } catch (error) {
+              toast.error("Erro ao imprimir recibo")
+            }
+          }
         },
         createSale,
       })
@@ -221,42 +259,64 @@ export default function SalesPage() {
     selectedPointOfSaleId,
     clearCart,
     createSale,
+    printerStatus,
+    printReceipt,
   ])
 
   // Customer dialog handlers
   const handleCustomerSave = useCallback(
-    (data: { name: string; phone: string; address: string }) => {
-      finalizeSale({
+    async (data: { name: string; phone: string; address: string }) => {
+      await finalizeSale({
         cart,
         paymentMethod,
         pointOfSaleId: selectedPointOfSaleId!,
         customerData: data,
-        onSuccess: () => {
+        onSuccess: async (sale) => {
           clearCart()
           setCustomerDialogOpen(false)
           const audio = new Audio("/alert.mp3")
           audio.play().catch(() => {})
+          
+          // Imprimir recibo automaticamente
+          if (printerStatus.connected && sale) {
+            try {
+              await printReceipt(sale, 'sale')
+              toast.success("Recibo impresso!")
+            } catch (error) {
+              toast.error("Erro ao imprimir recibo")
+            }
+          }
         },
         createSale,
       })
     },
-    [finalizeSale, cart, paymentMethod, selectedPointOfSaleId, clearCart, createSale]
+    [finalizeSale, cart, paymentMethod, selectedPointOfSaleId, clearCart, createSale, printerStatus, printReceipt]
   )
 
-  const handleCustomerSkip = useCallback(() => {
-    finalizeSale({
+  const handleCustomerSkip = useCallback(async () => {
+    await finalizeSale({
       cart,
       paymentMethod,
       pointOfSaleId: selectedPointOfSaleId!,
-      onSuccess: () => {
+      onSuccess: async (sale) => {
         clearCart()
         setCustomerDialogOpen(false)
         const audio = new Audio("/alert.mp3")
         audio.play().catch(() => {})
+        
+        // Imprimir recibo automaticamente
+        if (printerStatus.connected && sale) {
+          try {
+            await printReceipt(sale, 'sale')
+            toast.success("Recibo impresso!")
+          } catch (error) {
+            toast.error("Erro ao imprimir recibo")
+          }
+        }
       },
       createSale,
     })
-  }, [finalizeSale, cart, paymentMethod, selectedPointOfSaleId, clearCart, createSale])
+  }, [finalizeSale, cart, paymentMethod, selectedPointOfSaleId, clearCart, createSale, printerStatus, printReceipt])
 
   // Cash session handlers
   const handleOpenSession = useCallback(
@@ -336,33 +396,51 @@ export default function SalesPage() {
           </p>
         </div>
 
-        {/* Point of Sale Selector */}
-        <Card className="lg:w-80">
-          <CardHeader className="pb-2 pt-3">
-            <CardTitle className="text-sm font-medium flex items-center gap-2">
-              <MapPin className="h-4 w-4" />
-              Ponto de Venda
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pb-3">
-            <Select
-              value={selectedPointOfSaleId ?? ""}
-              onValueChange={(value) => setSelectedPointOfSaleId(value || null)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione..." />
-              </SelectTrigger>
-              <SelectContent>
-                {pointOptions.map((point) => (
-                  <SelectItem key={point.id} value={point.id}>
-                    {point.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
+        <div className="flex flex-col sm:flex-row gap-3">
+          {/* Printer Status */}
+          <PrinterStatus 
+            status={printerStatus} 
+            isPrinting={isPrinting}
+          />
+
+          {/* Point of Sale Selector */}
+          <Card className="lg:w-80">
+            <CardHeader className="pb-2 pt-3">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                Ponto de Venda
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pb-3">
+              <Select
+                value={selectedPointOfSaleId ?? ""}
+                onValueChange={(value) => setSelectedPointOfSaleId(value || null)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {pointOptions.map((point) => (
+                    <SelectItem key={point.id} value={point.id}>
+                      {point.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardContent>
+          </Card>
+        </div>
       </div>
+
+      {/* Barcode Scanner Input */}
+      <BarcodeInput
+        onScan={handleBarcodeScan}
+        onError={(error) => toast.error(error)}
+        enabled={!!selectedPointOfSaleId && isSessionOpen}
+        isScanning={isScanning}
+        scanHistory={scanHistory}
+        showHistory={true}
+      />
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">

@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useMemo, useRef, useState } from "react"
+import React, { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { useProducts, type Product } from "@/lib/useProducts"
 import { usePointsOfSale, type PointOfSale } from "@/lib/usePointsOfSale"
@@ -67,6 +66,10 @@ import { AddStockDialog } from "@/components/inventory/AddStockDialog"
 // Sprint 2: Pull-to-Refresh e Gestos
 import { usePullToRefresh } from "@/lib/usePullToRefresh"
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
+
+// Hardware
+import { useBarcodeScanner } from "@/lib/hardware/useBarcodeScanner"
+import { BarcodeInput } from "@/components/hardware/BarcodeInput"
 
 type Location = "coldRoom" | "house" | "salePoint"
 type ProductInventory = NonNullable<Product["inventory"]>
@@ -251,6 +254,28 @@ export default function InventoryPage() {
       })),
     [rawProducts]
   )
+
+  // Hardware: Barcode Scanner para buscar produtos no inventário
+  const handleBarcodeScan = React.useCallback((barcode: string) => {
+    const product = products.find(p => p.barcode === barcode)
+    
+    if (product) {
+      // Scrollar até o produto e destacá-lo
+      setSearchQuery(product.name)
+      // Abrir modal de adicionar estoque com o produto selecionado
+      setAddProductId(product.id)
+      setShowAddModal(true)
+      toast.success(`Produto encontrado: ${product.name}`)
+    } else {
+      toast.error("Produto não encontrado no inventário")
+    }
+  }, [products])
+
+  const { isScanning, scanHistory } = useBarcodeScanner({
+    enabled: true,
+    onScan: handleBarcodeScan,
+    onError: (error) => toast.error(error),
+  })
 
   // Pontos de venda ativos
   const activePointsOfSale = useMemo(
@@ -531,6 +556,16 @@ export default function InventoryPage() {
           </Button>
         </div>
       </div>
+
+      {/* Barcode Scanner para buscar produtos no inventário */}
+      <BarcodeInput
+        onScan={handleBarcodeScan}
+        onError={(error) => toast.error(error)}
+        enabled={true}
+        isScanning={isScanning}
+        scanHistory={scanHistory}
+        showHistory={true}
+      />
 
       {/* Sistema de Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

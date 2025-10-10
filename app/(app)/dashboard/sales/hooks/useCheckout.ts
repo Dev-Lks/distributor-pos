@@ -13,8 +13,8 @@ interface CheckoutOptions<T = unknown> {
     phone?: string
     address?: string
   }
-  onSuccess: () => void
-  createSale: (data: T) => Promise<unknown>
+  onSuccess: (sale?: any) => void
+  createSale: (data: T) => Promise<any>
 }
 
 /**
@@ -73,13 +73,13 @@ export function useCheckout() {
         customerData: customerData?.name ? customerData : undefined,
       } as T
 
-      await createSale(saleData)
+      const sale = await createSale(saleData)
 
       toast.success("Venda finalizada com sucesso!", {
         description: `Total: R$ ${total.toFixed(2)}`,
       })
 
-      onSuccess()
+      onSuccess(sale)
     } catch (error) {
       const { message } = handleError(error)
       logger.error("Erro ao finalizar venda", { error, pointOfSaleId })
