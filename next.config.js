@@ -18,7 +18,7 @@ const nextConfig = {
   },
   
   // Moved from experimental in Next.js 15
-  serverExternalPackages: ['pdfkit'],
+  serverExternalPackages: ['pdfkit', 'serialport', 'node-thermal-printer', '@serialport/parser-readline', 'escpos'],
   
   experimental: {
     // Otimizar imports de bibliotecas grandes

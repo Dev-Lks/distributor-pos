@@ -1,9 +1,3 @@
-170828000700095
-170828000700095
-170828000700095
-170828000700095
-170828000700095
-170828000700095
 'use client'
 
 /**
@@ -17,6 +11,8 @@
  * 2. Ajuste as funções de busca de produtos e salvamento de vendas
  * 3. Integre com seu sistema de carrinho existente
  * 4. Configure o hardware nas configurações do ponto de venda
+ * 
+ * Códigos de teste: 170828000700095
  */
 
 import { useState, useEffect } from 'react'
