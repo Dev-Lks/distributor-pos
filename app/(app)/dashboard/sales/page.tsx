@@ -1,348 +1,450 @@
-'use client';
+"use client"
 
-import { useState, useEffect, useCallback } from 'react';
-import { useBarcodeScanner } from '@/lib/hardware/useBarcodeScanner';
-import { useThermalPrinter } from '@/lib/hardware/useThermalPrinter';
-import { useCashSession } from '@/lib/useCashSession';
-import { usePointsOfSale } from '@/lib/usePointsOfSale';
-import { useProducts, type Product } from '@/lib/useProducts';
+import { useState, useEffect, useMemo, useCallback } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { useProducts, type Product } from "@/lib/useProducts"
+import { useSales } from "@/lib/useSales"
+import { usePointsOfSale, type PointOfSale } from "@/lib/usePointsOfSale"
+import { toast } from "sonner"
+import { MapPin } from "lucide-react"
+import { useQueryClient } from "@tanstack/react-query"
+import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 
-// V2 Components
-import { POSHeader } from './components/v2/POSHeader';
-import { POSCart } from './components/v2/POSCart';
-import { POSProducts } from './components/v2/POSProducts';
-import { POSPayment } from './components/v2/POSPayment';
-import { POSSessionControl } from './components/v2/POSSessionControl';
-import { POSCustomerDialog } from './components/v2/POSCustomerDialog';
+// Componentes modulares
+import { CartSection } from "./components/CartSection"
+import { ProductGrid } from "./components/ProductGrid"
+import { PaymentPanel } from "./components/PaymentPanel"
+import { CustomerDialog } from "./components/CustomerDialog"
+import { CashSessionPanel } from "./components/CashSessionPanel"
+import {
+  OpenSessionDialog,
+  TransactionDialog,
+  CloseSessionDialog,
+} from "./components/CashDialogs"
 
-/**
- * PDV Moderno - Modern Point of Sale Interface
- * 
- * Features:
- * - Barcode scanner integration (USB/Bluetooth)
- * - Thermal printer auto-print
- * - Keyboard shortcuts (F2, F3, F9, F12, Shift+F4)
- * - Real-time cash session management
- * - Scanner-first workflow for speed
- * 
- * Target: Reduce transaction time from 30-45s to 5-10s
- */
-export default function ModernPOSPage() {
-  // === STATE ===
-  const [selectedPointId, setSelectedPointId] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [customerDialogOpen, setCustomerDialogOpen] = useState(false);
-  
-  // Cart State
-  const [cart, setCart] = useState<Array<{
-    id: string;
-    name: string;
-    size: string;
-    salePrice: number;
-    quantity: number;
-    stock: number;
-    addedVia: 'manual' | 'barcode';
-  }>>([]);
+// Hooks customizados
+import { useCart } from "./hooks/useCart"
+import { useCheckout } from "./hooks/useCheckout"
+import { useCashSessionControls } from "./hooks/useCashSessionControls"
+import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 
-  // Customer State
-  const [customer, setCustomer] = useState<{
-    name: string;
-    document?: string;
-    phone?: string;
-  } | null>(null);
+export default function SalesPage() {
+  const queryClient = useQueryClient()
 
-  // Payment State
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'pix'>('cash');
-  const [cashReceived, setCashReceived] = useState<string>('0');
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // === DATA HOOKS ===
-  const pointsQuery = usePointsOfSale();
-  const productsQuery = useProducts();
-  const sessionHook = useCashSession(selectedPointId);
-
-  // === HARDWARE HOOKS ===
-  const scanner = useBarcodeScanner({
-    enabled: sessionHook.session?.status === 'OPEN',
-    onScan: (barcode: string) => {
-      console.log('Barcode scanned:', barcode);
+  // Pull to refresh
+  const { isPulling, isRefreshing, progress, pullDistance } = usePullToRefresh({
+    onRefresh: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["products"] })
+      await queryClient.invalidateQueries({ queryKey: ["points"] })
+      await queryClient.invalidateQueries({ queryKey: ["cash-session"] })
     },
-  });
+  })
 
-  const printer = useThermalPrinter();
+  // Data fetching
+  const { data: products = [], isLoading: loading } = useProducts()
+  const { data: pointsData = [], isLoading: pointsLoading } = usePointsOfSale()
+  
+  const pointOptions = useMemo(
+    () =>
+      Array.isArray(pointsData)
+        ? (pointsData as PointOfSale[]).filter((point) => point.isActive)
+        : [],
+    [pointsData]
+  )
 
-  // === DERIVED STATE ===
-  const points = pointsQuery.data || [];
-  const products = productsQuery.data || [];
-  const session = sessionHook.session;
-  const isSessionOpen = session?.status === 'OPEN';
-  const isLoading = pointsQuery.isLoading || sessionHook.isLoading || productsQuery.isLoading;
+  // Point of Sale selection
+  const [selectedPointOfSaleId, setSelectedPointOfSaleId] = useState<string | null>(null)
+  
+  const activePointOfSale = useMemo(
+    () => pointOptions.find((point) => point.id === selectedPointOfSaleId) ?? null,
+    [pointOptions, selectedPointOfSaleId]
+  )
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.salePrice * item.quantity, 0);
-  const change = paymentMethod === 'cash' ? Math.max(0, parseFloat(cashReceived || '0') - cartTotal) : 0;
-  const canFinalize = cart.length > 0 && isSessionOpen && !isProcessing;
+  // Hooks customizados
+  const { createSale } = useSales(selectedPointOfSaleId ?? undefined)
+  const cashSessionControls = useCashSessionControls(selectedPointOfSaleId)
+  const {
+    cart,
+    addToCart: addToCartHook,
+    updateQuantity,
+    removeFromCart,
+    clearCart,
+    getCartTotal,
+    getItemCount,
+  } = useCart()
 
-  // Enrich products with available stock
-  const enrichedProducts = products.map((product: Product) => ({
-    ...product,
-    availableStock: product.inventory?.totalQuantity || 0,
-  }));
+  // Payment and sale state
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "pix">("cash")
+  const [quickSaleMode, setQuickSaleMode] = useState(false)
 
-  // === AUTO-SELECT FIRST POINT ===
+  // Customer state
+  const [customerPromptEnabled, setCustomerPromptEnabled] = useState(true)
+  const [customerDialogOpen, setCustomerDialogOpen] = useState(false)
+
+  // Cash session dialogs
+  const [isOpenSessionDialogOpen, setIsOpenSessionDialogOpen] = useState(false)
+  const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false)
+  const [isCloseSessionDialogOpen, setIsCloseSessionDialogOpen] = useState(false)
+
+  const total = getCartTotal()
+  const itemCount = getItemCount()
+  const isSessionOpen = cashSessionControls.session?.status === "OPEN"
+
+  // Checkout hook
+  const { isProcessing, finalizeSale } = useCheckout()
+
+  // Persist point of sale selection
   useEffect(() => {
-    if (!selectedPointId && points.length > 0) {
-      setSelectedPointId(points[0].id);
+    if (typeof window === "undefined") return
+    const storedPoint = window.localStorage.getItem("nitro-active-point-of-sale")
+    if (storedPoint !== null) {
+      setSelectedPointOfSaleId(storedPoint === "null" ? null : storedPoint)
     }
-  }, [points, selectedPointId]);
+  }, [])
 
-  // === BARCODE SCAN HANDLER ===
   useEffect(() => {
-    const lastScan = scanner.lastScanned;
-    if (!lastScan || !isSessionOpen) return;
-
-    // Find product by barcode
-    const product = enrichedProducts.find(p => p.barcode === lastScan);
-    
-    if (!product) {
-      console.warn('[Scanner] Product not found:', lastScan);
-      return;
+    if (typeof window === "undefined") return
+    if (selectedPointOfSaleId === null) {
+      window.localStorage.setItem("nitro-active-point-of-sale", "null")
+    } else {
+      window.localStorage.setItem("nitro-active-point-of-sale", selectedPointOfSaleId)
     }
+  }, [selectedPointOfSaleId])
 
-    if (product.availableStock <= 0) {
-      console.warn('[Scanner] Product out of stock:', product.name);
-      return;
-    }
-
-    // Add to cart via barcode
-    handleAddToCart(product, 'barcode');
-  }, [scanner.lastScanned, isSessionOpen]);
-
-  // === CART MANAGEMENT ===
-  const handleAddToCart = useCallback((product: any, via: 'manual' | 'barcode') => {
-    setCart(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      
-      if (existing) {
-        // Increment quantity
-        return prev.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: Math.min(item.quantity + 1, item.stock) }
-            : item
-        );
+  // Auto-select first point if none selected
+  useEffect(() => {
+    if (pointOptions.length === 0) return
+    setSelectedPointOfSaleId((current) => {
+      if (current && pointOptions.some((point) => point.id === current)) {
+        return current
       }
+      return pointOptions[0]?.id ?? null
+    })
+  }, [pointOptions])
 
-      // Add new item
-      return [
-        ...prev,
-        {
-          id: product.id,
-          name: product.name,
-          size: product.size,
-          salePrice: product.salePrice,
-          quantity: 1,
-          stock: product.availableStock,
-          addedVia: via,
-        },
-      ];
-    });
-  }, []);
+  // Persist customer prompt preference
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const stored = window.localStorage.getItem("nitro-customer-prompt-enabled")
+    if (stored !== null) {
+      setCustomerPromptEnabled(stored === "true")
+    }
+  }, [])
 
-  const handleUpdateQuantity = useCallback((id: string, delta: number) => {
-    setCart(prev =>
-      prev.map(item => {
-        if (item.id === id) {
-          const newQty = item.quantity + delta;
-          return { ...item, quantity: Math.max(1, Math.min(newQty, item.stock)) };
-        }
-        return item;
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    window.localStorage.setItem("nitro-customer-prompt-enabled", String(customerPromptEnabled))
+  }, [customerPromptEnabled])
+
+  // Sound alert for low stock
+  useEffect(() => {
+    const hasAlerts = products.some(
+      (product: Product) =>
+        product.inventory?.coldRoomAlert ||
+        product.inventory?.houseAlert ||
+        product.inventory?.salePointAlert
+    )
+
+    if (hasAlerts) {
+      const audio = new Audio("/alert.mp3")
+      audio.play().catch(() => {})
+    }
+  }, [products])
+
+  // Enrich products with stock from selected point
+  const enrichedProducts = useMemo(() => {
+    return products.map((product) => ({
+      ...product,
+      stock: selectedPointOfSaleId
+        ? product.productPointsOfSale?.find(
+            (pps) => pps.pointOfSaleId === selectedPointOfSaleId
+          )?.quantity ?? 0
+        : product.inventory?.salePointQuantity ?? 0,
+    }))
+  }, [products, selectedPointOfSaleId])
+
+  // Add to cart with visual feedback
+  const addToCart = useCallback(
+    (product: Product) => {
+      const enriched = enrichedProducts.find((p) => p.id === product.id)
+      if (!enriched) return
+
+      addToCartHook({
+        id: product.id,
+        name: product.name,
+        salePrice: product.salePrice,
+        stock: enriched.stock,
       })
-    );
-  }, []);
 
-  const handleRemoveItem = useCallback((id: string) => {
-    setCart(prev => prev.filter(item => item.id !== id));
-  }, []);
-
-  const handleClearCart = useCallback(() => {
-    setCart([]);
-    setCustomer(null);
-    setPaymentMethod('cash');
-    setCashReceived('0');
-  }, []);
-
-  // === PAYMENT FINALIZATION ===
-  const handleFinalize = useCallback(async () => {
-    if (!canFinalize) return;
-
-    setIsProcessing(true);
-    try {
-      // Create sale (placeholder - implement actual API call)
-      const saleData = {
-        pointOfSaleId: selectedPointId,
-        sessionId: session?.id,
-        items: cart.map(item => ({
-          productId: item.id,
-          quantity: item.quantity,
-          price: item.salePrice,
-        })),
-        paymentMethod,
-        total: cartTotal,
-        cashReceived: paymentMethod === 'cash' ? parseFloat(cashReceived) : undefined,
-        change: paymentMethod === 'cash' ? change : undefined,
-        customer,
-      };
-
-      console.log('[Sale] Creating sale:', saleData);
-
-      // TODO: Call createSale API
-
-      // Auto-print receipt
-      if (printer.status.connected) {
-        await printer.print(saleData, 'sale');
+      // Visual feedback
+      const card = document.querySelector(`[data-product-id="${product.id}"]`)
+      if (card) {
+        card.classList.add("animate-pulse")
+        setTimeout(() => card.classList.remove("animate-pulse"), 300)
       }
+    },
+    [enrichedProducts, addToCartHook]
+  )
 
-      // Clear cart
-      handleClearCart();
-      productsQuery.refetch();
+  // Handle sale finalization
+  const handleFinalizeSale = useCallback(() => {
+    if (!isSessionOpen) {
+      toast.error("Abra o caixa antes de registrar a venda.")
+      return
+    }
 
-      console.log('[Sale] Sale completed successfully');
-    } catch (error) {
-      console.error('[Sale] Error:', error);
-    } finally {
-      setIsProcessing(false);
+    if (customerPromptEnabled) {
+      setCustomerDialogOpen(true)
+    } else {
+      finalizeSale({
+        cart,
+        paymentMethod,
+        pointOfSaleId: selectedPointOfSaleId!,
+        onSuccess: () => {
+          clearCart()
+          const audio = new Audio("/alert.mp3")
+          audio.play().catch(() => {})
+        },
+        createSale,
+      })
     }
   }, [
-    canFinalize,
-    selectedPointId,
-    session,
+    isSessionOpen,
+    customerPromptEnabled,
+    finalizeSale,
     cart,
     paymentMethod,
-    cartTotal,
-    cashReceived,
-    change,
-    customer,
-    printer,
-    handleClearCart,
-    productsQuery,
-  ]);
+    selectedPointOfSaleId,
+    clearCart,
+    createSale,
+  ])
 
-  // === KEYBOARD SHORTCUTS ===
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // F3: Toggle search focus
-      if (e.key === 'F3') {
-        e.preventDefault();
-        document.getElementById('product-search')?.focus();
+  // Customer dialog handlers
+  const handleCustomerSave = useCallback(
+    (data: { name: string; phone: string; address: string }) => {
+      finalizeSale({
+        cart,
+        paymentMethod,
+        pointOfSaleId: selectedPointOfSaleId!,
+        customerData: data,
+        onSuccess: () => {
+          clearCart()
+          setCustomerDialogOpen(false)
+          const audio = new Audio("/alert.mp3")
+          audio.play().catch(() => {})
+        },
+        createSale,
+      })
+    },
+    [finalizeSale, cart, paymentMethod, selectedPointOfSaleId, clearCart, createSale]
+  )
+
+  const handleCustomerSkip = useCallback(() => {
+    finalizeSale({
+      cart,
+      paymentMethod,
+      pointOfSaleId: selectedPointOfSaleId!,
+      onSuccess: () => {
+        clearCart()
+        setCustomerDialogOpen(false)
+        const audio = new Audio("/alert.mp3")
+        audio.play().catch(() => {})
+      },
+      createSale,
+    })
+  }, [finalizeSale, cart, paymentMethod, selectedPointOfSaleId, clearCart, createSale])
+
+  // Cash session handlers
+  const handleOpenSession = useCallback(
+    async (amount: number, notes?: string) => {
+      const success = await cashSessionControls.handleOpenSession(amount, notes)
+      if (success) {
+        setIsOpenSessionDialogOpen(false)
       }
+    },
+    [cashSessionControls]
+  )
 
-      // F9: Open customer dialog
-      if (e.key === 'F9') {
-        e.preventDefault();
-        if (isSessionOpen) setCustomerDialogOpen(true);
+  const handleTransaction = useCallback(
+    async (
+      type: "SUPPLY" | "WITHDRAWAL" | "ADJUSTMENT",
+      amount: number,
+      description?: string
+    ) => {
+      const success = await cashSessionControls.handleTransaction(type, amount, description)
+      if (success) {
+        setIsTransactionDialogOpen(false)
       }
+    },
+    [cashSessionControls]
+  )
 
-      // F12: Finalize sale
-      if (e.key === 'F12') {
-        e.preventDefault();
-        if (canFinalize) handleFinalize();
+  const handleCloseSession = useCallback(
+    async (closingAmount: number, notes?: string) => {
+      const success = await cashSessionControls.handleCloseSession(closingAmount, notes)
+      if (success) {
+        setIsCloseSessionDialogOpen(false)
       }
+    },
+    [cashSessionControls]
+  )
 
-      // Shift+F4: Clear cart
-      if (e.shiftKey && e.key === 'F4') {
-        e.preventDefault();
-        handleClearCart();
-      }
-    };
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    onF1: () => setQuickSaleMode((prev) => !prev),
+    onF2: () => clearCart(),
+    onEscape: () => clearCart(),
+    onEnter: handleFinalizeSale,
+    enabled: !customerDialogOpen && !isOpenSessionDialogOpen && !isTransactionDialogOpen && !isCloseSessionDialogOpen,
+  })
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSessionOpen, canFinalize, handleFinalize, handleClearCart]);
-
-  // === LOADING STATE ===
-  if (isLoading) {
+  if (pointsLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando PDV...</p>
+      <>
+        <PullToRefreshIndicator
+          isPulling={isPulling}
+          isRefreshing={isRefreshing}
+          progress={progress}
+          pullDistance={pullDistance}
+        />
+        <div className="container mx-auto">
+          <p className="text-muted-foreground">Carregando...</p>
         </div>
-      </div>
-    );
+      </>
+    )
   }
 
-  // === RENDER ===
   return (
-    <div className="flex flex-col h-screen bg-background">
-      {/* Header */}
-      <POSHeader
-        points={points}
-        selectedPointId={selectedPointId}
-        onPointChange={setSelectedPointId}
-        session={session}
-        printerStatus={printer.status}
-        isScanning={scanner.isScanning}
+    <>
+      <PullToRefreshIndicator
+        isPulling={isPulling}
+        isRefreshing={isRefreshing}
+        progress={progress}
+        pullDistance={pullDistance}
       />
+      <div className="container mx-auto space-y-4">
+      {/* Header */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">PDV</h1>
+          <p className="text-sm text-muted-foreground">
+            Ponto de venda rápido e eficiente
+          </p>
+        </div>
 
-      {/* Main Content: Products + Cart/Payment */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left: Products */}
-        <div className="w-1/2 border-r">
-          <POSProducts
-            products={enrichedProducts}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onProductClick={(product) => handleAddToCart(product, 'manual')}
-            isSessionOpen={isSessionOpen}
+        {/* Point of Sale Selector */}
+        <Card className="lg:w-80">
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Ponto de Venda
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pb-3">
+            <Select
+              value={selectedPointOfSaleId ?? ""}
+              onValueChange={(value) => setSelectedPointOfSaleId(value || null)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {pointOptions.map((point) => (
+                  <SelectItem key={point.id} value={point.id}>
+                    {point.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left Column - Products */}
+        <div className="lg:col-span-8 space-y-4">
+          <ProductGrid
+            products={products}
+            loading={loading}
+            onAddToCart={addToCart}
+            selectedPointOfSaleId={selectedPointOfSaleId}
+            quickMode={quickSaleMode}
+            onQuickModeChange={setQuickSaleMode}
           />
         </div>
 
-        {/* Right: Cart + Payment */}
-        <div className="w-1/2 flex flex-col">
-          {/* Cart */}
-          <div className="flex-1 overflow-auto">
-            <POSCart
+        {/* Right Column - Cart, Payment & Cash */}
+        <div className="lg:col-span-4">
+          <div className="lg:sticky lg:top-4 space-y-3">
+            {/* Cart */}
+            <CartSection
               cart={cart}
-              onUpdateQuantity={handleUpdateQuantity}
-              onRemoveItem={handleRemoveItem}
-              onClearCart={handleClearCart}
-              customer={customer}
-              onCustomerClick={() => setCustomerDialogOpen(true)}
+              onUpdateQuantity={updateQuantity}
+              onRemove={removeFromCart}
+              onClear={clearCart}
+              total={total}
+              itemCount={itemCount}
+            />
+
+            {/* Payment Panel */}
+            <PaymentPanel
+              total={total}
+              paymentMethod={paymentMethod}
+              onPaymentMethodChange={setPaymentMethod}
+              onFinalizeSale={handleFinalizeSale}
+              disabled={cart.length === 0 || !isSessionOpen}
+              loading={isProcessing}
+            />
+
+            {/* Cash Session Panel */}
+            <CashSessionPanel
+              session={cashSessionControls.session ?? null}
+              loading={cashSessionControls.isLoading}
+              onOpenSession={() => setIsOpenSessionDialogOpen(true)}
+              onRegisterTransaction={() => setIsTransactionDialogOpen(true)}
+              onCloseSession={() => setIsCloseSessionDialogOpen(true)}
             />
           </div>
-
-          {/* Payment */}
-          <POSPayment
-            total={cartTotal}
-            itemCount={cart.length}
-            paymentMethod={paymentMethod}
-            onPaymentMethodChange={setPaymentMethod}
-            cashReceived={cashReceived}
-            onCashReceivedChange={setCashReceived}
-            change={change}
-            isProcessing={isProcessing}
-            onFinalize={handleFinalize}
-            canFinalize={canFinalize}
-            printerConnected={printer.status.connected}
-            onReprint={async () => {}} // TODO: Implement reprint
-            hasLastSale={false} // TODO: Track last sale
-          />
         </div>
       </div>
 
-      {/* Footer: Session Control */}
-      <POSSessionControl
-        session={session}
-        pointOfSaleId={selectedPointId}
-        isLoading={sessionHook.isLoading}
-      />
-
       {/* Dialogs */}
-      <POSCustomerDialog
+      <CustomerDialog
         open={customerDialogOpen}
         onOpenChange={setCustomerDialogOpen}
-        customer={customer}
-        onCustomerSet={setCustomer}
+        onSave={handleCustomerSave}
+        onSkip={handleCustomerSkip}
+        promptEnabled={customerPromptEnabled}
+        onPromptEnabledChange={setCustomerPromptEnabled}
+      />
+
+      <OpenSessionDialog
+        open={isOpenSessionDialogOpen}
+        onOpenChange={setIsOpenSessionDialogOpen}
+        onConfirm={handleOpenSession}
+        loading={cashSessionControls.isOpening}
+      />
+
+      <TransactionDialog
+        open={isTransactionDialogOpen}
+        onOpenChange={setIsTransactionDialogOpen}
+        onConfirm={handleTransaction}
+        loading={cashSessionControls.isRegisteringTransaction}
+      />
+
+      <CloseSessionDialog
+        open={isCloseSessionDialogOpen}
+        onOpenChange={setIsCloseSessionDialogOpen}
+        onConfirm={handleCloseSession}
+        session={cashSessionControls.session ?? null}
+        loading={cashSessionControls.isClosing}
       />
     </div>
-  );
+    </>
+  )
 }
