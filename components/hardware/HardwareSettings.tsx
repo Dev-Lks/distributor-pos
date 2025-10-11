@@ -68,16 +68,16 @@ export function HardwareSettings({ pointOfSaleId }: HardwareSettingsProps) {
           Configurar Hardware
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>Configurações de Hardware</DialogTitle>
           <DialogDescription>
             Configure o leitor de código de barras e a impressora térmica
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="printer" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="printer" className="w-full flex-1 flex flex-col overflow-hidden">
+          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
             <TabsTrigger value="printer">
               <Printer className="h-4 w-4 mr-2" />
               Impressora
@@ -88,7 +88,7 @@ export function HardwareSettings({ pointOfSaleId }: HardwareSettingsProps) {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="printer" className="space-y-4">
+          <TabsContent value="printer" className="space-y-4 flex-1 overflow-y-auto mt-4">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="printer-type">Tipo de Conexão</Label>
@@ -101,12 +101,15 @@ export function HardwareSettings({ pointOfSaleId }: HardwareSettingsProps) {
                       type: e.target.value as 'USB' | 'Network' | 'Serial',
                     }))
                   }
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border rounded-md bg-background"
                 >
                   <option value="USB">USB</option>
                   <option value="Network">Rede (TCP/IP)</option>
                   <option value="Serial">Serial (COM)</option>
                 </select>
+                <p className="text-xs text-muted-foreground">
+                  📖 Não sabe qual escolher? Veja o arquivo CONFIGURACAO_IMPRESSORA.md
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -146,12 +149,12 @@ export function HardwareSettings({ pointOfSaleId }: HardwareSettingsProps) {
                       width: parseInt(e.target.value) as 32 | 48 | 58 | 80,
                     }))
                   }
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border rounded-md bg-background"
                 >
-                  <option value="32">32 (58mm)</option>
-                  <option value="48">48 (80mm)</option>
-                  <option value="58">58 (80mm)</option>
-                  <option value="80">80 (110mm)</option>
+                  <option value="32">32 caracteres (58mm)</option>
+                  <option value="48">48 caracteres (80mm) - Padrão</option>
+                  <option value="58">58 caracteres (80mm)</option>
+                  <option value="80">80 caracteres (110mm)</option>
                 </select>
               </div>
 
@@ -166,12 +169,15 @@ export function HardwareSettings({ pointOfSaleId }: HardwareSettingsProps) {
                       encoding: e.target.value as 'UTF-8' | 'GB18030' | 'ISO-8859-1',
                     }))
                   }
-                  className="w-full px-3 py-2 border rounded-md"
+                  className="w-full px-3 py-2 border rounded-md bg-background"
                 >
-                  <option value="UTF-8">UTF-8</option>
+                  <option value="UTF-8">UTF-8 (Recomendado)</option>
                   <option value="ISO-8859-1">ISO-8859-1</option>
                   <option value="GB18030">GB18030</option>
                 </select>
+                <p className="text-xs text-muted-foreground">
+                  UTF-8 suporta português e caracteres especiais
+                </p>
               </div>
 
               <div className="flex gap-2">
@@ -192,7 +198,7 @@ export function HardwareSettings({ pointOfSaleId }: HardwareSettingsProps) {
             </div>
           </TabsContent>
 
-          <TabsContent value="scanner" className="space-y-4">
+          <TabsContent value="scanner" className="space-y-4 flex-1 overflow-y-auto mt-4">
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <Label htmlFor="scanner-enabled">Habilitar Scanner</Label>

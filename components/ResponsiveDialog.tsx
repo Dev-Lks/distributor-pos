@@ -62,20 +62,20 @@ export function ResponsiveDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("sm:max-w-[500px]", className)}>
+      <DialogContent className={cn("sm:max-w-[500px] max-h-[90vh] flex flex-col", className)}>
         {(title || description) && (
-          <DialogHeader>
+          <DialogHeader className="flex-shrink-0">
             {title && <DialogTitle>{title}</DialogTitle>}
             {description && <DialogDescription>{description}</DialogDescription>}
           </DialogHeader>
         )}
         
-        <div className="py-4">
+        <div className="flex-1 overflow-y-auto py-4">
           {children}
         </div>
 
         {footer && (
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 border-t">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 pt-4 border-t flex-shrink-0">
             {footer}
           </div>
         )}

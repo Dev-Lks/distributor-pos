@@ -60,13 +60,15 @@ export function AddStockDialog({
     }
   }, [open, preSelectedProductId, preSelectedProductName])
 
-  // Filtrar produtos
+  // Filtrar produtos (incluindo busca por SKU e código de barras)
   const filteredProducts = useMemo(() => {
     const query = searchQuery.toLowerCase()
     return products.filter(
       (p) =>
         p.name.toLowerCase().includes(query) ||
-        p.category?.toLowerCase().includes(query)
+        p.category?.toLowerCase().includes(query) ||
+        p.barcode?.toLowerCase().includes(query) ||
+        p.sku?.toLowerCase().includes(query)
     )
   }, [products, searchQuery])
 
