@@ -6,12 +6,17 @@ Este sistema suporta impressoras térmicas para impressão de recibos de venda, 
 ## Como Acessar as Configurações
 
 1. **Na página de Vendas (PDV)**:
-   - Clique no botão **"Configurar Hardware"** no canto superior direito
-   - Ou clique no ícone da impressora na barra de ferramentas
+   - Clique no **ícone da impressora** no canto superior direito (ao lado do seletor de PDV)
+   - O ícone mostra o status atual: verde (pronta), vermelho (desconectada), amarelo (papel baixo)
+   - No tooltip aparece "Clique para configurar"
 
-2. **Na página de Pedidos**:
-   - Acesse o menu de configurações
-   - Selecione "Hardware"
+2. **Na página de Pedidos (Encomendas)**:
+   - Clique no **ícone da impressora** no canto superior direito
+   - Mesma funcionalidade da página de vendas
+
+3. **Usando o componente diretamente**:
+   - O componente `HardwareSettings` pode ser usado em qualquer página
+   - Basta importar e usar: `<HardwareSettings pointOfSaleId="seu-pdv-id" />`
 
 ## Tipos de Conexão Suportados
 

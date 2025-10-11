@@ -23,11 +23,13 @@ import { cn } from "@/lib/utils"
 // Hardware
 import { useThermalPrinter } from "@/lib/hardware/useThermalPrinter"
 import { PrinterStatus } from "@/components/hardware/PrinterStatus"
+import { HardwareSettings } from "@/components/hardware/HardwareSettings"
 
 export default function OrdersPage() {
   const [search, setSearch] = useState("")
   const [priorityFilter, setPriorityFilter] = useState<OrderPriority | "ALL">("ALL")
   const [viewMode, setViewMode] = useState<"all" | "kanban" | "list">("all")
+  const [isHardwareSettingsOpen, setIsHardwareSettingsOpen] = useState(false)
   const queryClient = useQueryClient()
 
   // Hardware: Thermal Printer
@@ -78,6 +80,7 @@ export default function OrdersPage() {
           <PrinterStatus 
             status={printerStatus} 
             isPrinting={isPrinting}
+            onClick={() => setIsHardwareSettingsOpen(true)}
           />
           <Link href="/dashboard/orders/new">
             <Button size="lg" className="w-full sm:w-auto">
@@ -263,6 +266,13 @@ export default function OrdersPage() {
           </>
         )}
       </Tabs>
+      
+      {/* Hardware Settings - usando PDV fixo ou primeiro disponível */}
+      <HardwareSettings 
+        pointOfSaleId="default"
+        open={isHardwareSettingsOpen}
+        onOpenChange={setIsHardwareSettingsOpen}
+      />
       </div>
     </>
   )

@@ -37,6 +37,7 @@ import { useBarcodeScanner } from "@/lib/hardware/useBarcodeScanner"
 import { useThermalPrinter } from "@/lib/hardware/useThermalPrinter"
 import { BarcodeInput } from "@/components/hardware/BarcodeInput"
 import { PrinterStatus } from "@/components/hardware/PrinterStatus"
+import { HardwareSettings } from "@/components/hardware/HardwareSettings"
 
 export default function SalesPage() {
   const queryClient = useQueryClient()
@@ -95,6 +96,9 @@ export default function SalesPage() {
   const [isOpenSessionDialogOpen, setIsOpenSessionDialogOpen] = useState(false)
   const [isTransactionDialogOpen, setIsTransactionDialogOpen] = useState(false)
   const [isCloseSessionDialogOpen, setIsCloseSessionDialogOpen] = useState(false)
+  
+  // Hardware settings dialog
+  const [isHardwareSettingsOpen, setIsHardwareSettingsOpen] = useState(false)
 
   const total = getCartTotal()
   const itemCount = getItemCount()
@@ -401,6 +405,7 @@ export default function SalesPage() {
           <PrinterStatus 
             status={printerStatus} 
             isPrinting={isPrinting}
+            onClick={() => setIsHardwareSettingsOpen(true)}
           />
 
           {/* Point of Sale Selector */}
@@ -522,6 +527,15 @@ export default function SalesPage() {
         session={cashSessionControls.session ?? null}
         loading={cashSessionControls.isClosing}
       />
+
+      {/* Hardware Settings */}
+      {selectedPointOfSaleId && (
+        <HardwareSettings 
+          pointOfSaleId={selectedPointOfSaleId}
+          open={isHardwareSettingsOpen}
+          onOpenChange={setIsHardwareSettingsOpen}
+        />
+      )}
     </div>
     </>
   )

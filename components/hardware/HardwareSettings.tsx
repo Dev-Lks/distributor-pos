@@ -20,11 +20,17 @@ import type { PrinterConfig } from '@/lib/hardware/types'
 
 interface HardwareSettingsProps {
   pointOfSaleId: string
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function HardwareSettings({ pointOfSaleId }: HardwareSettingsProps) {
-  const [open, setOpen] = useState(false)
+export function HardwareSettings({ pointOfSaleId, open: externalOpen, onOpenChange: externalOnOpenChange }: HardwareSettingsProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
   const { configure, testPrint, isPrinting } = useThermalPrinter()
+  
+  // Usar controle externo se fornecido, caso contrário usar interno
+  const open = externalOpen !== undefined ? externalOpen : internalOpen
+  const setOpen = externalOnOpenChange !== undefined ? externalOnOpenChange : setInternalOpen
   
   const [printerConfig, setPrinterConfig] = useState<PrinterConfig>({
     type: 'USB',
@@ -62,12 +68,14 @@ export function HardwareSettings({ pointOfSaleId }: HardwareSettingsProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Settings className="h-4 w-4 mr-2" />
-          Configurar Hardware
-        </Button>
-      </DialogTrigger>
+      {externalOpen === undefined && (
+        <DialogTrigger asChild>
+          <Button variant="outline" size="sm">
+            <Settings className="h-4 w-4 mr-2" />
+            Configurar Hardware
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Configurações de Hardware</DialogTitle>
