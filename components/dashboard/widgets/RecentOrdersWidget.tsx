@@ -88,7 +88,7 @@ export function RecentOrdersWidget() {
 
             return (
               <Link
-                href={`/orders/${order.id}`}
+                href={`/dashboard/orders/${order.id}`}
                 key={order.id}
                 className="flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50"
               >
