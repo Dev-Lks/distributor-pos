@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
-import { Prisma } from "@prisma/client"
 
-import { prisma } from "@/lib/prisma"
+import { prisma, type Prisma } from "@/lib/prisma"
 import { detectPersonType, sanitizeDocument, validateCpfCnpj } from "@/lib/documents"
 import { getServerAuth, notAuthenticated, unauthorized } from "@/lib/serverAuth"
 
@@ -32,8 +31,9 @@ const mapCustomer = (customer: Prisma.CustomerGetPayload<{ select: typeof CUSTOM
 })
 
 const handlePrismaError = (error: unknown) => {
-  if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-    const target = Array.isArray(error.meta?.target) ? error.meta?.target.join(", ") : undefined
+  if (error && typeof error === 'object' && 'code' in error && error.code === "P2002") {
+    const prismaError = error as { meta?: { target?: string[] } }
+    const target = Array.isArray(prismaError.meta?.target) ? prismaError.meta?.target.join(", ") : undefined
     const friendlyField = target?.includes("document") ? "documento (CPF/CNPJ)" : target
     return NextResponse.json(
       { error: `Já existe um cliente cadastrado com este ${friendlyField ?? "valor único"}.` },
@@ -52,6 +52,8 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = request.nextUrl
     const search = searchParams.get("search")?.trim()
+    const sort = searchParams.get("sort") // 'lastPurchaseAt', 'name', 'totalSpend'
+    const limit = searchParams.get("limit") ? parseInt(searchParams.get("limit")!) : undefined
     const sanitizedSearchDocument = sanitizeDocument(search ?? undefined)
 
     const where: Prisma.CustomerWhereInput | undefined = search
@@ -59,6 +61,7 @@ export async function GET(request: NextRequest) {
           OR: [
             { name: { contains: search, mode: "insensitive" } },
             { phone: { contains: search, mode: "insensitive" } },
+            { email: { contains: search, mode: "insensitive" } },
             { address: { contains: search, mode: "insensitive" } },
             ...(sanitizedSearchDocument
               ? [{ document: { contains: sanitizedSearchDocument } }]
@@ -67,9 +70,20 @@ export async function GET(request: NextRequest) {
         }
       : undefined
 
+    // Definir ordenação baseada no parâmetro sort
+    let orderBy: Prisma.CustomerOrderByWithRelationInput = { name: "asc" }
+    if (sort === "lastPurchaseAt") {
+      orderBy = { lastPurchaseAt: "desc" }
+    } else if (sort === "totalSpend") {
+      orderBy = { totalSpend: "desc" }
+    } else if (sort === "createdAt") {
+      orderBy = { createdAt: "desc" }
+    }
+
     const customers = await prisma.customer.findMany({
       where,
-      orderBy: { name: "asc" },
+      orderBy,
+      take: limit,
       select: CUSTOMER_SELECT,
     })
 
@@ -108,13 +122,36 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "CPF ou CNPJ inválido." }, { status: 400 })
     }
 
+    // Verificar duplicados por telefone ou documento
+    if (phone?.trim() || sanitizedDocument) {
+      const existing = await prisma.customer.findFirst({
+        where: {
+          OR: [
+            phone?.trim() ? { phone: phone.trim() } : {},
+            sanitizedDocument ? { document: sanitizedDocument } : {},
+          ].filter((condition) => Object.keys(condition).length > 0),
+        },
+        select: { id: true, name: true, phone: true, document: true },
+      })
+
+      if (existing) {
+        return NextResponse.json(
+          { 
+            error: "Cliente já cadastrado com este telefone ou documento",
+            existingCustomer: existing
+          },
+          { status: 409 }
+        )
+      }
+    }
+
     const customer = await prisma.customer.create({
       data: {
         name: name.trim(),
         phone: phone?.trim() || null,
         address: address?.trim() || null,
-  document: sanitizedDocument,
-  type: detectPersonType(document ?? undefined),
+        document: sanitizedDocument,
+        type: detectPersonType(document ?? undefined),
       },
       select: CUSTOMER_SELECT,
     })

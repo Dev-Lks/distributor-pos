@@ -66,6 +66,14 @@ export function usePermissions() {
     deleteOrders: hasPermission("DELETE_ORDERS"),
     manageOrderStatus: hasPermission("MANAGE_ORDER_STATUS"),
 
+    // Delivery
+    viewDeliveries: hasPermission("VIEW_DELIVERIES"),
+    createDeliveries: hasPermission("CREATE_DELIVERIES"),
+    editDeliveries: hasPermission("EDIT_DELIVERIES"),
+    deleteDeliveries: hasPermission("DELETE_DELIVERIES"),
+    manageDeliveryStatus: hasPermission("MANAGE_DELIVERY_STATUS"),
+    assignDeliveryDriver: hasPermission("ASSIGN_DELIVERY_DRIVER"),
+
     // Pontos de venda
     viewPointsOfSale: hasPermission("VIEW_POINTS_OF_SALE"),
     managePointsOfSale: hasPermission("MANAGE_POINTS_OF_SALE"),

@@ -91,6 +91,17 @@ const PERMISSION_CATEGORIES: Record<string, PermissionCategory> = {
       { key: "MANAGE_ORDER_STATUS", label: "Gerenciar Status de Encomendas" },
     ],
   },
+  delivery: {
+    label: "Delivery",
+    permissions: [
+      { key: "VIEW_DELIVERIES", label: "Visualizar Entregas" },
+      { key: "CREATE_DELIVERIES", label: "Criar Entregas" },
+      { key: "EDIT_DELIVERIES", label: "Editar Entregas" },
+      { key: "DELETE_DELIVERIES", label: "Deletar Entregas" },
+      { key: "MANAGE_DELIVERY_STATUS", label: "Gerenciar Status de Entregas" },
+      { key: "ASSIGN_DELIVERY_DRIVER", label: "Atribuir Entregador" },
+    ],
+  },
   pointsOfSale: {
     label: "Pontos de Venda",
     permissions: [

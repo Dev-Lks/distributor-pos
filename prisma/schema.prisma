@@ -26,7 +26,7 @@ enum PermissionKey {
   VIEW_DASHBOARD
   VIEW_ANALYTICS
   VIEW_REPORTS
-  
+
   // Vendas
   CREATE_SALES
   VIEW_ALL_SALES
@@ -34,56 +34,64 @@ enum PermissionKey {
   EDIT_SALES
   DELETE_SALES
   APPLY_DISCOUNTS
-  
+
   // Produtos
   VIEW_PRODUCTS
   CREATE_PRODUCTS
   EDIT_PRODUCTS
   DELETE_PRODUCTS
   MANAGE_PRICES
-  
+
   // Inventário
   VIEW_INVENTORY
   MANAGE_INVENTORY
   TRANSFER_STOCK
   ADJUST_STOCK
   VIEW_STOCK_MOVEMENTS
-  
+
   // Clientes
   VIEW_CUSTOMERS
   CREATE_CUSTOMERS
   EDIT_CUSTOMERS
   DELETE_CUSTOMERS
   VIEW_CUSTOMER_HISTORY
-  
+
   // Caixa
   OPEN_CASH_SESSION
   CLOSE_CASH_SESSION
   MANAGE_CASH_TRANSACTIONS
   FORCE_CLOSE_CASH
   VIEW_CASH_REPORTS
-  
+
   // Encomendas
   VIEW_ORDERS
   CREATE_ORDERS
   EDIT_ORDERS
   DELETE_ORDERS
   MANAGE_ORDER_STATUS
-  
+
+  // Delivery
+  VIEW_DELIVERIES
+  CREATE_DELIVERIES
+  EDIT_DELIVERIES
+  DELETE_DELIVERIES
+  MANAGE_DELIVERY_STATUS
+  ASSIGN_DELIVERY_DRIVER
+
   // Pontos de Venda
   VIEW_POINTS_OF_SALE
   MANAGE_POINTS_OF_SALE
-  
+
   // Usuários e Permissões
   MANAGE_USERS
   VIEW_USERS
   ASSIGN_PERMISSIONS
-  
+
   // Bonificações
   CREATE_BONIFICATIONS
   APPROVE_BONIFICATIONS
   VIEW_BONIFICATIONS
-  
+
   // Configurações
   VIEW_SETTINGS
   MANAGE_SETTINGS
@@ -123,12 +131,12 @@ enum DailyReportStatus {
 }
 
 enum OrderStatus {
-  PENDING        // Aguardando confirmação
-  CONFIRMED      // Confirmado pelo cliente
-  PREPARING      // Em preparação/produção
-  READY          // Pronto para retirada
-  DELIVERED      // Entregue
-  CANCELLED      // Cancelado
+  PENDING // Aguardando confirmação
+  CONFIRMED // Confirmado pelo cliente
+  PREPARING // Em preparação/produção
+  READY // Pronto para retirada
+  DELIVERED // Entregue
+  CANCELLED // Cancelado
 }
 
 enum OrderPriority {
@@ -139,50 +147,51 @@ enum OrderPriority {
 }
 
 model User {
-  id                String         @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Informações básicas
-  fullName          String
-  email             String         @unique
-  passwordHash      String
-  phone             String?
-  cpf               String?        @unique
-  avatarUrl         String?
-  
+  fullName     String
+  email        String  @unique
+  passwordHash String
+  phone        String?
+  cpf          String? @unique
+  avatarUrl    String?
+
   // Informações legadas (compatibilidade)
-  name              String?
-  password          String?
-  
+  name     String?
+  password String?
+
   // Permissões e status
-  isAdmin           Boolean        @default(false)
-  status            UserStatus     @default(ACTIVE)
-  isActive          Boolean        @default(true)
-  
+  isAdmin  Boolean    @default(false)
+  status   UserStatus @default(ACTIVE)
+  isActive Boolean    @default(true)
+
   // Multi-tenancy (preparação futura)
-  tenantId          String?
-  
+  tenantId String?
+
   // Metadados
-  lastLoginAt       DateTime?
-  passwordChangedAt DateTime?
-  failedLoginAttempts Int         @default(0)
-  lockedUntil       DateTime?
-  
+  lastLoginAt         DateTime?
+  passwordChangedAt   DateTime?
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
   // Timestamps
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  createdById       String?
-  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  createdById String?
+
   // Relações
-  cashSessions      CashSession[]
-  cashTransactions  CashTransaction[] @relation("UserCashTransactions")
-  pendingCarts      PendingCart[]     @relation("UserPendingCarts")
-  userPointsOfSale  UserPointOfSale[]
-  salesCreated      Sale[]            @relation("SaleCreatedBy")
+  cashSessions       CashSession[]
+  cashTransactions   CashTransaction[]   @relation("UserCashTransactions")
+  pendingCarts       PendingCart[]       @relation("UserPendingCarts")
+  userPointsOfSale   UserPointOfSale[]
+  salesCreated       Sale[]              @relation("SaleCreatedBy")
   inventoryMovements InventoryMovement[] @relation("MovementPerformedBy")
-  ordersCreated     Order[]           @relation("OrderCreatedBy")
-  ordersAssigned    Order[]           @relation("OrderAssignedTo")
-  permissions       UserPermission[]
-  
+  ordersCreated      Order[]             @relation("OrderCreatedBy")
+  ordersAssigned     Order[]             @relation("OrderAssignedTo")
+  deliveriesCreated  Delivery[]          @relation("DeliveryCreatedBy")
+  permissions        UserPermission[]
+
   @@index([email])
   @@index([status])
   @@index([isAdmin])
@@ -190,33 +199,33 @@ model User {
 }
 
 model UserPermission {
-  id           String        @id @default(cuid())
-  userId       String
-  permission   PermissionKey
-  granted      Boolean       @default(true)
-  grantedBy    String?
-  grantedAt    DateTime      @default(now())
-  revokedAt    DateTime?
-  
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+  id         String        @id @default(cuid())
+  userId     String
+  permission PermissionKey
+  granted    Boolean       @default(true)
+  grantedBy  String?
+  grantedAt  DateTime      @default(now())
+  revokedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@unique([userId, permission])
   @@index([userId])
   @@index([permission])
 }
 
 model UserPointOfSale {
-  id            String      @id @default(cuid())
+  id            String   @id @default(cuid())
   userId        String
   pointOfSaleId String
-  isPrimary     Boolean     @default(false)
-  isActive      Boolean     @default(true)
-  assignedAt    DateTime    @default(now())
+  isPrimary     Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  assignedAt    DateTime @default(now())
   assignedBy    String?
-  
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pointOfSale   PointOfSale @relation(fields: [pointOfSaleId], references: [id], onDelete: Cascade)
-  
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointOfSale PointOfSale @relation(fields: [pointOfSaleId], references: [id], onDelete: Cascade)
+
   @@unique([userId, pointOfSaleId])
   @@index([userId])
   @@index([pointOfSaleId])
@@ -224,65 +233,65 @@ model UserPointOfSale {
 }
 
 model Product {
-  id        String @id @default(cuid())
-  name      String
-  size      String
-  cost      Float
-  salePrice Float
-  isBonified Boolean @default(false)
-  bonifications Int @default(0) // Número de bonificações disponíveis
-  category  String? // Ex.: "Cerveja", "Vinho"
-  supplier  String? // Fornecedor
-  isActive  Boolean @default(true) // Para desativar produtos sem deletar
-  sku       String? @unique // Código único para identificação
-  brand     String?
-  origin    String?
-  packaging String?
-  abv       Float?
-  ibu       Float?
-  shelfLifeDays Int?
-  tags      String[] @default([])
-  lastPurchaseCost Float?
-  lastPurchaseAt DateTime?
-  avgCost   Float?
+  id                 String    @id @default(cuid())
+  name               String
+  size               String
+  cost               Float
+  salePrice          Float
+  isBonified         Boolean   @default(false)
+  bonifications      Int       @default(0) // Número de bonificações disponíveis
+  category           String? // Ex.: "Cerveja", "Vinho"
+  supplier           String? // Fornecedor
+  isActive           Boolean   @default(true) // Para desativar produtos sem deletar
+  sku                String?   @unique // Código único para identificação
+  brand              String?
+  origin             String?
+  packaging          String?
+  abv                Float?
+  ibu                Float?
+  shelfLifeDays      Int?
+  tags               String[]  @default([])
+  lastPurchaseCost   Float?
+  lastPurchaseAt     DateTime?
+  avgCost            Float?
   priceLastUpdatedAt DateTime?
-  
+
   // Novos campos para gestão avançada de inventário
-  expirationDate DateTime? // Data de validade
-  batchNumber String? // Número do lote
+  expirationDate      DateTime? // Data de validade
+  batchNumber         String? // Número do lote
   supplierProductCode String? // Código do fornecedor
-  barcode String? @unique // Código de barras (agora único e indexado)
-  barcodeType String? // EAN13, EAN8, CODE128, etc
-  weight Float? // Peso em kg
-  volume Float? // Volume em litros
-  image String? // URL da imagem
-  description String? // Descrição detalhada
-  nutritionalInfo Json? // Informações nutricionais
-  allergens String[] @default([]) // Alérgenos
+  barcode             String?   @unique // Código de barras (agora único e indexado)
+  barcodeType         String? // EAN13, EAN8, CODE128, etc
+  weight              Float? // Peso em kg
+  volume              Float? // Volume em litros
+  image               String? // URL da imagem
+  description         String? // Descrição detalhada
+  nutritionalInfo     Json? // Informações nutricionais
+  allergens           String[]  @default([]) // Alérgenos
   storageInstructions String? // Instruções de armazenamento
-  
+
   // Campos para produtos sob encomenda
-  isOrderOnly         Boolean  @default(false)  // Somente sob encomenda?
-  leadTimeDays        Int?                      // Prazo de produção (dias)
-  minOrderQuantity    Int?                      // Quantidade mínima
-  maxOrderQuantity    Int?                      // Quantidade máxima
-  requiresDeposit     Boolean  @default(false)  // Requer sinal?
-  depositPercentage   Float?                    // % de sinal
-  availableForOrder   Boolean  @default(true)   // Disponível para encomenda?
-  orderInstructions   String?                   // Instruções especiais
-  
+  isOrderOnly       Boolean @default(false) // Somente sob encomenda?
+  leadTimeDays      Int? // Prazo de produção (dias)
+  minOrderQuantity  Int? // Quantidade mínima
+  maxOrderQuantity  Int? // Quantidade máxima
+  requiresDeposit   Boolean @default(false) // Requer sinal?
+  depositPercentage Float? // % de sinal
+  availableForOrder Boolean @default(true) // Disponível para encomenda?
+  orderInstructions String? // Instruções especiais
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  inventory Inventory?
+  inventory           Inventory?
   productPointsOfSale ProductPointOfSale[]
-  saleItems SaleItem[]
-  priceHistories ProductPriceHistory[]
-  inventoryMovements InventoryMovement[]
-  pendingCartItems PendingCartItem[]
-  batches Batch[]
-  auditItems InventoryAuditItem[]
-  orderItems OrderItem[]
+  saleItems           SaleItem[]
+  priceHistories      ProductPriceHistory[]
+  inventoryMovements  InventoryMovement[]
+  pendingCartItems    PendingCartItem[]
+  batches             Batch[]
+  auditItems          InventoryAuditItem[]
+  orderItems          OrderItem[]
 
   @@index([isActive]) // Para filtrar produtos ativos
   @@index([category]) // Para filtrar por categoria
@@ -292,37 +301,37 @@ model Product {
 }
 
 model Inventory {
-  id        String @id @default(cuid())
-  productId String @unique
+  id                      String    @id @default(cuid())
+  productId               String    @unique
   // Quantidades por local
-  coldRoomQuantity Int @default(0) // Câmara fria
-  houseQuantity     Int @default(0) // Casa
-  salePointQuantity Int @default(0) // Pontos de venda
+  coldRoomQuantity        Int       @default(0) // Câmara fria
+  houseQuantity           Int       @default(0) // Casa
+  salePointQuantity       Int       @default(0) // Pontos de venda
   // Estoque mínimo por local
-  coldRoomMinStock  Int @default(10)
-  houseMinStock     Int @default(5)
-  salePointMinStock Int @default(2)
-  reservedQuantity  Int @default(0)
-  damagedQuantity   Int @default(0)
-  inTransitQuantity Int @default(0)
-  safetyStock       Int?
-  reorderLeadTimeDays Int?
-  lastRestockedAt   DateTime?
-  lastAuditedAt     DateTime?
+  coldRoomMinStock        Int       @default(10)
+  houseMinStock           Int       @default(5)
+  salePointMinStock       Int       @default(2)
+  reservedQuantity        Int       @default(0)
+  damagedQuantity         Int       @default(0)
+  inTransitQuantity       Int       @default(0)
+  safetyStock             Int?
+  reorderLeadTimeDays     Int?
+  lastRestockedAt         DateTime?
+  lastAuditedAt           DateTime?
   averageDailyConsumption Float?
-  turnoverDays      Float?
-  
+  turnoverDays            Float?
+
   // Novos campos para análises avançadas
-  reorderPoint      Int? // Ponto de reposição
+  reorderPoint          Int? // Ponto de reposição
   economicOrderQuantity Int? // Quantidade econômica de pedido
-  abcClass          String? // Classificação ABC (A, B, C)
-  revenueContribution Float? // % de contribuição para receita
-  lastSoldAt        DateTime? // Última venda
-  stockoutCount     Int @default(0) // Número de vezes que ficou sem estoque
-  lastStockoutAt    DateTime? // Última vez que ficou sem estoque
-  stockValue        Float? // Valor total do estoque (custo * quantidade)
-  
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  abcClass              String? // Classificação ABC (A, B, C)
+  revenueContribution   Float? // % de contribuição para receita
+  lastSoldAt            DateTime? // Última venda
+  stockoutCount         Int       @default(0) // Número de vezes que ficou sem estoque
+  lastStockoutAt        DateTime? // Última vez que ficou sem estoque
+  stockValue            Float? // Valor total do estoque (custo * quantidade)
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@index([abcClass])
@@ -331,12 +340,12 @@ model Inventory {
 }
 
 model ProductPointOfSale {
-  id            String @id @default(cuid())
+  id            String      @id @default(cuid())
   productId     String
   pointOfSaleId String
-  quantity      Int @default(0)
-  minStock      Int @default(2)
-  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity      Int         @default(0)
+  minStock      Int         @default(2)
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
   pointOfSale   PointOfSale @relation(fields: [pointOfSaleId], references: [id], onDelete: Cascade)
 
   @@unique([productId, pointOfSaleId])
@@ -345,44 +354,45 @@ model ProductPointOfSale {
 }
 
 model Sale {
-  id        String @id @default(cuid())
-  date      DateTime @default(now())
-  total     Float
-  status    String @default("completed") // 'pending', 'completed', 'cancelled'
-  paymentMethod String?
-  customerName String?
-  customerEmail String?
-  customerPhone String?
+  id               String   @id @default(cuid())
+  date             DateTime @default(now())
+  total            Float
+  status           String   @default("completed") // 'pending', 'completed', 'cancelled'
+  paymentMethod    String?
+  customerName     String?
+  customerEmail    String?
+  customerPhone    String?
   customerDocument String?
-  customerAddress String?
-  customerId String?
-  channel   String?
-  subtotal  Float?
-  discountValue Float @default(0)
-  taxValue  Float @default(0)
-  serviceCharge Float @default(0)
-  costOfGoods Float @default(0)
-  grossMargin Float @default(0)
-  pointOfSaleId String?
-  cashSessionId String?
-  notes     String?
-  pendingCartId String? @unique
-  metadata Json?
-  createdById   String?
-  
+  customerAddress  String?
+  customerId       String?
+  channel          String?
+  subtotal         Float?
+  discountValue    Float    @default(0)
+  taxValue         Float    @default(0)
+  serviceCharge    Float    @default(0)
+  costOfGoods      Float    @default(0)
+  grossMargin      Float    @default(0)
+  pointOfSaleId    String?
+  cashSessionId    String?
+  notes            String?
+  pendingCartId    String?  @unique
+  metadata         Json?
+  createdById      String?
+
   // Campos para impressão térmica
-  printedAt     DateTime?
-  printJobId    String?
-  printStatus   String?   // pending, success, failed
-  
-  items     SaleItem[]
-  payments  SalePayment[]
-  pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
-  customer Customer? @relation(fields: [customerId], references: [id])
-  cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
-  pendingCart PendingCart? @relation("SalePendingCart", fields: [pendingCartId], references: [id])
+  printedAt   DateTime?
+  printJobId  String?
+  printStatus String? // pending, success, failed
+
+  items              SaleItem[]
+  payments           SalePayment[]
+  pointOfSale        PointOfSale?        @relation(fields: [pointOfSaleId], references: [id])
+  customer           Customer?           @relation(fields: [customerId], references: [id])
+  cashSession        CashSession?        @relation(fields: [cashSessionId], references: [id])
+  pendingCart        PendingCart?        @relation("SalePendingCart", fields: [pendingCartId], references: [id])
   inventoryMovements InventoryMovement[]
-  createdBy     User?   @relation("SaleCreatedBy", fields: [createdById], references: [id])
+  createdBy          User?               @relation("SaleCreatedBy", fields: [createdById], references: [id])
+  delivery           Delivery?
 
   @@index([customerId])
   @@index([cashSessionId])
@@ -395,46 +405,47 @@ model Sale {
 }
 
 model Customer {
-  id        String   @id @default(cuid())
-  name      String
-  type      PersonType @default(INDIVIDUAL)
-  document  String?  @unique
-  phone     String?  @unique
-  secondaryPhone String?
-  email     String?
-  whatsapp  String?
-  address   String?
-  addressNumber String?
-  addressComplement String?
-  district  String?
-  city      String?
-  state     String?
-  postalCode String?
-  country   String?
+  id                     String     @id @default(cuid())
+  name                   String
+  type                   PersonType @default(INDIVIDUAL)
+  document               String?    @unique
+  phone                  String?    @unique
+  secondaryPhone         String?
+  email                  String?
+  whatsapp               String?
+  address                String?
+  addressNumber          String?
+  addressComplement      String?
+  district               String?
+  city                   String?
+  state                  String?
+  postalCode             String?
+  country                String?
   preferredPaymentMethod String?
-  paymentTerms String?
-  creditLimit Float?
-  creditUsed Float @default(0)
-  isBlocked Boolean @default(false)
-  blockedReason String?
-  notes     String?
-  tags      String[] @default([])
-  birthDate DateTime?
-  isActive  Boolean @default(true)
-  isDelinquent Boolean @default(false)
-  lastPurchaseAt DateTime?
-  averageTicket Float?
-  totalSpend Float @default(0)
-  totalOrders Int @default(0)
-  metadata Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  paymentTerms           String?
+  creditLimit            Float?
+  creditUsed             Float      @default(0)
+  isBlocked              Boolean    @default(false)
+  blockedReason          String?
+  notes                  String?
+  tags                   String[]   @default([])
+  birthDate              DateTime?
+  isActive               Boolean    @default(true)
+  isDelinquent           Boolean    @default(false)
+  lastPurchaseAt         DateTime?
+  averageTicket          Float?
+  totalSpend             Float      @default(0)
+  totalOrders            Int        @default(0)
+  metadata               Json?
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
 
-  sales Sale[]
-  pendingCarts PendingCart[]
-  payments SalePayment[]
+  sales         Sale[]
+  pendingCarts  PendingCart[]
+  payments      SalePayment[]
   bonifications CustomerBonification[]
-  orders Order[]
+  orders        Order[]
+  deliveries    Delivery[]
 }
 
 model CustomerBonification {
@@ -454,14 +465,14 @@ model CustomerBonification {
 }
 
 model SaleItem {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   saleId    String
   productId String
   quantity  Int
   price     Float
   unitCost  Float?
-  discount  Float? @default(0)
-  sale      Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  discount  Float?  @default(0)
+  sale      Sale    @relation(fields: [saleId], references: [id], onDelete: Cascade)
   product   Product @relation(fields: [productId], references: [id])
 
   @@unique([saleId, productId])
@@ -469,52 +480,53 @@ model SaleItem {
 }
 
 model PointOfSale {
-  id        String @id @default(cuid())
-  name      String @unique
-  isActive  Boolean @default(true)
-  code      String? @unique
-  channel   String?
+  id          String   @id @default(cuid())
+  name        String   @unique
+  isActive    Boolean  @default(true)
+  code        String?  @unique
+  channel     String?
   managerName String?
-  address   String?
-  city      String?
-  state     String?
-  country   String?
-  timezone  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  address     String?
+  city        String?
+  state       String?
+  country     String?
+  timezone    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   productPointsOfSale ProductPointOfSale[]
-  sales     Sale[]
-  inventoryMovements InventoryMovement[]
-  cashSessions CashSession[]
-  pendingCarts PendingCart[]
-  dailyReports DailyReport[]
-  orders Order[]
-  userPointsOfSale UserPointOfSale[]
-  hardwareConfig HardwareConfig?
+  sales               Sale[]
+  inventoryMovements  InventoryMovement[]
+  cashSessions        CashSession[]
+  pendingCarts        PendingCart[]
+  dailyReports        DailyReport[]
+  orders              Order[]
+  userPointsOfSale    UserPointOfSale[]
+  hardwareConfig      HardwareConfig?
+  deliveries          Delivery[]
 }
 
 model SalePayment {
-  id        String @id @default(cuid())
-  saleId    String
-  method    String
-  amount    Float
-  dueDate   DateTime?
-  status    PaymentStatus @default(PENDING)
-  receivedAt DateTime?
-  paidAmount Float @default(0)
-  reference String?
-  notes     String?
-  cashSessionId String?
+  id                String        @id @default(cuid())
+  saleId            String
+  method            String
+  amount            Float
+  dueDate           DateTime?
+  status            PaymentStatus @default(PENDING)
+  receivedAt        DateTime?
+  paidAmount        Float         @default(0)
+  reference         String?
+  notes             String?
+  cashSessionId     String?
   installmentNumber Int?
   installmentsTotal Int?
-  customerId String?
+  customerId        String?
   overdueNotifiedAt DateTime?
   externalReference String?
-  metadata Json?
-  sale      Sale @relation(fields: [saleId], references: [id], onDelete: Cascade)
-  cashSession CashSession? @relation(fields: [cashSessionId], references: [id])
-  customer Customer? @relation(fields: [customerId], references: [id])
+  metadata          Json?
+  sale              Sale          @relation(fields: [saleId], references: [id], onDelete: Cascade)
+  cashSession       CashSession?  @relation(fields: [cashSessionId], references: [id])
+  customer          Customer?     @relation(fields: [customerId], references: [id])
 
   @@index([saleId])
   @@index([cashSessionId])
@@ -522,39 +534,39 @@ model SalePayment {
 }
 
 model ProductPriceHistory {
-  id        String @id @default(cuid())
-  productId String
-  cost      Float
-  salePrice Float
+  id          String   @id @default(cuid())
+  productId   String
+  cost        Float
+  salePrice   Float
   effectiveAt DateTime @default(now())
-  source    String?
-  notes     String?
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  source      String?
+  notes       String?
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId, effectiveAt])
 }
 
 model PendingCart {
-  id             String            @id @default(cuid())
-  status         PendingCartStatus @default(ACTIVE)
-  pointOfSaleId  String?
-  createdById    String
-  customerId     String?
-  expiresAt      DateTime?
-  resumedAt      DateTime?
-  discountValue  Float @default(0)
-  serviceCharge  Float @default(0)
-  subtotal       Float @default(0)
-  total          Float @default(0)
-  notes          String?
-  metadata       Json?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  pointOfSale    PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
-  createdBy      User @relation("UserPendingCarts", fields: [createdById], references: [id])
-  customer       Customer? @relation(fields: [customerId], references: [id])
-  sale           Sale? @relation("SalePendingCart")
-  items          PendingCartItem[]
+  id            String            @id @default(cuid())
+  status        PendingCartStatus @default(ACTIVE)
+  pointOfSaleId String?
+  createdById   String
+  customerId    String?
+  expiresAt     DateTime?
+  resumedAt     DateTime?
+  discountValue Float             @default(0)
+  serviceCharge Float             @default(0)
+  subtotal      Float             @default(0)
+  total         Float             @default(0)
+  notes         String?
+  metadata      Json?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  pointOfSale   PointOfSale?      @relation(fields: [pointOfSaleId], references: [id])
+  createdBy     User              @relation("UserPendingCarts", fields: [createdById], references: [id])
+  customer      Customer?         @relation(fields: [customerId], references: [id])
+  sale          Sale?             @relation("SalePendingCart")
+  items         PendingCartItem[]
 
   @@index([pointOfSaleId, status])
   @@index([customerId])
@@ -562,18 +574,18 @@ model PendingCart {
 }
 
 model PendingCartItem {
-  id        String @id @default(cuid())
+  id        String      @id @default(cuid())
   cartId    String
   productId String
   quantity  Int
   price     Float
-  discount  Float @default(0)
+  discount  Float       @default(0)
   notes     String?
   metadata  Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
   cart      PendingCart @relation(fields: [cartId], references: [id], onDelete: Cascade)
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product     @relation(fields: [productId], references: [id])
 
   @@index([cartId])
   @@index([productId])
@@ -588,31 +600,31 @@ model DailyReport {
   pointOfSaleId      String?
   cashSessionId      String?
   totalsByMethod     Json
-  subtotal           Float @default(0)
-  discountTotal      Float @default(0)
-  taxTotal           Float @default(0)
-  serviceChargeTotal Float @default(0)
-  grossTotal         Float @default(0)
-  netTotal           Float @default(0)
-  
+  subtotal           Float             @default(0)
+  discountTotal      Float             @default(0)
+  taxTotal           Float             @default(0)
+  serviceChargeTotal Float             @default(0)
+  grossTotal         Float             @default(0)
+  netTotal           Float             @default(0)
+
   // Armazenamento de PDFs no banco (novo sistema)
-  pdfData            Bytes?            // PDF armazenado diretamente no banco
-  csvData            Bytes?            // CSV armazenado diretamente no banco
-  
+  pdfData Bytes? // PDF armazenado diretamente no banco
+  csvData Bytes? // CSV armazenado diretamente no banco
+
   // Campos legados (compatibilidade com sistema antigo)
-  fileUrl            String?
-  fileType           String?
-  storageKey         String?
-  
-  sentAt             DateTime?
-  resentCount        Int @default(0)
-  lastResentAt       DateTime?
-  deliveryMetadata   Json?
-  metadata           Json?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  pointOfSale        PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
-  cashSession        CashSession? @relation(fields: [cashSessionId], references: [id])
+  fileUrl    String?
+  fileType   String?
+  storageKey String?
+
+  sentAt           DateTime?
+  resentCount      Int          @default(0)
+  lastResentAt     DateTime?
+  deliveryMetadata Json?
+  metadata         Json?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  pointOfSale      PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  cashSession      CashSession? @relation(fields: [cashSessionId], references: [id])
 
   @@unique([reportDate, pointOfSaleId])
   @@index([cashSessionId])
@@ -620,27 +632,27 @@ model DailyReport {
 }
 
 model InventoryMovement {
-  id        String @id @default(cuid())
-  productId String
-  saleId    String?
-  pointOfSaleId String?
-  batchId   String? // Relacionar com lote específico
-  type      InventoryMovementType
-  quantity  Int
-  unitCost  Float?
-  fromLocation InventoryLocation?
-  toLocation   InventoryLocation?
+  id               String                @id @default(cuid())
+  productId        String
+  saleId           String?
+  pointOfSaleId    String?
+  batchId          String? // Relacionar com lote específico
+  type             InventoryMovementType
+  quantity         Int
+  unitCost         Float?
+  fromLocation     InventoryLocation?
+  toLocation       InventoryLocation?
   adjustmentReason String?
-  notes     String?
-  performedBy String?
-  performedById String?
-  occurredAt DateTime @default(now())
-  
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sale      Sale? @relation(fields: [saleId], references: [id])
-  pointOfSale PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
-  batch     Batch? @relation(fields: [batchId], references: [id])
-  performedByUser User? @relation("MovementPerformedBy", fields: [performedById], references: [id])
+  notes            String?
+  performedBy      String?
+  performedById    String?
+  occurredAt       DateTime              @default(now())
+
+  product         Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sale            Sale?        @relation(fields: [saleId], references: [id])
+  pointOfSale     PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  batch           Batch?       @relation(fields: [batchId], references: [id])
+  performedByUser User?        @relation("MovementPerformedBy", fields: [performedById], references: [id])
 
   @@index([productId, occurredAt])
   @@index([saleId])
@@ -651,25 +663,25 @@ model InventoryMovement {
 
 // Novo modelo para gestão de lotes
 model Batch {
-  id               String   @id @default(cuid())
-  productId        String
-  batchNumber      String   @unique
-  supplier         String?
-  productionDate   DateTime?
-  expirationDate   DateTime?
-  receivedDate     DateTime @default(now())
-  quantity         Int
-  remainingQuantity Int
-  cost             Float
-  location         InventoryLocation
-  notes            String?
-  qrCode           String?  // QR Code gerado para o lote
-  status           BatchStatus @default(ACTIVE)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  product          Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  id                 String               @id @default(cuid())
+  productId          String
+  batchNumber        String               @unique
+  supplier           String?
+  productionDate     DateTime?
+  expirationDate     DateTime?
+  receivedDate       DateTime             @default(now())
+  quantity           Int
+  remainingQuantity  Int
+  cost               Float
+  location           InventoryLocation
+  notes              String?
+  qrCode             String? // QR Code gerado para o lote
+  status             BatchStatus          @default(ACTIVE)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  product            Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventoryMovements InventoryMovement[]
-  auditItems       InventoryAuditItem[]
+  auditItems         InventoryAuditItem[]
 
   @@index([productId])
   @@index([expirationDate])
@@ -685,20 +697,20 @@ enum BatchStatus {
 
 // Modelo para auditorias de inventário
 model InventoryAudit {
-  id           String   @id @default(cuid())
-  startedAt    DateTime @default(now())
-  completedAt  DateTime?
-  status       AuditStatus @default(IN_PROGRESS)
-  location     InventoryLocation? // Auditar local específico
-  performedBy  String[] @default([])
-  totalItems   Int @default(0)
-  itemsWithDifference Int @default(0)
-  accuracyRate Float?
+  id                   String               @id @default(cuid())
+  startedAt            DateTime             @default(now())
+  completedAt          DateTime?
+  status               AuditStatus          @default(IN_PROGRESS)
+  location             InventoryLocation? // Auditar local específico
+  performedBy          String[]             @default([])
+  totalItems           Int                  @default(0)
+  itemsWithDifference  Int                  @default(0)
+  accuracyRate         Float?
   totalValueDifference Float?
-  notes        String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  items        InventoryAuditItem[]
+  notes                String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  items                InventoryAuditItem[]
 }
 
 enum AuditStatus {
@@ -709,19 +721,19 @@ enum AuditStatus {
 
 // Itens da auditoria
 model InventoryAuditItem {
-  id                String   @id @default(cuid())
-  auditId           String
-  productId         String
-  batchId           String?
-  expectedQuantity  Int
-  countedQuantity   Int
-  difference        Int
-  notes             String?
-  photoUrl          String?
-  countedAt         DateTime @default(now())
-  audit             InventoryAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
-  product           Product @relation(fields: [productId], references: [id])
-  batch             Batch? @relation(fields: [batchId], references: [id])
+  id               String         @id @default(cuid())
+  auditId          String
+  productId        String
+  batchId          String?
+  expectedQuantity Int
+  countedQuantity  Int
+  difference       Int
+  notes            String?
+  photoUrl         String?
+  countedAt        DateTime       @default(now())
+  audit            InventoryAudit @relation(fields: [auditId], references: [id], onDelete: Cascade)
+  product          Product        @relation(fields: [productId], references: [id])
+  batch            Batch?         @relation(fields: [batchId], references: [id])
 
   @@index([auditId])
   @@index([productId])
@@ -759,22 +771,22 @@ enum CashTransactionType {
 }
 
 model CashSession {
-  id                     String             @id @default(cuid())
+  id                     String            @id @default(cuid())
   userId                 String
   pointOfSaleId          String?
-  openedAt               DateTime           @default(now())
+  openedAt               DateTime          @default(now())
   closedAt               DateTime?
-  openingAmount          Float              @default(0)
+  openingAmount          Float             @default(0)
   closingAmount          Float?
   expectedClosingAmount  Float?
   differenceAmount       Float?
-  status                 CashSessionStatus  @default(OPEN)
+  status                 CashSessionStatus @default(OPEN)
   notes                  String?
   hardwareEventReference String?
-  createdAt              DateTime           @default(now())
-  updatedAt              DateTime           @updatedAt
-  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  pointOfSale            PointOfSale?       @relation(fields: [pointOfSaleId], references: [id])
+  createdAt              DateTime          @default(now())
+  updatedAt              DateTime          @updatedAt
+  user                   User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pointOfSale            PointOfSale?      @relation(fields: [pointOfSaleId], references: [id])
   transactions           CashTransaction[]
   sales                  Sale[]
   payments               SalePayment[]
@@ -803,63 +815,64 @@ model CashTransaction {
 }
 
 model Order {
-  id              String        @id @default(cuid())
-  orderNumber     String        @unique  // Ex: "ENC-2025-001"
-  
+  id          String @id @default(cuid())
+  orderNumber String @unique // Ex: "ENC-2025-001"
+
   // Cliente
   customerId      String?
-  customer        Customer?     @relation(fields: [customerId], references: [id])
+  customer        Customer? @relation(fields: [customerId], references: [id])
   customerName    String
   customerPhone   String
   customerEmail   String?
   customerAddress String?
-  
+
   // Status e prioridade
-  status          OrderStatus   @default(PENDING)
-  priority        OrderPriority @default(MEDIUM)
-  
+  status   OrderStatus   @default(PENDING)
+  priority OrderPriority @default(MEDIUM)
+
   // Datas importantes
-  orderedAt       DateTime      @default(now())
-  confirmedAt     DateTime?
-  promisedAt      DateTime?     // Data prometida de entrega
-  readyAt         DateTime?
-  deliveredAt     DateTime?
-  cancelledAt     DateTime?
-  
+  orderedAt   DateTime  @default(now())
+  confirmedAt DateTime?
+  promisedAt  DateTime? // Data prometida de entrega
+  readyAt     DateTime?
+  deliveredAt DateTime?
+  cancelledAt DateTime?
+
   // Financeiro
-  subtotal        Float
-  discountValue   Float         @default(0)
-  deliveryFee     Float         @default(0)
-  total           Float
-  depositPaid     Float         @default(0)
-  balanceDue      Float
-  paymentStatus   PaymentStatus @default(PENDING)
-  
+  subtotal      Float
+  discountValue Float         @default(0)
+  deliveryFee   Float         @default(0)
+  total         Float
+  depositPaid   Float         @default(0)
+  balanceDue    Float
+  paymentStatus PaymentStatus @default(PENDING)
+
   // Itens
-  items           OrderItem[]
-  
+  items OrderItem[]
+
   // Observações
-  notes           String?       // Observações do cliente
-  internalNotes   String?       // Notas internas (não visível para cliente)
-  specialRequests String?       // Pedidos especiais
-  
+  notes           String? // Observações do cliente
+  internalNotes   String? // Notas internas (não visível para cliente)
+  specialRequests String? // Pedidos especiais
+
   // Rastreamento
-  statusHistory   Json?         // Histórico de mudanças de status
-  notifications   Json?         // Notificações enviadas
-  
+  statusHistory Json? // Histórico de mudanças de status
+  notifications Json? // Notificações enviadas
+
   // Metadados
-  createdBy       String?
-  assignedTo      String?
-  source          String?
-  pointOfSaleId   String?
-  
-  pointOfSale     PointOfSale?  @relation(fields: [pointOfSaleId], references: [id])
-  createdByUser   User?         @relation("OrderCreatedBy", fields: [createdBy], references: [id])
-  assignedToUser  User?         @relation("OrderAssignedTo", fields: [assignedTo], references: [id])
-  
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  
+  createdBy     String?
+  assignedTo    String?
+  source        String?
+  pointOfSaleId String?
+
+  pointOfSale    PointOfSale? @relation(fields: [pointOfSaleId], references: [id])
+  createdByUser  User?        @relation("OrderCreatedBy", fields: [createdBy], references: [id])
+  assignedToUser User?        @relation("OrderAssignedTo", fields: [assignedTo], references: [id])
+  delivery       Delivery?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([customerId])
   @@index([status])
   @@index([promisedAt])
@@ -869,73 +882,266 @@ model Order {
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
-  orderId     String
-  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  
-  productId   String
-  product     Product  @relation(fields: [productId], references: [id])
-  
-  quantity    Int
-  unitPrice   Float
-  discount    Float    @default(0)
-  subtotal    Float
-  
+  id      String @id @default(cuid())
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  quantity  Int
+  unitPrice Float
+  discount  Float @default(0)
+  subtotal  Float
+
   // Customizações
-  customizations Json?  // Ex: { engraving: "Feliz Aniversário", color: "azul" }
+  customizations Json? // Ex: { engraving: "Feliz Aniversário", color: "azul" }
   notes          String?
-  
+
   // Status individual do item
-  status      String   @default("pending")  // pending, in_production, ready
-  
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  
+  status String @default("pending") // pending, in_production, ready
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([orderId])
   @@index([productId])
 }
 
 // Modelo para trabalhos de impressão
 model PrintJob {
-  id            String   @id @default(cuid())
-  type          String   // sale, cash-transaction, report
-  data          Json
-  status        String   // pending, printing, completed, failed
-  error         String?
-  createdAt     DateTime @default(now())
-  completedAt   DateTime?
-  retryCount    Int      @default(0)
-  
+  id          String    @id @default(cuid())
+  type        String // sale, cash-transaction, report
+  data        Json
+  status      String // pending, printing, completed, failed
+  error       String?
+  createdAt   DateTime  @default(now())
+  completedAt DateTime?
+  retryCount  Int       @default(0)
+
   @@index([status])
   @@index([createdAt])
 }
 
 // Modelo para configurações de hardware (scanner e impressora)
 model HardwareConfig {
-  id            String   @id @default(cuid())
-  pointOfSaleId String   @unique
+  id            String      @id @default(cuid())
+  pointOfSaleId String      @unique
   pointOfSale   PointOfSale @relation(fields: [pointOfSaleId], references: [id], onDelete: Cascade)
-  
+
   // Scanner
   scannerEnabled Boolean @default(false)
   scannerAutoAdd Boolean @default(true)
   scannerPrefix  String?
   scannerSuffix  String?
-  
+
   // Printer
-  printerEnabled Boolean @default(false)
-  printerType    String  @default("USB") // USB, Network, Serial
+  printerEnabled    Boolean @default(false)
+  printerType       String  @default("USB") // USB, Network, Serial
   printerConnection String?
-  printerWidth   Int     @default(48)
-  printerEncoding String @default("UTF-8")
-  autoPrint      Boolean @default(true)
-  
+  printerWidth      Int     @default(48)
+  printerEncoding   String  @default("UTF-8")
+  autoPrint         Boolean @default(true)
+
   // Logo e customização
-  logoUrl        String?
-  footerMessage  String?
-  
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  
+  logoUrl       String?
+  footerMessage String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([pointOfSaleId])
+}
+
+// ========================================
+// SISTEMA DE DELIVERY
+// ========================================
+
+enum DeliveryStatus {
+  PENDING // Aguardando preparo
+  PREPARING // Em preparo
+  READY_FOR_PICKUP // Pronto para retirada
+  IN_TRANSIT // Em trânsito
+  DELIVERED // Entregue
+  CANCELLED // Cancelado
+  FAILED // Falha na entrega
+}
+
+enum VehicleType {
+  MOTORCYCLE // Moto
+  CAR // Carro
+  BICYCLE // Bicicleta
+  FOOT // A pé
+}
+
+// Zonas de Entrega
+model DeliveryZone {
+  id          String  @id @default(cuid())
+  name        String // "Centro", "Zona Norte", etc
+  description String?
+
+  // Financeiro
+  baseDeliveryFee   Float  @default(0) // Taxa base
+  minOrderValue     Float  @default(0) // Pedido mínimo
+  freeDeliveryAbove Float? // Grátis acima de X
+
+  // Tempo estimado
+  estimatedTime Int @default(30) // minutos
+
+  // Configurações
+  isActive    Boolean @default(true)
+  maxDistance Float? // km
+
+  // Geolocalização (opcional)
+  postalCodes   String[] @default([]) // CEPs atendidos
+  neighborhoods String[] @default([]) // Bairros
+  centerLat     Float? // Centro da zona
+  centerLng     Float?
+  radius        Float? // Raio em km
+
+  // Preços por tipo de veículo
+  motorcycleFee Float?
+  carFee        Float?
+  bicycleFee    Float?
+
+  deliveries Delivery[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([isActive])
+}
+
+// Entregadores
+model DeliveryDriver {
+  id       String  @id @default(cuid())
+  name     String
+  phone    String  @unique
+  email    String?
+  document String? @unique // CPF
+
+  // Veículo
+  vehicleType  VehicleType @default(MOTORCYCLE)
+  vehiclePlate String?
+  vehicleModel String?
+  vehicleColor String?
+
+  // Status
+  isActive    Boolean @default(true)
+  isAvailable Boolean @default(true)
+
+  // Estatísticas
+  rating               Float? // Média de avaliações
+  totalDeliveries      Int    @default(0)
+  successfulDeliveries Int    @default(0)
+  failedDeliveries     Int    @default(0)
+
+  // Localização atual (opcional - para rastreamento)
+  currentLat         Float?
+  currentLng         Float?
+  lastLocationUpdate DateTime?
+
+  // Metadados
+  notes String?
+  photo String? // URL da foto
+
+  deliveries Delivery[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@index([phone])
+  @@index([isActive])
+  @@index([isAvailable])
+}
+
+// Delivery (Entrega)
+model Delivery {
+  id             String @id @default(cuid())
+  deliveryNumber String @unique // "DEL-2025-001"
+
+  // Relacionamentos
+  saleId        String?         @unique
+  sale          Sale?           @relation(fields: [saleId], references: [id])
+  orderId       String?         @unique
+  order         Order?          @relation(fields: [orderId], references: [id])
+  customerId    String
+  customer      Customer        @relation(fields: [customerId], references: [id])
+  zoneId        String?
+  zone          DeliveryZone?   @relation(fields: [zoneId], references: [id])
+  driverId      String?
+  driver        DeliveryDriver? @relation(fields: [driverId], references: [id])
+  pointOfSaleId String?
+  pointOfSale   PointOfSale?    @relation(fields: [pointOfSaleId], references: [id])
+
+  // Endereço de entrega (pode ser diferente do cadastro do cliente)
+  deliveryAddress   String
+  addressNumber     String?
+  addressComplement String?
+  district          String
+  city              String
+  state             String
+  postalCode        String?
+  referencePoint    String? // "Próximo ao mercado X"
+
+  // Coordenadas (opcional)
+  latitude  Float?
+  longitude Float?
+
+  // Status e timeline
+  status             DeliveryStatus @default(PENDING)
+  scheduledFor       DateTime? // Entrega agendada
+  preparedAt         DateTime?
+  pickedUpAt         DateTime? // Motorista pegou
+  departedAt         DateTime? // Saiu do ponto de venda
+  arrivedAt          DateTime? // Chegou no destino
+  deliveredAt        DateTime?
+  cancelledAt        DateTime?
+  cancellationReason String?
+
+  // Financeiro
+  subtotal      Float @default(0)
+  deliveryFee   Float
+  discountValue Float @default(0)
+  total         Float
+
+  // Cálculos
+  distance    Float? // km
+  vehicleUsed VehicleType?
+
+  // Rastreamento e tempo
+  estimatedTime      Int? // minutos estimados
+  actualDeliveryTime Int? // tempo real em minutos
+
+  // Observações
+  notes                String? // Observações do cliente
+  deliveryInstructions String? // "Interfone 302", "Deixar com porteiro"
+  internalNotes        String? // Notas internas
+
+  // Pagamento
+  paymentMethod String? // cash, card, pix, prepaid
+  paidInAdvance Boolean       @default(false)
+  paymentStatus PaymentStatus @default(PENDING)
+  changeFor     Float? // Troco para quanto?
+
+  // Avaliação
+  rating        Int? // 1-5
+  ratingComment String?
+
+  // Metadados
+  statusHistory  Json? // Histórico de mudanças
+  driverLocation Json? // Última localização do entregador
+  metadata       Json?
+
+  createdById String?
+  createdBy   User?   @relation("DeliveryCreatedBy", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([status])
+  @@index([scheduledFor])
+  @@index([driverId])
+  @@index([zoneId])
+  @@index([deliveryNumber])
+  @@index([createdAt])
 }

@@ -28,7 +28,8 @@ import {
   DollarSign,
   LogOut,
   User,
-  Bell
+  Bell,
+  Truck
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -102,6 +103,14 @@ const navSections: Array<{
         icon: ShoppingCart,
         tag: "Live",
         permission: "createSales"
+      },
+      {
+        label: "Delivery",
+        description: "Entregas e pedidos",
+        href: "/dashboard/delivery",
+        icon: Truck,
+        tag: "Novo",
+        permission: "viewDeliveries"
       },
       {
         label: "Registro de Vendas",

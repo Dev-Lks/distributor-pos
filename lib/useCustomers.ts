@@ -105,3 +105,24 @@ export function useDeleteCustomer() {
     },
   })
 }
+
+// Hook para buscar clientes com termo de busca
+export function useSearchCustomers(query?: string) {
+  return useCustomers(query)
+}
+
+// Hook para buscar clientes recentes
+export function useRecentCustomers(limit: number = 10) {
+  return useQuery<CustomerSummary[]>({
+    queryKey: [...CUSTOMERS_QUERY_KEY, "recent", limit],
+    queryFn: async () => {
+      const response = await fetch(`/api/customers?sort=lastPurchaseAt&limit=${limit}`)
+      const data = await response.json()
+      if (!response.ok) {
+        throw new Error(data.error ?? "Falha ao buscar clientes recentes")
+      }
+      return data as CustomerSummary[]
+    },
+    staleTime: 1000 * 60 * 2,
+  })
+}
