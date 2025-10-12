@@ -402,12 +402,10 @@ export default function SalesPage() {
 
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Printer Status */}
-          {/* NOTA: Configuração de impressora foi movida para print-server separado */}
-          {/* Veja: /TUTORIAL_IMPRESSORA_TERMICA.md */}
           <PrinterStatus 
             status={printerStatus} 
             isPrinting={isPrinting}
-            // onClick={() => setIsHardwareSettingsOpen(true)} // Desabilitado - use print-server
+            onClick={() => setIsHardwareSettingsOpen(true)}
           />
 
           {/* Point of Sale Selector */}

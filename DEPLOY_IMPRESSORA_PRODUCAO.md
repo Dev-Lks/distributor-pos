@@ -183,11 +183,13 @@ Acesse: [Vercel Dashboard](https://vercel.com) → Seu Projeto → Settings → 
 Adicione:
 
 ```
-PRINT_SERVER_URL = https://seu-tunnel.trycloudflare.com
+PRINT_SERVER_URL = https://print.nitrobeer.com.br
 PRINT_SERVER_TOKEN = SuaChaveSecretaSuperSegura123!@#
 ```
 
 **⚠️ Use os mesmos valores do `.env` do print-server!**
+
+**✅ URL Permanente Configurada:** `https://print.nitrobeer.com.br` via Cloudflare Tunnel
 
 ### 2. Deploy
 
