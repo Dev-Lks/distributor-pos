@@ -41,8 +41,15 @@ export function useThermalPrinter(): UseThermalPrinter {
         body: JSON.stringify(config),
       })
 
+      const result = await response.json()
+
       if (!response.ok) {
-        throw new Error('Erro ao configurar impressora')
+        // Mostrar mensagem mais detalhada se disponível
+        toast.error(result.message || 'Erro ao configurar impressora', {
+          description: result.help || 'Verifique a documentação',
+          duration: 5000,
+        })
+        throw new Error(result.message || 'Erro ao configurar impressora')
       }
 
       toast.success('Impressora configurada com sucesso')
@@ -53,9 +60,11 @@ export function useThermalPrinter(): UseThermalPrinter {
         const data = await statusResponse.json()
         setStatus(data)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao configurar impressora:', error)
-      toast.error('Erro ao configurar impressora')
+      if (!error.message.includes('desabilitada')) {
+        toast.error('Erro ao configurar impressora')
+      }
       throw error
     }
   }, [])
