@@ -15,6 +15,7 @@ import { useDeliveryCart } from "../hooks/useDeliveryCart"
 import { ProductSelector } from "../components/ProductSelector"
 import { DeliveryCart } from "../components/DeliveryCart"
 import { AddressForm } from "../components/AddressForm"
+import { DateTimePicker } from "../components/DateTimePicker"
 import { toast } from "sonner"
 
 type Step = "customer" | "address" | "products" | "payment" | "review"
@@ -67,7 +68,7 @@ interface DeliveryFormData {
   deliveryInstructions: string
   
   // Agendamento
-  scheduledFor: string | null
+  scheduledFor?: string | null
 }
 
 export default function NewDeliveryPage() {
@@ -227,7 +228,7 @@ export default function NewDeliveryPage() {
               {/* Resumo do Cliente */}
               {formData.customerName && (
                 <div className="lg:col-span-1">
-                  <div className="sticky top-4 p-4 border rounded-lg bg-muted/20">
+                  <div className="sticky top-4 p-4 border border-border rounded-lg bg-card shadow-sm">
                     <h3 className="text-sm font-semibold mb-3">Cliente</h3>
                     <div className="space-y-2 text-sm">
                       <div>
@@ -364,12 +365,10 @@ export default function NewDeliveryPage() {
                   )}
 
                   <div className="sm:col-span-2">
-                    <Label htmlFor="scheduledFor">Agendamento (Opcional)</Label>
-                    <Input
-                      id="scheduledFor"
-                      type="datetime-local"
-                      value={formData.scheduledFor || ""}
-                      onChange={(e) => setFormData({ ...formData, scheduledFor: e.target.value })}
+                    <DateTimePicker
+                      value={formData.scheduledFor || null}
+                      onChange={(value) => setFormData({ ...formData, scheduledFor: value || undefined })}
+                      label="Agendamento (Opcional)"
                     />
                   </div>
                 </div>
@@ -377,7 +376,7 @@ export default function NewDeliveryPage() {
 
               {/* Resumo do Pedido */}
               <div className="lg:col-span-1">
-                <div className="sticky top-4 p-4 border rounded-lg bg-muted/20">
+                <div className="sticky top-4 p-4 border border-border rounded-lg bg-card shadow-sm">
                   <h3 className="text-sm font-semibold mb-3">Resumo do Pedido</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
@@ -414,11 +413,11 @@ export default function NewDeliveryPage() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Revisar Entrega</h2>
             
-            <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
+            <div className="space-y-3 bg-card border border-border p-4 rounded-lg shadow-sm">
               <div>
                 <div className="text-sm font-medium text-muted-foreground">Cliente</div>
                 <div className="font-medium">{formData.customerName}</div>
-                {formData.customerPhone && <div className="text-sm">{formData.customerPhone}</div>}
+                {formData.customerPhone && <div className="text-sm text-muted-foreground">{formData.customerPhone}</div>}
               </div>
 
               <div>
@@ -427,8 +426,8 @@ export default function NewDeliveryPage() {
                   {formData.deliveryAddress}, {formData.addressNumber}
                   {formData.addressComplement && ` - ${formData.addressComplement}`}
                 </div>
-                <div>{formData.district}, {formData.city} - {formData.state}</div>
-                {formData.postalCode && <div className="text-sm">{formData.postalCode}</div>}
+                <div className="text-muted-foreground">{formData.district}, {formData.city} - {formData.state}</div>
+                {formData.postalCode && <div className="text-sm text-muted-foreground">{formData.postalCode}</div>}
               </div>
 
               <div>
@@ -445,7 +444,7 @@ export default function NewDeliveryPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 pt-3 border-t">
+              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border">
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">Subtotal</div>
                   <div>R$ {subtotal.toFixed(2)}</div>
@@ -456,19 +455,33 @@ export default function NewDeliveryPage() {
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">Desconto</div>
-                  <div>R$ {totalDiscount.toFixed(2)}</div>
+                  <div className="text-green-600 dark:text-green-500">R$ {totalDiscount.toFixed(2)}</div>
                 </div>
                 <div>
                   <div className="text-sm font-medium text-muted-foreground">Total</div>
-                  <div className="text-lg font-bold">R$ {total.toFixed(2)}</div>
+                  <div className="text-lg font-bold text-primary">R$ {total.toFixed(2)}</div>
                 </div>
               </div>
 
               {formData.paymentMethod && (
-                <div>
+                <div className="pt-3 border-t border-border">
                   <div className="text-sm font-medium text-muted-foreground">Pagamento</div>
-                  <div>{formData.paymentMethod}</div>
-                  {formData.paidInAdvance && <div className="text-sm text-green-600">Pago antecipadamente</div>}
+                  <div className="font-medium">{formData.paymentMethod}</div>
+                  {formData.paidInAdvance && (
+                    <div className="text-sm text-green-600 dark:text-green-500">✓ Pago antecipadamente</div>
+                  )}
+                </div>
+              )}
+
+              {formData.scheduledFor && (
+                <div className="pt-3 border-t border-border">
+                  <div className="text-sm font-medium text-muted-foreground">Agendamento</div>
+                  <div className="font-medium">
+                    📅 {new Date(formData.scheduledFor).toLocaleString("pt-BR", {
+                      dateStyle: "full",
+                      timeStyle: "short"
+                    })}
+                  </div>
                 </div>
               )}
             </div>

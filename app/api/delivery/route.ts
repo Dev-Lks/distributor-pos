@@ -192,6 +192,7 @@ export async function POST(request: NextRequest) {
         zoneId: data.zoneId,
         driverId: data.driverId,
         pointOfSaleId: data.pointOfSaleId,
+        createdById: session.user.id, // ✅ Adicionado
         
         // Endereço
         deliveryAddress: data.deliveryAddress,
@@ -242,8 +243,6 @@ export async function POST(request: NextRequest) {
             },
           ],
         },
-        
-        createdById: session.user.id,
       },
       include: {
         customer: {
