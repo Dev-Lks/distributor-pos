@@ -77,10 +77,11 @@ export default function OrdersPage() {
         </div>
         <div className="flex gap-2">
           {/* Printer Status */}
+          {/* NOTA: Configuração de impressora foi movida para print-server separado */}
           <PrinterStatus 
             status={printerStatus} 
             isPrinting={isPrinting}
-            onClick={() => setIsHardwareSettingsOpen(true)}
+            // onClick={() => setIsHardwareSettingsOpen(true)} // Desabilitado - use print-server
           />
           <Link href="/dashboard/orders/new">
             <Button size="lg" className="w-full sm:w-auto">
