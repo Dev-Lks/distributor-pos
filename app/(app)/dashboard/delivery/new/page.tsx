@@ -144,7 +144,7 @@ export default function NewDeliveryPage() {
         return
       }
 
-      await createDelivery.mutateAsync({
+      const deliveryData = {
         customerId: formData.customerId,
         deliveryAddress: formData.deliveryAddress,
         addressNumber: formData.addressNumber || null,
@@ -163,7 +163,9 @@ export default function NewDeliveryPage() {
         paidInAdvance: formData.paidInAdvance || false,
         changeFor: formData.changeFor || null,
         scheduledFor: formData.scheduledFor || null,
-      })
+      }
+
+      await createDelivery.mutateAsync(deliveryData)
 
       toast.success("Entrega criada com sucesso!")
       clearCart()

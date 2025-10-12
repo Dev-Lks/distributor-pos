@@ -282,6 +282,206 @@ async function processCommand(printer, cmd) {
   }
 }
 
+// ==================== IMPRESSÃO DE DELIVERY ====================
+
+app.post('/print', async (req, res) => {
+  try {
+    if (!printer) {
+      return res.status(503).json({
+        success: false,
+        error: 'Impressora não disponível',
+      })
+    }
+    
+    const { type, data } = req.body
+    
+    if (type === 'delivery' && data) {
+      await printDelivery(data)
+      
+      return res.json({
+        success: true,
+        message: 'Comprovante de entrega impresso com sucesso',
+      })
+    }
+    
+    return res.status(400).json({
+      success: false,
+      error: 'Tipo de impressão não suportado',
+    })
+  } catch (error) {
+    console.error('❌ Erro ao imprimir:', error)
+    return res.status(500).json({
+      success: false,
+      error: error.message,
+    })
+  }
+})
+
+async function printDelivery(data) {
+  printer.clear()
+  
+  // Cabeçalho
+  printer.alignCenter()
+  printer.bold(true)
+  printer.setTextDoubleHeight()
+  printer.println(data.header.title)
+  printer.setTextNormal()
+  printer.bold(false)
+  printer.newLine()
+  
+  printer.println(`#${data.header.deliveryNumber}`)
+  printer.println(data.header.date)
+  printer.newLine()
+  
+  // Status
+  printer.bold(true)
+  printer.println(`Status: ${data.header.status}`)
+  printer.bold(false)
+  printer.drawLine()
+  printer.newLine()
+  
+  // Cliente
+  printer.alignLeft()
+  printer.bold(true)
+  printer.println('CLIENTE')
+  printer.bold(false)
+  printer.println(data.customer.name)
+  if (data.customer.phone) {
+    printer.println(`Tel: ${data.customer.phone}`)
+  }
+  printer.newLine()
+  
+  // Endereço
+  printer.bold(true)
+  printer.println('ENDERECO DE ENTREGA')
+  printer.bold(false)
+  printer.println(`${data.address.street}, ${data.address.number}`)
+  if (data.address.complement) {
+    printer.println(data.address.complement)
+  }
+  printer.println(`${data.address.district}`)
+  printer.println(`${data.address.city} - ${data.address.state}`)
+  if (data.address.postalCode) {
+    printer.println(`CEP: ${data.address.postalCode}`)
+  }
+  
+  if (data.address.reference) {
+    printer.newLine()
+    printer.println(`Ref: ${data.address.reference}`)
+  }
+  
+  if (data.address.instructions) {
+    printer.newLine()
+    printer.bold(true)
+    printer.println('INSTRUCOES:')
+    printer.bold(false)
+    printer.println(data.address.instructions)
+  }
+  
+  printer.drawLine()
+  printer.newLine()
+  
+  // Itens
+  if (data.items && data.items.length > 0) {
+    printer.bold(true)
+    printer.println('PRODUTOS')
+    printer.bold(false)
+    printer.newLine()
+    
+    data.items.forEach((item) => {
+      printer.println(`${item.quantity}x ${item.name}`)
+      printer.tableCustom([
+        { text: `  R$ ${item.unitPrice.toFixed(2)}`, align: 'LEFT', width: 0.5 },
+        { text: `R$ ${item.totalPrice.toFixed(2)}`, align: 'RIGHT', width: 0.5 }
+      ])
+      
+      if (item.discount > 0) {
+        printer.println(`  Desconto: -R$ ${item.discount.toFixed(2)}`)
+      }
+    })
+    
+    printer.drawLine()
+    printer.newLine()
+  }
+  
+  // Resumo Financeiro
+  printer.tableCustom([
+    { text: 'Subtotal:', align: 'LEFT', width: 0.6 },
+    { text: `R$ ${data.financial.subtotal.toFixed(2)}`, align: 'RIGHT', width: 0.4 }
+  ])
+  
+  if (data.financial.discountValue > 0) {
+    printer.tableCustom([
+      { text: 'Desconto:', align: 'LEFT', width: 0.6 },
+      { text: `-R$ ${data.financial.discountValue.toFixed(2)}`, align: 'RIGHT', width: 0.4 }
+    ])
+  }
+  
+  printer.tableCustom([
+    { text: 'Taxa de Entrega:', align: 'LEFT', width: 0.6 },
+    { text: `R$ ${data.financial.deliveryFee.toFixed(2)}`, align: 'RIGHT', width: 0.4 }
+  ])
+  
+  printer.drawLine()
+  
+  printer.bold(true)
+  printer.setTextDoubleHeight()
+  printer.tableCustom([
+    { text: 'TOTAL:', align: 'LEFT', width: 0.6 },
+    { text: `R$ ${data.financial.total.toFixed(2)}`, align: 'RIGHT', width: 0.4 }
+  ])
+  printer.setTextNormal()
+  printer.bold(false)
+  
+  printer.drawLine()
+  printer.newLine()
+  
+  // Pagamento
+  if (data.payment.method) {
+    printer.println(`Pagamento: ${data.payment.method}`)
+    if (data.payment.paidInAdvance) {
+      printer.println('✓ PAGO ANTECIPADAMENTE')
+    }
+    if (data.payment.changeFor) {
+      printer.println(`Troco para: R$ ${data.payment.changeFor.toFixed(2)}`)
+    }
+    printer.newLine()
+  }
+  
+  // Agendamento
+  if (data.scheduledFor) {
+    printer.bold(true)
+    printer.println('AGENDAMENTO:')
+    printer.bold(false)
+    printer.println(data.scheduledFor)
+    printer.newLine()
+  }
+  
+  // Observações
+  if (data.notes) {
+    printer.bold(true)
+    printer.println('OBSERVACOES:')
+    printer.bold(false)
+    printer.println(data.notes)
+    printer.newLine()
+  }
+  
+  // Rodapé
+  printer.drawLine()
+  printer.alignCenter()
+  printer.println(`Impresso por: ${data.footer.createdBy}`)
+  printer.println(data.footer.printedAt)
+  printer.newLine()
+  printer.newLine()
+  
+  // Cortar papel
+  printer.cut()
+  
+  // Executar
+  await printer.execute()
+  console.log('✅ Comprovante de entrega impresso')
+}
+
 // ==================== SERVIDOR ====================
 
 const PORT = process.env.PORT || 3001

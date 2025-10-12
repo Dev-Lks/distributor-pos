@@ -32,13 +32,13 @@ type DeliveryStatus =
   | "FAILED"
 
 const statusConfig: Record<DeliveryStatus, { label: string; color: string }> = {
-  PENDING: { label: "Pendente", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
-  PREPARING: { label: "Preparando", color: "bg-purple-100 text-purple-800 border-purple-300" },
-  READY_FOR_PICKUP: { label: "Pronto", color: "bg-indigo-100 text-indigo-800 border-indigo-300" },
-  IN_TRANSIT: { label: "Em Trânsito", color: "bg-orange-100 text-orange-800 border-orange-300" },
-  DELIVERED: { label: "Entregue", color: "bg-green-100 text-green-800 border-green-300" },
-  CANCELLED: { label: "Cancelado", color: "bg-red-100 text-red-800 border-red-300" },
-  FAILED: { label: "Falhou", color: "bg-red-100 text-red-800 border-red-300" },
+  PENDING: { label: "Pendente", color: "bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-950/50 dark:text-yellow-400 dark:border-yellow-800" },
+  PREPARING: { label: "Preparando", color: "bg-purple-100 text-purple-800 border-purple-300 dark:bg-purple-950/50 dark:text-purple-400 dark:border-purple-800" },
+  READY_FOR_PICKUP: { label: "Pronto", color: "bg-indigo-100 text-indigo-800 border-indigo-300 dark:bg-indigo-950/50 dark:text-indigo-400 dark:border-indigo-800" },
+  IN_TRANSIT: { label: "Em Trânsito", color: "bg-orange-100 text-orange-800 border-orange-300 dark:bg-orange-950/50 dark:text-orange-400 dark:border-orange-800" },
+  DELIVERED: { label: "Entregue", color: "bg-green-100 text-green-800 border-green-300 dark:bg-green-950/50 dark:text-green-400 dark:border-green-800" },
+  CANCELLED: { label: "Cancelado", color: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800" },
+  FAILED: { label: "Falhou", color: "bg-red-100 text-red-800 border-red-300 dark:bg-red-950/50 dark:text-red-400 dark:border-red-800" },
 }
 
 const nextStatusMap: Partial<Record<DeliveryStatus, DeliveryStatus>> = {
@@ -71,6 +71,23 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
     }
   }
 
+  const handlePrint = async () => {
+    try {
+      const res = await fetch(`/api/delivery/${id}/print`, {
+        method: "POST",
+      })
+      
+      if (!res.ok) {
+        const error = await res.json()
+        throw new Error(error.error || "Falha ao imprimir")
+      }
+      
+      toast.success("Impressão enviada com sucesso!")
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao imprimir")
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -82,7 +99,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
   if (error || !delivery) {
     return (
       <div className="p-4">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-800">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 text-destructive">
           Erro ao carregar entrega
         </div>
       </div>
@@ -133,7 +150,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
           </Button>
         )}
 
-        <Button variant="outline">
+        <Button variant="outline" onClick={handlePrint}>
           <Printer className="w-4 h-4 mr-2" />
           Imprimir
         </Button>
@@ -155,7 +172,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
         {/* Coluna Principal */}
         <div className="lg:col-span-2 space-y-6">
           {/* Informações do Cliente */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+          <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <User className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">Cliente</h2>
@@ -182,7 +199,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
           </div>
 
           {/* Endereço de Entrega */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+          <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <MapPin className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">Endereço de Entrega</h2>
@@ -201,7 +218,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
                 <div className="text-sm text-muted-foreground">CEP: {delivery.postalCode}</div>
               )}
               {delivery.referencePoint && (
-                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200">
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950/50 rounded border border-blue-200 dark:border-blue-800">
                   <div className="text-sm font-medium text-blue-900 dark:text-blue-100">
                     Ponto de Referência
                   </div>
@@ -211,7 +228,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
                 </div>
               )}
               {delivery.deliveryInstructions && (
-                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded border border-amber-200">
+                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-950/50 rounded border border-amber-200 dark:border-amber-800">
                   <div className="text-sm font-medium text-amber-900 dark:text-amber-100">
                     Instruções de Entrega
                   </div>
@@ -225,7 +242,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
 
           {/* Observações */}
           {delivery.notes && (
-            <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+            <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
               <h2 className="text-lg font-semibold mb-3">Observações</h2>
               <p className="text-muted-foreground">{delivery.notes}</p>
             </div>
@@ -235,7 +252,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
         {/* Coluna Lateral */}
         <div className="space-y-6">
           {/* Resumo Financeiro */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border p-6">
+          <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <DollarSign className="w-5 h-5 text-muted-foreground" />
               <h2 className="text-lg font-semibold">Resumo</h2>

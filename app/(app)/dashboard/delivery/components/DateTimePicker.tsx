@@ -25,12 +25,18 @@ export function DateTimePicker({
 
   useEffect(() => {
     if (value) {
-      const dateObj = new Date(value)
-      const dateStr = dateObj.toISOString().split("T")[0]
-      const timeStr = dateObj.toTimeString().slice(0, 5)
-      setDate(dateStr)
-      setTime(timeStr)
-      setIsScheduled(true)
+      try {
+        const dateObj = new Date(value)
+        if (!isNaN(dateObj.getTime())) {
+          const dateStr = dateObj.toISOString().split("T")[0]
+          const timeStr = dateObj.toTimeString().slice(0, 5)
+          setDate(dateStr)
+          setTime(timeStr)
+          setIsScheduled(true)
+        }
+      } catch (e) {
+        console.error("Invalid date:", value)
+      }
     } else {
       setDate("")
       setTime("")
@@ -41,7 +47,15 @@ export function DateTimePicker({
   const handleDateChange = (newDate: string) => {
     setDate(newDate)
     if (newDate && time) {
-      onChange(`${newDate}T${time}`)
+      try {
+        // Criar ISO 8601 válido
+        const dateTime = new Date(`${newDate}T${time}:00`)
+        if (!isNaN(dateTime.getTime())) {
+          onChange(dateTime.toISOString())
+        }
+      } catch (e) {
+        console.error("Invalid date/time:", newDate, time)
+      }
     } else if (!newDate) {
       onChange(null)
     }
@@ -50,7 +64,15 @@ export function DateTimePicker({
   const handleTimeChange = (newTime: string) => {
     setTime(newTime)
     if (date && newTime) {
-      onChange(`${date}T${newTime}`)
+      try {
+        // Criar ISO 8601 válido
+        const dateTime = new Date(`${date}T${newTime}:00`)
+        if (!isNaN(dateTime.getTime())) {
+          onChange(dateTime.toISOString())
+        }
+      } catch (e) {
+        console.error("Invalid date/time:", date, newTime)
+      }
     }
   }
 
@@ -68,7 +90,7 @@ export function DateTimePicker({
     setDate(dateStr)
     setTime(timeStr)
     setIsScheduled(true)
-    onChange(`${dateStr}T${timeStr}`)
+    onChange(now.toISOString())
   }
 
   const handleSetTomorrow = () => {
@@ -80,7 +102,7 @@ export function DateTimePicker({
     setDate(dateStr)
     setTime(timeStr)
     setIsScheduled(true)
-    onChange(`${dateStr}T${timeStr}`)
+    onChange(tomorrow.toISOString())
   }
 
   return (
@@ -163,7 +185,7 @@ export function DateTimePicker({
 
           {date && time && (
             <div className="text-sm text-muted-foreground bg-muted/20 p-2 rounded-md">
-              📅 {new Date(`${date}T${time}`).toLocaleString("pt-BR", {
+              📅 {new Date(`${date}T${time}:00`).toLocaleString("pt-BR", {
                 dateStyle: "full",
                 timeStyle: "short"
               })}

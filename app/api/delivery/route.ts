@@ -26,7 +26,10 @@ const createDeliverySchema = z.object({
   longitude: z.number().optional().nullable(),
   
   // Agendamento
-  scheduledFor: z.string().datetime().optional().nullable(),
+  scheduledFor: z.preprocess(
+    (val) => val === "" || val === null || val === undefined ? null : val,
+    z.string().datetime().nullable().optional()
+  ),
   
   // Financeiro
   subtotal: z.number().min(0),
