@@ -45,28 +45,73 @@ export async function POST(
     const printData = formatDeliveryForPrint(delivery)
 
     // Enviar para impressora térmica via print-server
-    const printServerUrl = process.env.PRINT_SERVER_URL || "http://localhost:3001"
+    const printServerUrl = process.env.PRINT_SERVER_URL
+    const printServerToken = process.env.PRINT_SERVER_TOKEN
     
-    const response = await fetch(`${printServerUrl}/print`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        type: "delivery",
-        data: printData
+    // Se não houver print-server configurado, apenas retorna os dados
+    if (!printServerUrl) {
+      console.warn("PRINT_SERVER_URL não configurado. Impressão desabilitada.")
+      return NextResponse.json({ 
+        success: true,
+        message: "Print-server não configurado. Configure PRINT_SERVER_URL para habilitar impressão.",
+        data: printData // Retorna dados para debug
       })
-    })
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.message || "Erro ao enviar para impressora")
     }
+    
+    try {
+      const headers: HeadersInit = {
+        "Content-Type": "application/json",
+      }
+      
+      // Adicionar token se configurado
+      if (printServerToken) {
+        headers["Authorization"] = `Bearer ${printServerToken}`
+      }
+      
+      const response = await fetch(`${printServerUrl}/print`, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({
+          type: "delivery",
+          data: printData
+        }),
+        // Timeout de 10 segundos
+        signal: AbortSignal.timeout(10000)
+      })
 
-    return NextResponse.json({ 
-      success: true,
-      message: "Impressão enviada com sucesso" 
-    })
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({ message: "Erro desconhecido" }))
+        throw new Error(error.error || error.message || "Erro ao enviar para impressora")
+      }
+
+      const result = await response.json()
+      
+      return NextResponse.json({ 
+        success: true,
+        message: result.message || "Impressão enviada com sucesso"
+      })
+    } catch (fetchError: any) {
+      // Se erro de conexão, avisar mas não falhar
+      if (fetchError.name === 'AbortError') {
+        console.error("Timeout ao conectar no print-server:", printServerUrl)
+        return NextResponse.json({ 
+          success: false,
+          error: "Timeout: Print-server demorou muito para responder. Verifique se está rodando.",
+          message: "Servidor de impressão não respondeu"
+        }, { status: 504 }) // Gateway Timeout
+      }
+      
+      if (fetchError.code === 'ECONNREFUSED' || fetchError.cause?.code === 'ECONNREFUSED') {
+        console.error("Print-server não acessível:", printServerUrl)
+        return NextResponse.json({ 
+          success: false,
+          error: "Print-server não está acessível. Verifique se está rodando.",
+          message: "Servidor de impressão offline"
+        }, { status: 503 }) // Service Unavailable
+      }
+      
+      throw fetchError
+    }
 
   } catch (error: any) {
     console.error("Erro ao imprimir delivery:", error)
