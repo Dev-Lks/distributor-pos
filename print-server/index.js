@@ -18,6 +18,7 @@ let printerConfig = {
   type: PrinterTypes.EPSON,
   interface: process.env.PRINTER_PORT || '/dev/usb/lp0',
   width: parseInt(process.env.PRINTER_WIDTH) || 48,
+  characterSet: 'BRAZIL',
   removeSpecialCharacters: false,
   lineCharacter: '-',
 }
