@@ -2,13 +2,16 @@
 
 import { useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
-import { ChevronLeft, ChevronRight, Check, User, MapPin, Package, DollarSign, FileText } from "lucide-react"
+import { ChevronLeft, ChevronRight, Check, User, MapPin, Package, DollarSign, FileText, Printer, Calculator, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Separator } from "@/components/ui/separator"
+import { Badge } from "@/components/ui/badge"
 import { ImprovedCustomerSelector } from "@/components/customers/ImprovedCustomerSelector"
 import { useCreateDelivery } from "@/lib/useDeliveries"
 import { useDeliveryCart } from "../hooks/useDeliveryCart"
@@ -16,6 +19,7 @@ import { ProductSelector } from "../components/ProductSelector"
 import { DeliveryCart } from "../components/DeliveryCart"
 import { AddressForm } from "../components/AddressForm"
 import { DateTimePicker } from "../components/DateTimePicker"
+import { DeliveryPrintButtons } from "../components/DeliveryPrintButtons"
 import { toast } from "sonner"
 
 type Step = "customer" | "address" | "products" | "payment" | "review"
@@ -79,6 +83,11 @@ export default function NewDeliveryPage() {
     discountValue: 0,
     paidInAdvance: false,
   })
+  const [isCalculatingDistance, setIsCalculatingDistance] = useState(false)
+  const [distanceInfo, setDistanceInfo] = useState<{
+    distance: number
+    estimatedTime: number
+  } | null>(null)
 
   const createDelivery = useCreateDelivery()
   
@@ -96,6 +105,46 @@ export default function NewDeliveryPage() {
     totalDiscount,
     itemCount,
   } = useDeliveryCart()
+
+  // Função para calcular distância e taxa automaticamente
+  const handleCalculateDistance = async () => {
+    if (!formData.deliveryAddress || !formData.city || !formData.state) {
+      toast.error("Preencha o endereço completo primeiro")
+      return
+    }
+
+    setIsCalculatingDistance(true)
+    try {
+      const fullAddress = `${formData.deliveryAddress}, ${formData.addressNumber || ''} - ${formData.district}, ${formData.city} - ${formData.state}, ${formData.postalCode || ''}`
+      
+      const response = await fetch('/api/delivery/calculate-distance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destinationAddress: fullAddress
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao calcular distância')
+      }
+
+      const data = await response.json()
+      
+      setFormData(prev => ({ ...prev, deliveryFee: data.fee }))
+      setDistanceInfo({
+        distance: data.distance,
+        estimatedTime: data.estimatedTime
+      })
+      
+      toast.success(`Distância: ${data.distance.toFixed(2)} km | Tempo estimado: ${data.estimatedTime.toFixed(0)} min`)
+    } catch (error) {
+      console.error('Erro ao calcular distância:', error)
+      toast.error('Erro ao calcular distância. Defina manualmente.')
+    } finally {
+      setIsCalculatingDistance(false)
+    }
+  }
 
   // Calcular total com taxa de entrega
   const total = useMemo(() => {
@@ -205,10 +254,10 @@ export default function NewDeliveryPage() {
 
       case "address":
         return (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Formulário de Endereço */}
-              <div className="lg:col-span-2">
+              <div className="lg:col-span-2 space-y-4">
                 <AddressForm
                   values={{
                     postalCode: formData.postalCode,
@@ -226,17 +275,87 @@ export default function NewDeliveryPage() {
                   }}
                   customerId={formData.customerId}
                 />
+
+                {/* Calculadora de Distância */}
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Calculator className="h-4 w-4" />
+                      Taxa de Entrega
+                    </CardTitle>
+                    <CardDescription>
+                      Calcule automaticamente baseado na distância
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <Label htmlFor="deliveryFee">Valor (R$)</Label>
+                        <Input
+                          id="deliveryFee"
+                          type="number"
+                          step="0.01"
+                          value={formData.deliveryFee || 0}
+                          onChange={(e) => {
+                            const deliveryFee = parseFloat(e.target.value) || 0
+                            setFormData({ ...formData, deliveryFee })
+                          }}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="pt-6">
+                        <Button
+                          type="button"
+                          onClick={handleCalculateDistance}
+                          disabled={isCalculatingDistance || !formData.deliveryAddress}
+                          variant="secondary"
+                          className="gap-2"
+                        >
+                          {isCalculatingDistance ? (
+                            <>
+                              <Calculator className="h-4 w-4 animate-pulse" />
+                              Calculando...
+                            </>
+                          ) : (
+                            <>
+                              <Calculator className="h-4 w-4" />
+                              Calcular
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    {distanceInfo && (
+                      <div className="text-sm bg-primary/5 border border-primary/20 p-3 rounded-md space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Distância:</span>
+                          <span className="font-semibold">{distanceInfo.distance.toFixed(2)} km</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Tempo estimado:</span>
+                          <span className="font-semibold">{distanceInfo.estimatedTime.toFixed(0)} min</span>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Resumo do Cliente */}
               {formData.customerName && (
                 <div className="lg:col-span-1">
-                  <div className="sticky top-4 p-4 border border-border rounded-lg bg-card shadow-sm">
-                    <h3 className="text-sm font-semibold mb-3">Cliente</h3>
-                    <div className="space-y-2 text-sm">
+                  <Card className="sticky top-4">
+                    <CardHeader>
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Cliente Selecionado
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
                       <div>
                         <span className="text-muted-foreground">Nome:</span>
-                        <div className="font-medium">{formData.customerName}</div>
+                        <div className="font-medium text-base">{formData.customerName}</div>
                       </div>
                       {formData.customerPhone && (
                         <div>
@@ -244,8 +363,8 @@ export default function NewDeliveryPage() {
                           <div className="font-medium">{formData.customerPhone}</div>
                         </div>
                       )}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
               )}
             </div>
@@ -254,158 +373,197 @@ export default function NewDeliveryPage() {
 
       case "products":
         return (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Produtos do Pedido</h2>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Produtos do Pedido</h2>
+                <p className="text-sm text-muted-foreground">Adicione os produtos que serão entregues</p>
+              </div>
+              {itemCount > 0 && (
+                <Badge variant="secondary" className="text-base px-3 py-1">
+                  {itemCount} {itemCount === 1 ? 'item' : 'itens'}
+                </Badge>
+              )}
+            </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Seletor de Produtos */}
-              <div>
-                <h3 className="text-sm font-medium mb-3">Adicionar Produtos</h3>
-                <ProductSelector onSelectProduct={addToCart} />
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Adicionar Produtos
+                  </CardTitle>
+                  <CardDescription>Busque e adicione produtos ao pedido</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ProductSelector onSelectProduct={addToCart} />
+                </CardContent>
+              </Card>
 
               {/* Carrinho */}
-              <div>
-                <h3 className="text-sm font-medium mb-3">Carrinho</h3>
-                <DeliveryCart
-                  cart={cart}
-                  onUpdateQuantity={updateQuantity}
-                  onUpdateDiscount={updateDiscount}
-                  onUpdateNotes={updateNotes}
-                  onRemoveItem={removeFromCart}
-                  onClearCart={clearCart}
-                  subtotal={subtotal}
-                  totalDiscount={totalDiscount}
-                  deliveryFee={formData.deliveryFee || 0}
-                  total={total}
-                />
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Carrinho</CardTitle>
+                  <CardDescription>Revise os itens e quantidades</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <DeliveryCart
+                    cart={cart}
+                    onUpdateQuantity={updateQuantity}
+                    onUpdateDiscount={updateDiscount}
+                    onUpdateNotes={updateNotes}
+                    onRemoveItem={removeFromCart}
+                    onClearCart={clearCart}
+                    subtotal={subtotal}
+                    totalDiscount={totalDiscount}
+                    deliveryFee={formData.deliveryFee || 0}
+                    total={total}
+                  />
+                </CardContent>
+              </Card>
             </div>
 
-            {/* Taxa de Entrega e Observações */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t">
-              <div>
-                <Label htmlFor="deliveryFee">Taxa de Entrega</Label>
-                <Input
-                  id="deliveryFee"
-                  type="number"
-                  step="0.01"
-                  value={formData.deliveryFee || 0}
-                  onChange={(e) => {
-                    const deliveryFee = parseFloat(e.target.value) || 0
-                    setFormData({ ...formData, deliveryFee })
-                  }}
-                  placeholder="0.00"
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Observações</Label>
+            {/* Observações */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Observações</CardTitle>
+                <CardDescription>Adicione observações sobre o pedido (opcional)</CardDescription>
+              </CardHeader>
+              <CardContent>
                 <Textarea
-                  id="notes"
                   value={formData.notes || ""}
                   onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                  rows={2}
-                  placeholder="Observações sobre o pedido..."
+                  rows={3}
+                  placeholder="Ex: Cliente solicitou embalagem especial..."
                 />
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
         )
 
       case "payment":
         return (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Pagamento</h2>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold">Pagamento e Agendamento</h2>
+              <p className="text-sm text-muted-foreground">Defina como o cliente irá pagar</p>
+            </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Formulário de Pagamento */}
               <div className="lg:col-span-2 space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="sm:col-span-2">
-                    <Label htmlFor="paymentMethod">Forma de Pagamento</Label>
-                    <Select
-                      value={formData.paymentMethod || ""}
-                      onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="MONEY">Dinheiro</SelectItem>
-                        <SelectItem value="PIX">PIX</SelectItem>
-                        <SelectItem value="DEBIT_CARD">Cartão de Débito</SelectItem>
-                        <SelectItem value="CREDIT_CARD">Cartão de Crédito</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <DollarSign className="h-4 w-4" />
+                      Forma de Pagamento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <Label htmlFor="paymentMethod">Método de Pagamento</Label>
+                      <Select
+                        value={formData.paymentMethod || ""}
+                        onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}
+                      >
+                        <SelectTrigger className="mt-1">
+                          <SelectValue placeholder="Selecione..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="MONEY">💵 Dinheiro</SelectItem>
+                          <SelectItem value="PIX">📱 PIX</SelectItem>
+                          <SelectItem value="DEBIT_CARD">💳 Cartão de Débito</SelectItem>
+                          <SelectItem value="CREDIT_CARD">💳 Cartão de Crédito</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                  <div className="sm:col-span-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 p-3 bg-muted/30 rounded-md">
                       <Checkbox
                         id="paidInAdvance"
                         checked={formData.paidInAdvance || false}
                         onCheckedChange={(checked) => setFormData({ ...formData, paidInAdvance: checked === true })}
                       />
                       <Label htmlFor="paidInAdvance" className="cursor-pointer">
-                        Pago Antecipadamente
+                        ✅ Já foi pago antecipadamente
                       </Label>
                     </div>
-                  </div>
 
-                  {formData.paymentMethod === "MONEY" && (
-                    <div className="sm:col-span-2">
-                      <Label htmlFor="changeFor">Troco para</Label>
-                      <Input
-                        id="changeFor"
-                        type="number"
-                        step="0.01"
-                        value={formData.changeFor || ""}
-                        onChange={(e) => setFormData({ ...formData, changeFor: parseFloat(e.target.value) || null })}
-                        placeholder="0.00"
-                      />
-                    </div>
-                  )}
+                    {formData.paymentMethod === "MONEY" && !formData.paidInAdvance && (
+                      <div>
+                        <Label htmlFor="changeFor">Troco para (opcional)</Label>
+                        <Input
+                          id="changeFor"
+                          type="number"
+                          step="0.01"
+                          value={formData.changeFor || ""}
+                          onChange={(e) => setFormData({ ...formData, changeFor: parseFloat(e.target.value) || null })}
+                          placeholder="Ex: 100.00"
+                          className="mt-1"
+                        />
+                        {formData.changeFor && formData.changeFor > total && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Troco: R$ {(formData.changeFor - total).toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-                  <div className="sm:col-span-2">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Agendamento
+                    </CardTitle>
+                    <CardDescription>Defina quando a entrega deve ser realizada (opcional)</CardDescription>
+                  </CardHeader>
+                  <CardContent>
                     <DateTimePicker
                       value={formData.scheduledFor || null}
                       onChange={(value) => setFormData({ ...formData, scheduledFor: value || undefined })}
-                      label="Agendamento (Opcional)"
+                      label=""
                     />
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Resumo do Pedido */}
               <div className="lg:col-span-1">
-                <div className="sticky top-4 p-4 border border-border rounded-lg bg-card shadow-sm">
-                  <h3 className="text-sm font-semibold mb-3">Resumo do Pedido</h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Itens:</span>
-                      <span className="font-medium">{itemCount}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Subtotal:</span>
-                      <span className="font-medium">R$ {subtotal.toFixed(2)}</span>
-                    </div>
-                    {totalDiscount > 0 && (
-                      <div className="flex justify-between text-green-600">
-                        <span>Desconto:</span>
-                        <span>-R$ {totalDiscount.toFixed(2)}</span>
+                <Card className="sticky top-4">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Resumo do Pedido</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Itens:</span>
+                        <span className="font-medium">{itemCount}</span>
                       </div>
-                    )}
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Taxa de entrega:</span>
-                      <span className="font-medium">R$ {(formData.deliveryFee || 0).toFixed(2)}</span>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Subtotal:</span>
+                        <span className="font-medium">R$ {subtotal.toFixed(2)}</span>
+                      </div>
+                      {totalDiscount > 0 && (
+                        <div className="flex justify-between text-green-600">
+                          <span>Desconto:</span>
+                          <span className="font-semibold">-R$ {totalDiscount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Taxa de entrega:</span>
+                        <span className="font-medium">R$ {(formData.deliveryFee || 0).toFixed(2)}</span>
+                      </div>
+                      <Separator className="my-2" />
+                      <div className="flex justify-between font-bold text-lg">
+                        <span>Total:</span>
+                        <span className="text-primary">R$ {total.toFixed(2)}</span>
+                      </div>
                     </div>
-                    <div className="border-t pt-2 flex justify-between font-bold text-base">
-                      <span>Total:</span>
-                      <span className="text-primary">R$ {total.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>
@@ -413,81 +571,183 @@ export default function NewDeliveryPage() {
 
       case "review":
         return (
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Revisar Entrega</h2>
-            
-            <div className="space-y-3 bg-card border border-border p-4 rounded-lg shadow-sm">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
               <div>
-                <div className="text-sm font-medium text-muted-foreground">Cliente</div>
-                <div className="font-medium">{formData.customerName}</div>
-                {formData.customerPhone && <div className="text-sm text-muted-foreground">{formData.customerPhone}</div>}
+                <h2 className="text-xl font-semibold">Revisar Entrega</h2>
+                <p className="text-sm text-muted-foreground">Confira todos os dados antes de finalizar</p>
               </div>
+            </div>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Informações do Cliente
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Nome:</span>
+                  <span className="font-medium">{formData.customerName}</span>
+                </div>
+                {formData.customerPhone && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Telefone:</span>
+                    <span className="font-medium">{formData.customerPhone}</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">Endereço</div>
-                <div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <MapPin className="h-4 w-4" />
+                  Endereço de Entrega
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1">
+                <div className="font-medium">
                   {formData.deliveryAddress}, {formData.addressNumber}
                   {formData.addressComplement && ` - ${formData.addressComplement}`}
                 </div>
                 <div className="text-muted-foreground">{formData.district}, {formData.city} - {formData.state}</div>
-                {formData.postalCode && <div className="text-sm text-muted-foreground">{formData.postalCode}</div>}
-              </div>
+                {formData.postalCode && <div className="text-sm text-muted-foreground">CEP: {formData.postalCode}</div>}
+                {formData.referencePoint && (
+                  <div className="text-sm text-muted-foreground mt-2">
+                    <strong>Referência:</strong> {formData.referencePoint}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
-              <div>
-                <div className="text-sm font-medium text-muted-foreground">Produtos</div>
-                <div className="space-y-1 mt-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Produtos ({itemCount} {itemCount === 1 ? 'item' : 'itens'})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
                   {cart.map((item) => (
-                    <div key={item.productId} className="text-sm flex justify-between">
-                      <span>{item.name} × {item.quantity}</span>
-                      <span className="font-medium">
+                    <div key={item.productId} className="flex justify-between items-start py-2 border-b last:border-0">
+                      <div className="flex-1">
+                        <div className="font-medium">{item.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {item.quantity} × R$ {item.price.toFixed(2)}
+                          {item.discount && item.discount > 0 && ` - Desconto: R$ ${item.discount.toFixed(2)}`}
+                        </div>
+                      </div>
+                      <div className="font-semibold">
                         R$ {(item.price * item.quantity - (item.discount || 0)).toFixed(2)}
-                      </span>
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="grid grid-cols-2 gap-4 pt-3 border-t border-border">
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">Subtotal</div>
-                  <div>R$ {subtotal.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">Taxa de Entrega</div>
-                  <div>R$ {(formData.deliveryFee || 0).toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">Desconto</div>
-                  <div className="text-green-600 dark:text-green-500">R$ {totalDiscount.toFixed(2)}</div>
-                </div>
-                <div>
-                  <div className="text-sm font-medium text-muted-foreground">Total</div>
-                  <div className="text-lg font-bold text-primary">R$ {total.toFixed(2)}</div>
-                </div>
-              </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Resumo Financeiro
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal:</span>
+                    <span>R$ {subtotal.toFixed(2)}</span>
+                  </div>
+                  {totalDiscount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600 dark:text-green-500">
+                      <span>Desconto:</span>
+                      <span>-R$ {totalDiscount.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Taxa de Entrega:</span>
+                    <span>R$ {(formData.deliveryFee || 0).toFixed(2)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-lg font-bold">
+                    <span>Total:</span>
+                    <span className="text-primary">R$ {total.toFixed(2)}</span>
+                  </div>
+                  
+                  {formData.paymentMethod && (
+                    <>
+                      <Separator />
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Forma de Pagamento:</span>
+                          <span className="font-medium">
+                            {formData.paymentMethod === 'MONEY' && '💵 Dinheiro'}
+                            {formData.paymentMethod === 'PIX' && '📱 PIX'}
+                            {formData.paymentMethod === 'DEBIT_CARD' && '💳 Débito'}
+                            {formData.paymentMethod === 'CREDIT_CARD' && '💳 Crédito'}
+                          </span>
+                        </div>
+                        {formData.paidInAdvance && (
+                          <div className="text-green-600 dark:text-green-500 font-medium">
+                            ✓ Pago antecipadamente
+                          </div>
+                        )}
+                        {formData.paymentMethod === 'MONEY' && formData.changeFor && formData.changeFor > total && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Troco para:</span>
+                            <span>R$ {formData.changeFor.toFixed(2)} <span className="text-muted-foreground">(Troco: R$ {(formData.changeFor - total).toFixed(2)})</span></span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
 
-              {formData.paymentMethod && (
-                <div className="pt-3 border-t border-border">
-                  <div className="text-sm font-medium text-muted-foreground">Pagamento</div>
-                  <div className="font-medium">{formData.paymentMethod}</div>
-                  {formData.paidInAdvance && (
-                    <div className="text-sm text-green-600 dark:text-green-500">✓ Pago antecipadamente</div>
+                  {formData.scheduledFor && (
+                    <>
+                      <Separator />
+                      <div className="text-sm">
+                        <div className="text-muted-foreground mb-1">Agendamento:</div>
+                        <div className="font-medium">
+                          📅 {new Date(formData.scheduledFor).toLocaleString("pt-BR", {
+                            dateStyle: "full",
+                            timeStyle: "short"
+                          })}
+                        </div>
+                      </div>
+                    </>
                   )}
                 </div>
-              )}
+              </CardContent>
+            </Card>
 
-              {formData.scheduledFor && (
-                <div className="pt-3 border-t border-border">
-                  <div className="text-sm font-medium text-muted-foreground">Agendamento</div>
-                  <div className="font-medium">
-                    📅 {new Date(formData.scheduledFor).toLocaleString("pt-BR", {
-                      dateStyle: "full",
-                      timeStyle: "short"
-                    })}
-                  </div>
-                </div>
-              )}
-            </div>
+            {(formData.notes || formData.deliveryInstructions) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Observações
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm">
+                  {formData.notes && (
+                    <div>
+                      <span className="font-medium">Observações do pedido:</span>
+                      <p className="text-muted-foreground mt-1">{formData.notes}</p>
+                    </div>
+                  )}
+                  {formData.deliveryInstructions && (
+                    <div>
+                      <span className="font-medium">Instruções para entrega:</span>
+                      <p className="text-muted-foreground mt-1">{formData.deliveryInstructions}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         )
 
@@ -557,26 +817,46 @@ export default function NewDeliveryPage() {
       </div>
 
       {/* Actions */}
-      <div className="flex justify-between">
+      <div className="flex justify-between items-center gap-3">
         <Button
           variant="outline"
           onClick={handlePrevious}
           disabled={isFirstStep}
+          className="gap-2"
         >
-          <ChevronLeft className="w-4 h-4 mr-1" />
+          <ChevronLeft className="w-4 h-4" />
           Anterior
         </Button>
 
-        {isLastStep ? (
-          <Button onClick={handleSubmit} disabled={createDelivery.isPending}>
-            {createDelivery.isPending ? "Criando..." : "Criar Entrega"}
-          </Button>
-        ) : (
-          <Button onClick={handleNext}>
-            Próximo
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {isLastStep ? (
+            <>
+              <Button 
+                onClick={handleSubmit} 
+                disabled={createDelivery.isPending}
+                size="lg"
+                className="gap-2"
+              >
+                {createDelivery.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Criando...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Criar Entrega
+                  </>
+                )}
+              </Button>
+            </>
+          ) : (
+            <Button onClick={handleNext} size="lg" className="gap-2">
+              Próximo
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )

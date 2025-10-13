@@ -20,6 +20,7 @@ import { useDelivery, useUpdateDeliveryStatus } from "@/lib/useDeliveries"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/Loader"
+import { DeliveryPrintButtons } from "../components/DeliveryPrintButtons"
 import { toast } from "sonner"
 
 type DeliveryStatus = 
@@ -150,10 +151,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
           </Button>
         )}
 
-        <Button variant="outline" onClick={handlePrint}>
-          <Printer className="w-4 h-4 mr-2" />
-          Imprimir
-        </Button>
+        <DeliveryPrintButtons deliveryId={id} deliveryData={delivery} />
 
         {canCancel && (
           <Button 

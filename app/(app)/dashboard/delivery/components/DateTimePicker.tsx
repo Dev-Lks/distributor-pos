@@ -164,16 +164,6 @@ export function DateTimePicker({
             </Button>
             <Button
               type="button"
-              variant="outline"
-              size="sm"
-              onClick={handleSetTomorrow}
-              className="text-xs"
-            >
-              <Calendar className="h-3 w-3 mr-1" />
-              Amanhã 9h
-            </Button>
-            <Button
-              type="button"
               variant="ghost"
               size="sm"
               onClick={handleClear}
