@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useCreateCustomer } from "@/lib/useCustomers"
+import { useCheckDuplicates, type DuplicateMatch } from "@/lib/useCheckDuplicates"
+import { DuplicateWarningDialog } from "./DuplicateWarningDialog"
 import { toast } from "sonner"
 import { Loader2 } from "lucide-react"
 
@@ -37,7 +39,12 @@ export function CreateCustomerModal({
   initialData,
 }: CreateCustomerModalProps) {
   const [isLoadingCep, setIsLoadingCep] = useState(false)
+  const [foundDuplicates, setFoundDuplicates] = useState<DuplicateMatch[]>([])
+  const [showDuplicateWarning, setShowDuplicateWarning] = useState(false)
+  const [pendingData, setPendingData] = useState<CustomerFormData | null>(null)
+  
   const createCustomer = useCreateCustomer()
+  const { checkDuplicates } = useCheckDuplicates()
   
   const {
     register,
@@ -111,7 +118,7 @@ export function CreateCustomerModal({
     }
   }
 
-  const onSubmit = async (data: CustomerFormData) => {
+  const createCustomerWithData = async (data: CustomerFormData) => {
     try {
       // Montar endereço completo
       const addressParts = [
@@ -141,14 +148,50 @@ export function CreateCustomerModal({
     }
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
-        <DialogHeader>
-          <DialogTitle>Novo Cliente</DialogTitle>
-        </DialogHeader>
+  const onSubmit = async (data: CustomerFormData) => {
+    // Verificar duplicatas antes de criar
+    const duplicates = checkDuplicates({
+      name: data.name,
+      phone: data.phone,
+      document: data.document,
+    })
+    
+    if (duplicates.length > 0) {
+      // Encontrou possíveis duplicatas - mostrar aviso
+      setFoundDuplicates(duplicates)
+      setPendingData(data)
+      setShowDuplicateWarning(true)
+      return
+    }
+    
+    // Não encontrou duplicatas - criar normalmente
+    await createCustomerWithData(data)
+  }
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
+  const handleSelectExisting = (customer: any) => {
+    // Usuário escolheu usar um cliente existente
+    toast.info(`Cliente "${customer.name}" selecionado`)
+    onSuccess(customer)
+    onOpenChange(false)
+  }
+
+  const handleCreateAnyway = async () => {
+    // Usuário confirmou criar novo mesmo com duplicatas
+    if (pendingData) {
+      await createCustomerWithData(pendingData)
+      setPendingData(null)
+    }
+  }
+
+  return (
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" onOpenAutoFocus={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" autoComplete="off">
           {/* Informações Básicas */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold">Informações Básicas</h3>
@@ -300,6 +343,15 @@ export function CreateCustomerModal({
         </form>
       </DialogContent>
     </Dialog>
+
+      {/* Modal de aviso de duplicatas */}
+      <DuplicateWarningDialog
+        open={showDuplicateWarning}
+        onOpenChange={setShowDuplicateWarning}
+        duplicates={foundDuplicates}
+        onSelectExisting={handleSelectExisting}
+        onCreateAnyway={handleCreateAnyway}
+      />
+    </>
   )
 }
-

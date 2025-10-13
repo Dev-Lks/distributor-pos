@@ -33,7 +33,10 @@ export function useCustomers(search?: string) {
       }
       return data as CustomerSummary[]
     },
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 5, // 5 minutos - dados considerados frescos
+    gcTime: 1000 * 60 * 30, // 30 minutos - mantém em cache
+    refetchOnWindowFocus: true, // Atualiza quando voltar à aba
+    refetchOnMount: false, // Não refaz se dados ainda estão frescos
   })
 }
 
@@ -52,8 +55,15 @@ export function useCreateCustomer() {
       }
       return data as CustomerSummary
     },
-    onSuccess: () => {
+    onSuccess: (newCustomer) => {
+      // Invalida todas as queries de clientes para forçar atualização
       queryClient.invalidateQueries({ queryKey: CUSTOMERS_QUERY_KEY })
+      
+      // Atualiza cache otimisticamente
+      queryClient.setQueryData<CustomerSummary[]>(
+        [...CUSTOMERS_QUERY_KEY, ''],
+        (old = []) => [newCustomer, ...old]
+      )
     },
   })
 }
@@ -123,6 +133,7 @@ export function useRecentCustomers(limit: number = 10) {
       }
       return data as CustomerSummary[]
     },
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 60 * 5, // 5 minutos
+    gcTime: 1000 * 60 * 30, // 30 minutos
   })
 }

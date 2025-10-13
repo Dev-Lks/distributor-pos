@@ -14,14 +14,22 @@ import {
   MapPin,
   Phone,
   Calendar,
-  DollarSign
+  DollarSign,
+  Settings,
+  Users,
+  MapPinned,
+  TrendingUp,
 } from "lucide-react"
 import { useDeliveries } from "@/lib/useDeliveries"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EmptyState } from "@/components/EmptyState"
 import { Loader } from "@/components/Loader"
+import { CreateDeliveryDialog } from "@/components/delivery/CreateDeliveryDialog"
+import { DeliveryDetailsDialog } from "@/components/delivery/DeliveryDetailsDialog"
 
 type DeliveryStatus = 
   | "PENDING" 
@@ -45,6 +53,9 @@ const statusConfig: Record<DeliveryStatus, { label: string; color: string; icon:
 export default function DeliveryPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "ALL">("ALL")
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null)
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   
   const { data: deliveries, isLoading, error } = useDeliveries()
 
@@ -68,7 +79,22 @@ export default function DeliveryPage() {
 
   // Estatísticas
   const stats = useMemo(() => {
-    if (!deliveries) return { total: 0, pending: 0, inProgress: 0, delivered: 0, cancelled: 0 }
+    if (!deliveries) return { 
+      total: 0, 
+      pending: 0, 
+      inProgress: 0, 
+      delivered: 0, 
+      cancelled: 0,
+      totalRevenue: 0,
+      avgDeliveryFee: 0,
+      avgRating: 0,
+    }
+    
+    const delivered = deliveries.filter(d => d.status === "DELIVERED")
+    const totalRevenue = deliveries.reduce((sum, d) => sum + d.total, 0)
+    const totalDeliveryFees = deliveries.reduce((sum, d) => sum + d.deliveryFee, 0)
+    const ratingsCount = deliveries.filter(d => d.rating).length
+    const totalRating = deliveries.reduce((sum, d) => sum + (d.rating || 0), 0)
     
     return {
       total: deliveries.length,
@@ -78,10 +104,18 @@ export default function DeliveryPage() {
         d.status === "READY_FOR_PICKUP" || 
         d.status === "IN_TRANSIT"
       ).length,
-      delivered: deliveries.filter(d => d.status === "DELIVERED").length,
+      delivered: delivered.length,
       cancelled: deliveries.filter(d => d.status === "CANCELLED" || d.status === "FAILED").length,
+      totalRevenue,
+      avgDeliveryFee: deliveries.length > 0 ? totalDeliveryFees / deliveries.length : 0,
+      avgRating: ratingsCount > 0 ? totalRating / ratingsCount : 0,
     }
   }, [deliveries])
+
+  const handleDeliveryClick = (deliveryId: string) => {
+    setSelectedDeliveryId(deliveryId)
+    setIsDetailsDialogOpen(true)
+  }
 
   if (isLoading) {
     return (
@@ -108,40 +142,93 @@ export default function DeliveryPage() {
         <div>
           <h1 className="text-2xl font-bold">Entregas</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Gerencie todas as entregas
+            Gerencie todas as entregas do sistema
           </p>
         </div>
         
-        <Link href="/dashboard/delivery/new">
-          <Button className="w-full sm:w-auto">
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = "/dashboard/delivery/zones"}
+            className="hidden sm:flex"
+          >
+            <MapPinned className="w-4 h-4 mr-2" />
+            Zonas
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => window.location.href = "/dashboard/delivery/drivers"}
+            className="hidden sm:flex"
+          >
+            <Users className="w-4 h-4 mr-2" />
+            Entregadores
+          </Button>
+          <Button onClick={() => setIsCreateDialogOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Nova Entrega
           </Button>
-        </Link>
+        </div>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-        <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
-          <div className="text-2xl font-bold">{stats.total}</div>
-          <div className="text-xs text-muted-foreground">Total</div>
-        </div>
-        <div className="bg-yellow-50 dark:bg-yellow-950/50 rounded-lg border border-yellow-200 dark:border-yellow-800 p-4 shadow-sm">
-          <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{stats.pending}</div>
-          <div className="text-xs text-yellow-600 dark:text-yellow-500">Pendentes</div>
-        </div>
-        <div className="bg-blue-50 dark:bg-blue-950/50 rounded-lg border border-blue-200 dark:border-blue-800 p-4 shadow-sm">
-          <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.inProgress}</div>
-          <div className="text-xs text-blue-600 dark:text-blue-500">Em Andamento</div>
-        </div>
-        <div className="bg-green-50 dark:bg-green-950/50 rounded-lg border border-green-200 dark:border-green-800 p-4 shadow-sm">
-          <div className="text-2xl font-bold text-green-700 dark:text-green-400">{stats.delivered}</div>
-          <div className="text-xs text-green-600 dark:text-green-500">Entregues</div>
-        </div>
-        <div className="bg-red-50 dark:bg-red-950/50 rounded-lg border border-red-200 dark:border-red-800 p-4 shadow-sm">
-          <div className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.cancelled}</div>
-          <div className="text-xs text-red-600 dark:text-red-500">Canceladas</div>
-        </div>
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        <Card className="col-span-2 sm:col-span-1">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold">{stats.total}</div>
+            <div className="text-xs text-muted-foreground">Total</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-2 sm:col-span-1 bg-yellow-50 dark:bg-yellow-950/30 border-yellow-200">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-yellow-700 dark:text-yellow-400">{stats.pending}</div>
+            <div className="text-xs text-yellow-600 dark:text-yellow-500">Pendentes</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-2 sm:col-span-1 bg-blue-50 dark:bg-blue-950/30 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-blue-700 dark:text-blue-400">{stats.inProgress}</div>
+            <div className="text-xs text-blue-600 dark:text-blue-500">Em Andamento</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-2 sm:col-span-1 bg-green-50 dark:bg-green-950/30 border-green-200">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-green-700 dark:text-green-400">{stats.delivered}</div>
+            <div className="text-xs text-green-600 dark:text-green-500">Entregues</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-2 sm:col-span-1 bg-red-50 dark:bg-red-950/30 border-red-200">
+          <CardContent className="pt-6">
+            <div className="text-2xl font-bold text-red-700 dark:text-red-400">{stats.cancelled}</div>
+            <div className="text-xs text-red-600 dark:text-red-500">Canceladas</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-2 sm:col-span-1">
+          <CardContent className="pt-6">
+            <div className="text-xl font-bold">R$ {stats.totalRevenue.toFixed(0)}</div>
+            <div className="text-xs text-muted-foreground">Receita</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-2 sm:col-span-1">
+          <CardContent className="pt-6">
+            <div className="text-xl font-bold">R$ {stats.avgDeliveryFee.toFixed(2)}</div>
+            <div className="text-xs text-muted-foreground">Taxa Média</div>
+          </CardContent>
+        </Card>
+        
+        <Card className="col-span-2 sm:col-span-1">
+          <CardContent className="pt-6">
+            <div className="text-xl font-bold flex items-center gap-1">
+              ⭐ {stats.avgRating.toFixed(1)}
+            </div>
+            <div className="text-xs text-muted-foreground">Avaliação</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -188,10 +275,10 @@ export default function DeliveryPage() {
             const StatusIcon = statusInfo?.icon || Package
             
             return (
-              <Link
+              <button
                 key={delivery.id}
-                href={`/dashboard/delivery/${delivery.id}`}
-                className="block bg-card border border-border rounded-lg p-4 hover:shadow-md transition-all hover:border-primary/50"
+                onClick={() => handleDeliveryClick(delivery.id)}
+                className="block w-full bg-card border border-border rounded-lg p-4 hover:shadow-md transition-all hover:border-primary/50 text-left"
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 space-y-2">
@@ -258,11 +345,23 @@ export default function DeliveryPage() {
                     </div>
                   )}
                 </div>
-              </Link>
+              </button>
             )
           })}
         </div>
       )}
+
+      {/* Dialogs */}
+      <CreateDeliveryDialog
+        open={isCreateDialogOpen}
+        onOpenChange={setIsCreateDialogOpen}
+      />
+      
+      <DeliveryDetailsDialog
+        deliveryId={selectedDeliveryId}
+        open={isDetailsDialogOpen}
+        onOpenChange={setIsDetailsDialogOpen}
+      />
     </div>
   )
 }

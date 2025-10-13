@@ -5,6 +5,7 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { AuthSessionProvider } from "@/components/AuthSessionProvider"
 import { QueryProvider } from "@/components/QueryProvider"
+import { CustomerProvider } from "@/components/providers/CustomerProvider"
 import { PWAInstall } from "@/components/PWAInstall"
 import { ProgressBar } from "@/components/ProgressBar"
 import { Toaster } from "@/components/ui/sonner"
@@ -43,9 +44,13 @@ export default async function RootLayout({
       <body className={`${inter.variable} antialiased`} suppressHydrationWarning>
         <ProgressBar />
         <AuthSessionProvider session={session}>
-          <QueryProvider>{children}</QueryProvider>
-          <PWAInstall />
-          <Toaster />
+          <QueryProvider>
+            <CustomerProvider>
+              {children}
+            </CustomerProvider>
+            <PWAInstall />
+            <Toaster />
+          </QueryProvider>
         </AuthSessionProvider>
       </body>
     </html>
