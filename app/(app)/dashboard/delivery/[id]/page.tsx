@@ -261,22 +261,22 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span>R$ {delivery.subtotal.toFixed(2)}</span>
+                <span>R$ {(delivery.subtotal ?? 0).toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Taxa de Entrega</span>
-                <span>R$ {delivery.deliveryFee.toFixed(2)}</span>
+                <span>R$ {(delivery.deliveryFee ?? 0).toFixed(2)}</span>
               </div>
-              {delivery.discountValue > 0 && (
+              {(delivery.discountValue ?? 0) > 0 && (
                 <div className="flex justify-between text-green-600">
                   <span>Desconto</span>
-                  <span>- R$ {delivery.discountValue.toFixed(2)}</span>
+                  <span>- R$ {(delivery.discountValue ?? 0).toFixed(2)}</span>
                 </div>
               )}
               <div className="border-t pt-2 mt-2">
                 <div className="flex justify-between font-bold text-lg">
                   <span>Total</span>
-                  <span>R$ {delivery.total.toFixed(2)}</span>
+                  <span>R$ {(delivery.total ?? 0).toFixed(2)}</span>
                 </div>
               </div>
             </div>
@@ -293,7 +293,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
                 {delivery.changeFor && (
                   <div className="mt-2 text-sm">
                     <span className="text-muted-foreground">Troco para: </span>
-                    <span className="font-medium">R$ {delivery.changeFor.toFixed(2)}</span>
+                    <span className="font-medium">R$ {(delivery.changeFor ?? 0).toFixed(2)}</span>
                   </div>
                 )}
               </div>
@@ -325,7 +325,7 @@ export default function DeliveryDetailPage({ params }: { params: Promise<{ id: s
               {delivery.distance && (
                 <div>
                   <div className="text-sm text-muted-foreground">Distância</div>
-                  <div className="font-medium">{delivery.distance.toFixed(2)} km</div>
+                  <div className="font-medium">{(delivery.distance ?? 0).toFixed(2)} km</div>
                 </div>
               )}
 

@@ -261,22 +261,22 @@ export function DeliveryDetailsDialog({
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span>Subtotal (itens):</span>
-                  <span>R$ {delivery.subtotal.toFixed(2)}</span>
+                  <span>R$ {(delivery.subtotal ?? 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>Taxa de Entrega:</span>
-                  <span>R$ {delivery.deliveryFee.toFixed(2)}</span>
+                  <span>R$ {(delivery.deliveryFee ?? 0).toFixed(2)}</span>
                 </div>
-                {delivery.discountValue > 0 && (
+                {(delivery.discountValue ?? 0) > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Desconto:</span>
-                    <span>- R$ {delivery.discountValue.toFixed(2)}</span>
+                    <span>- R$ {(delivery.discountValue ?? 0).toFixed(2)}</span>
                   </div>
                 )}
                 <Separator />
                 <div className="flex justify-between font-bold text-base">
                   <span>Total:</span>
-                  <span>R$ {delivery.total.toFixed(2)}</span>
+                  <span>R$ {(delivery.total ?? 0).toFixed(2)}</span>
                 </div>
                 
                 {delivery.paymentMethod && (

@@ -408,19 +408,19 @@ async function printDelivery(data) {
   // Resumo Financeiro
   printer.tableCustom([
     { text: 'Subtotal:', align: 'LEFT', width: 0.6 },
-    { text: `R$ ${data.financial.subtotal.toFixed(2)}`, align: 'RIGHT', width: 0.4 }
+    { text: `R$ ${(data.financial.subtotal ?? 0).toFixed(2)}`, align: 'RIGHT', width: 0.4 }
   ])
   
-  if (data.financial.discountValue > 0) {
+  if ((data.financial.discountValue ?? 0) > 0) {
     printer.tableCustom([
       { text: 'Desconto:', align: 'LEFT', width: 0.6 },
-      { text: `-R$ ${data.financial.discountValue.toFixed(2)}`, align: 'RIGHT', width: 0.4 }
+      { text: `-R$ ${(data.financial.discountValue ?? 0).toFixed(2)}`, align: 'RIGHT', width: 0.4 }
     ])
   }
   
   printer.tableCustom([
     { text: 'Taxa de Entrega:', align: 'LEFT', width: 0.6 },
-    { text: `R$ ${data.financial.deliveryFee.toFixed(2)}`, align: 'RIGHT', width: 0.4 }
+    { text: `R$ ${(data.financial.deliveryFee ?? 0).toFixed(2)}`, align: 'RIGHT', width: 0.4 }
   ])
   
   printer.drawLine()
@@ -429,7 +429,7 @@ async function printDelivery(data) {
   printer.setTextDoubleHeight()
   printer.tableCustom([
     { text: 'TOTAL:', align: 'LEFT', width: 0.6 },
-    { text: `R$ ${data.financial.total.toFixed(2)}`, align: 'RIGHT', width: 0.4 }
+    { text: `R$ ${(data.financial.total ?? 0).toFixed(2)}`, align: 'RIGHT', width: 0.4 }
   ])
   printer.setTextNormal()
   printer.bold(false)
