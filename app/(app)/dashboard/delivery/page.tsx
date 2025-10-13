@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { 
   Plus, 
   Search, 
@@ -18,6 +18,7 @@ import {
   Settings,
   Users,
   TrendingUp,
+  Printer,
 } from "lucide-react"
 import { useDeliveries } from "@/lib/useDeliveries"
 import { Button } from "@/components/ui/button"
@@ -28,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EmptyState } from "@/components/EmptyState"
 import { Loader } from "@/components/Loader"
 import { CreateDeliveryDialog } from "@/components/delivery/CreateDeliveryDialog"
-import { DeliveryDetailsDialog } from "@/components/delivery/DeliveryDetailsDialog"
+import { DeliveryPrintButtons } from "./components/DeliveryPrintButtons"
 
 type DeliveryStatus = 
   | "PENDING" 
@@ -50,13 +51,16 @@ const statusConfig: Record<DeliveryStatus, { label: string; color: string; icon:
 }
 
 export default function DeliveryPage() {
+  const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState<DeliveryStatus | "ALL">("ALL")
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
-  const [selectedDeliveryId, setSelectedDeliveryId] = useState<string | null>(null)
-  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false)
   
   const { data: deliveries, isLoading, error } = useDeliveries()
+
+  const handleDeliveryClick = (deliveryId: string) => {
+    router.push(`/dashboard/delivery/${deliveryId}`)
+  }
 
   // Filtrar deliveries
   const filteredDeliveries = useMemo(() => {
@@ -110,11 +114,6 @@ export default function DeliveryPage() {
       avgRating: ratingsCount > 0 ? totalRating / ratingsCount : 0,
     }
   }, [deliveries])
-
-  const handleDeliveryClick = (deliveryId: string) => {
-    setSelectedDeliveryId(deliveryId)
-    setIsDetailsDialogOpen(true)
-  }
 
   if (isLoading) {
     return (
@@ -222,31 +221,54 @@ export default function DeliveryPage() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por cliente, número, telefone ou endereço..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as DeliveryStatus | "ALL")}
-          className="px-4 py-2 border border-border rounded-lg bg-card text-foreground text-sm shadow-sm"
-        >
-          <option value="ALL">Todos os Status</option>
-          {Object.entries(statusConfig).map(([key, config]) => (
-            <option key={key} value={key}>
-              {config.label}
-            </option>
-          ))}
-        </select>
+      {/* Filtro de Busca */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por cliente, número, telefone ou endereço..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10"
+        />
       </div>
+
+      {/* Tabs de Filtro por Status */}
+      <Tabs defaultValue="ALL" className="space-y-4" onValueChange={(value) => setStatusFilter(value as DeliveryStatus | "ALL")}>
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="inline-flex h-auto w-full justify-start overflow-x-auto overflow-y-hidden whitespace-nowrap rounded-lg p-1 md:grid md:w-full md:grid-cols-8">
+            <TabsTrigger value="ALL" className="text-xs sm:text-sm shrink-0">
+              Todas
+              {filteredDeliveries.length > 0 && (
+                <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
+                  {filteredDeliveries.length}
+                </span>
+              )}
+            </TabsTrigger>
+            {Object.entries(statusConfig).map(([key, config]) => {
+              const count = filteredDeliveries.filter(d => d.status === key).length
+              return (
+                <TabsTrigger key={key} value={key} className="text-xs sm:text-sm shrink-0">
+                  {config.label}
+                  {count > 0 && (
+                    <span className="ml-1.5 rounded-full bg-muted px-2 py-0.5 text-xs">
+                      {count}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )
+            })}
+          </TabsList>
+        </div>
+
+        <TabsContent value="ALL" className="space-y-0">
+          {/* Lista será renderizada abaixo */}
+        </TabsContent>
+        {Object.keys(statusConfig).map((key) => (
+          <TabsContent key={key} value={key} className="space-y-0">
+            {/* Lista será renderizada abaixo */}
+          </TabsContent>
+        ))}
+      </Tabs>
 
       {/* Lista de Entregas */}
       {filteredDeliveries.length === 0 ? (
@@ -266,13 +288,15 @@ export default function DeliveryPage() {
             const StatusIcon = statusInfo?.icon || Package
             
             return (
-              <button
+              <div
                 key={delivery.id}
-                onClick={() => handleDeliveryClick(delivery.id)}
-                className="block w-full bg-card border border-border rounded-lg p-4 hover:shadow-md transition-all hover:border-primary/50 text-left"
+                className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-all hover:border-primary/50"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 space-y-2">
+                  <button
+                    onClick={() => handleDeliveryClick(delivery.id)}
+                    className="flex-1 space-y-2 text-left"
+                  >
                     {/* Header */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-lg">
@@ -324,34 +348,51 @@ export default function DeliveryPage() {
                         R$ {(delivery.total ?? 0).toFixed(2)}
                       </div>
                     </div>
-                  </div>
+                  </button>
 
-                  {/* Rating (se entregue) */}
-                  {delivery.rating && (
-                    <div className="text-right">
-                      <div className="text-yellow-500 font-semibold">
-                        ★ {delivery.rating}
+                  {/* Botões de Ação */}
+                  <div className="flex flex-col gap-2">
+                    {/* Rating (se entregue) */}
+                    {delivery.rating && (
+                      <div className="text-right">
+                        <div className="text-yellow-500 font-semibold">
+                          ★ {delivery.rating}
+                        </div>
+                        <div className="text-xs text-muted-foreground">Avaliação</div>
                       </div>
-                      <div className="text-xs text-muted-foreground">Avaliação</div>
-                    </div>
-                  )}
+                    )}
+
+                    {/* Botão de Impressão */}
+                    <DeliveryPrintButtons 
+                      deliveryId={delivery.id}
+                      deliveryData={{
+                        customer: { 
+                          name: delivery.customerName, 
+                          phone: delivery.customerPhone 
+                        },
+                        deliveryAddress: delivery.deliveryAddress,
+                        addressNumber: "",
+                        district: delivery.district,
+                        city: delivery.city,
+                        state: "SP",
+                        items: [],
+                        subtotal: delivery.subtotal,
+                        deliveryFee: delivery.deliveryFee,
+                        total: delivery.total,
+                      }}
+                    />
+                  </div>
                 </div>
-              </button>
+              </div>
             )
           })}
         </div>
       )}
 
-      {/* Dialogs */}
+      {/* Dialog de Nova Entrega */}
       <CreateDeliveryDialog
         open={isCreateDialogOpen}
         onOpenChange={setIsCreateDialogOpen}
-      />
-      
-      <DeliveryDetailsDialog
-        deliveryId={selectedDeliveryId}
-        open={isDetailsDialogOpen}
-        onOpenChange={setIsDetailsDialogOpen}
       />
     </div>
   )
