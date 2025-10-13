@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrinterInstance } from '@/lib/hardware/thermalPrinter'
 import { 
   generateSaleReceipt, 
   generateCashTransactionReceipt,
@@ -93,9 +92,30 @@ export async function POST(request: NextRequest) {
         )
     }
 
-    // Imprime
-    const printer = getPrinterInstance()
-    await printer.print(template)
+    // Envia para o print-server
+    const printServerUrl = process.env.PRINT_SERVER_URL
+    const authToken = process.env.PRINT_SERVER_AUTH_TOKEN
+
+    if (!printServerUrl) {
+      return NextResponse.json(
+        { success: false, message: 'Print server não configurado' },
+        { status: 503 }
+      )
+    }
+
+    const printResponse = await fetch(`${printServerUrl}/api/printer/print`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+      },
+      body: JSON.stringify({ template }),
+    })
+
+    if (!printResponse.ok) {
+      const errorData = await printResponse.json()
+      throw new Error(errorData.error || 'Erro ao imprimir no print-server')
+    }
     
     // TODO: Registra job de impressão quando PrintJob estiver disponível
     // const printJob = await prisma.printJob.create({

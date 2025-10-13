@@ -1,36 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server'
 
 /**
- * NOTA: Este endpoint foi desabilitado porque node-thermal-printer
- * não funciona em ambientes serverless (Vercel/Edge Functions).
+ * Proxy para o print-server separado.
  * 
- * Use o print-server separado executando em um servidor local/VPS.
+ * Este endpoint encaminha as requisições de configuração para o print-server
+ * que deve estar rodando em PRINT_SERVER_URL.
  * 
- * Para configurar:
- * 1. Instale o print-server: cd print-server && ./install.sh
- * 2. Configure: nano .env
- * 3. Inicie: pm2 start index.js --name print-server
- * 4. Configure URL no projeto: PRINT_SERVER_URL=http://localhost:3001
+ * Para configurar o print-server:
+ * 1. Configure a variável: PRINT_SERVER_URL=https://print.nitrobeer.com.br
+ * 2. Configure o token: PRINT_SERVER_AUTH_TOKEN=seu_token_secreto
  * 
  * Veja: /TUTORIAL_IMPRESSORA_TERMICA.md e /DEPLOY_IMPRESSORA_PRODUCAO.md
  */
 export async function POST(request: NextRequest) {
-  return NextResponse.json(
-    { 
-      success: false, 
-      message: 'Configuração de impressora local desabilitada. Use o print-server separado.',
-      help: 'Veja /TUTORIAL_IMPRESSORA_TERMICA.md para instruções de setup',
-      documentation: [
-        '/TUTORIAL_IMPRESSORA_TERMICA.md',
-        '/DEPLOY_IMPRESSORA_PRODUCAO.md',
-        '/print-server/README.md'
-      ]
-    },
-    { status: 501 } // Not Implemented
-  )
-}
+  const printServerUrl = process.env.PRINT_SERVER_URL
+  const authToken = process.env.PRINT_SERVER_AUTH_TOKEN
 
-// Desabilitar outros métodos também
-export async function GET(request: NextRequest) {
-  return POST(request)
+  if (!printServerUrl) {
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: 'Print server não configurado',
+        help: 'Configure PRINT_SERVER_URL no ambiente',
+      },
+      { status: 503 }
+    )
+  }
+
+  try {
+    const body = await request.json()
+
+    const response = await fetch(`${printServerUrl}/api/printer/configure`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+      },
+      body: JSON.stringify(body),
+    })
+
+    const data = await response.json()
+
+    return NextResponse.json(data, { status: response.status })
+  } catch (error: any) {
+    console.error('Erro ao conectar ao print-server:', error)
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: 'Erro ao conectar ao print-server',
+        error: error.message,
+      },
+      { status: 503 }
+    )
+  }
 }

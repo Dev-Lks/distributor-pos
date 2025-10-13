@@ -1,23 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrinterInstance } from '@/lib/hardware/thermalPrinter'
 
+/**
+ * Proxy para teste de impressão no print-server
+ */
 export async function POST(request: NextRequest) {
-  try {
-    const printer = getPrinterInstance()
-    await printer.testPrint()
-    
-    return NextResponse.json({ 
-      success: true,
-      message: 'Teste de impressão enviado com sucesso' 
-    })
-  } catch (error) {
-    console.error('Erro no teste de impressão:', error)
+  const printServerUrl = process.env.PRINT_SERVER_URL
+  const authToken = process.env.PRINT_SERVER_AUTH_TOKEN
+
+  if (!printServerUrl) {
     return NextResponse.json(
       { 
         success: false, 
-        message: error instanceof Error ? error.message : 'Erro no teste de impressão' 
+        message: 'Print server não configurado',
+        help: 'Configure PRINT_SERVER_URL no ambiente',
       },
-      { status: 500 }
+      { status: 503 }
+    )
+  }
+
+  try {
+    const response = await fetch(`${printServerUrl}/api/printer/test`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+      },
+    })
+
+    const data = await response.json()
+    return NextResponse.json(data, { status: response.status })
+  } catch (error: any) {
+    console.error('Erro ao conectar ao print-server:', error)
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: 'Erro ao conectar ao print-server',
+        error: error.message,
+      },
+      { status: 503 }
     )
   }
 }

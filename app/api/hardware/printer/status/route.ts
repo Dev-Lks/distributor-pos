@@ -1,22 +1,44 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getPrinterInstance } from '@/lib/hardware/thermalPrinter'
 
+/**
+ * Proxy para status da impressora no print-server
+ */
 export async function GET(request: NextRequest) {
-  try {
-    const printer = getPrinterInstance()
-    const status = await printer.getStatus()
-    
-    return NextResponse.json(status)
-  } catch (error) {
-    console.error('Erro ao obter status da impressora:', error)
+  const printServerUrl = process.env.PRINT_SERVER_URL
+  const authToken = process.env.PRINT_SERVER_AUTH_TOKEN
+
+  if (!printServerUrl) {
     return NextResponse.json(
       { 
         connected: false, 
         online: false, 
         paperStatus: 'out',
-        error: error instanceof Error ? error.message : 'Erro desconhecido' 
+        error: 'Print server não configurado',
       },
-      { status: 500 }
+      { status: 503 }
+    )
+  }
+
+  try {
+    const response = await fetch(`${printServerUrl}/api/printer/status`, {
+      method: 'GET',
+      headers: {
+        ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+      },
+    })
+
+    const data = await response.json()
+    return NextResponse.json(data, { status: response.status })
+  } catch (error: any) {
+    console.error('Erro ao conectar ao print-server:', error)
+    return NextResponse.json(
+      { 
+        connected: false, 
+        online: false, 
+        paperStatus: 'out',
+        error: 'Erro ao conectar ao print-server',
+      },
+      { status: 503 }
     )
   }
 }
