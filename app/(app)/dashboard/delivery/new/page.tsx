@@ -224,6 +224,7 @@ export default function NewDeliveryPage() {
                   onChange={(field, value) => {
                     setFormData(prev => ({ ...prev, [field]: value }))
                   }}
+                  customerId={formData.customerId}
                 />
               </div>
 

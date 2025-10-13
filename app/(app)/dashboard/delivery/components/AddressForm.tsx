@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
-import { Loader2, MapPin } from "lucide-react"
+import { Loader2, MapPin, User } from "lucide-react"
 import { toast } from "sonner"
 
 interface AddressFields {
@@ -24,10 +24,95 @@ interface AddressFormProps {
   values: AddressFields
   onChange: (field: keyof AddressFields, value: string) => void
   errors?: Partial<Record<keyof AddressFields, string>>
+  customerId?: string // ID do cliente para buscar endereço
+  onCalculateDistance?: (address: string) => void // Callback para calcular distância
 }
 
-export function AddressForm({ values, onChange, errors }: AddressFormProps) {
+export function AddressForm({ values, onChange, errors, customerId, onCalculateDistance }: AddressFormProps) {
   const [isLoadingCep, setIsLoadingCep] = useState(false)
+  const [isLoadingCustomerAddress, setIsLoadingCustomerAddress] = useState(false)
+
+  // Função para carregar endereço do cliente
+  const handleLoadCustomerAddress = async () => {
+    if (!customerId) {
+      toast.error("Nenhum cliente selecionado")
+      return
+    }
+
+    setIsLoadingCustomerAddress(true)
+    try {
+      const response = await fetch(`/api/customers/${customerId}`)
+      if (!response.ok) throw new Error("Erro ao buscar dados do cliente")
+
+      const customer = await response.json()
+      
+      // Verifica se o cliente tem endereço cadastrado
+      if (!customer.address && !customer.street) {
+        toast.warning("Cliente não possui endereço cadastrado")
+        return
+      }
+
+      // Preenche os campos com os dados do cliente
+      let preenchidos = 0
+      
+      if (customer.postalCode || customer.zipCode) {
+        onChange("postalCode", customer.postalCode || customer.zipCode)
+        preenchidos++
+      }
+      
+      if (customer.address || customer.street) {
+        onChange("deliveryAddress", customer.address || customer.street)
+        preenchidos++
+      }
+      
+      if (customer.addressNumber || customer.number) {
+        onChange("addressNumber", customer.addressNumber || customer.number)
+        preenchidos++
+      }
+      
+      if (customer.addressComplement || customer.complement) {
+        onChange("addressComplement", customer.addressComplement || customer.complement)
+        preenchidos++
+      }
+      
+      if (customer.district || customer.neighborhood) {
+        onChange("district", customer.district || customer.neighborhood)
+        preenchidos++
+      }
+      
+      if (customer.city) {
+        onChange("city", customer.city)
+        preenchidos++
+      }
+      
+      if (customer.state) {
+        onChange("state", customer.state)
+        preenchidos++
+      }
+      
+      if (customer.referencePoint) {
+        onChange("referencePoint", customer.referencePoint)
+        preenchidos++
+      }
+
+      if (preenchidos > 0) {
+        toast.success(`Endereço do cliente carregado! ${preenchidos} campo(s) preenchido(s)`)
+        
+        // Se callback de calcular distância foi fornecido, chama automaticamente
+        if (onCalculateDistance && (customer.address || customer.street)) {
+          const fullAddress = `${customer.address || customer.street}, ${customer.addressNumber || customer.number || ''} - ${customer.district || customer.neighborhood}, ${customer.city} - ${customer.state}, ${customer.postalCode || customer.zipCode}`
+          setTimeout(() => onCalculateDistance(fullAddress), 500)
+        }
+      } else {
+        toast.warning("Cliente não possui dados de endereço cadastrados")
+      }
+    } catch (error) {
+      console.error("Erro ao carregar endereço do cliente:", error)
+      toast.error("Erro ao carregar endereço do cliente")
+    } finally {
+      setIsLoadingCustomerAddress(false)
+    }
+  }
 
   const handleCepChange = (cep: string) => {
     // Formatar CEP automaticamente
@@ -101,9 +186,34 @@ export function AddressForm({ values, onChange, errors }: AddressFormProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <MapPin className="h-5 w-5 text-muted-foreground" />
-        <h3 className="text-sm font-semibold">Endereço de Entrega</h3>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <MapPin className="h-5 w-5 text-muted-foreground" />
+          <h3 className="text-sm font-semibold">Endereço de Entrega</h3>
+        </div>
+        
+        {customerId && (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleLoadCustomerAddress}
+            disabled={isLoadingCustomerAddress}
+            className="gap-2"
+          >
+            {isLoadingCustomerAddress ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Carregando...
+              </>
+            ) : (
+              <>
+                <User className="h-4 w-4" />
+                Usar Endereço do Cliente
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
