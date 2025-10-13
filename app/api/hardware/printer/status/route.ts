@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
  */
 export async function GET(request: NextRequest) {
   const printServerUrl = process.env.PRINT_SERVER_URL
-  const authToken = process.env.PRINT_SERVER_AUTH_TOKEN
+  const authToken = process.env.PRINT_SERVER_TOKEN || process.env.PRINT_SERVER_AUTH_TOKEN
 
   if (!printServerUrl) {
     return NextResponse.json(

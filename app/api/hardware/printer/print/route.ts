@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     // Envia para o print-server
     const printServerUrl = process.env.PRINT_SERVER_URL
-    const authToken = process.env.PRINT_SERVER_AUTH_TOKEN
+    const authToken = process.env.PRINT_SERVER_TOKEN || process.env.PRINT_SERVER_AUTH_TOKEN
 
     if (!printServerUrl) {
       return NextResponse.json(
