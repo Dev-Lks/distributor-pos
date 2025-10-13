@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 
 /**
  * Calcula a distância entre dois pontos usando a fórmula de Haversine
@@ -105,6 +106,40 @@ export async function POST(request: NextRequest) {
     let originCoords: { lat: number; lng: number } | null = null
     let destCoords: { lat: number; lng: number } | null = null
 
+    // Se não forneceu endereço de origem, buscar das configurações
+    let effectiveOriginAddress = originAddress
+    
+    if (!effectiveOriginAddress && !originLat && !originLng) {
+      // Buscar configurações do sistema
+      const settings = await prisma.systemSettings.findFirst()
+      
+      if (settings?.defaultPointOfSaleId) {
+        // Buscar endereço do ponto de venda principal
+        const mainPoint = await prisma.pointOfSale.findUnique({
+          where: { id: settings.defaultPointOfSaleId },
+          select: { address: true, city: true, state: true, name: true }
+        })
+        
+        if (mainPoint && mainPoint.address) {
+          effectiveOriginAddress = `${mainPoint.address}, ${mainPoint.city} - ${mainPoint.state}`
+          console.log(`Usando endereço do ponto principal (${mainPoint.name}): ${effectiveOriginAddress}`)
+        }
+      }
+      
+      // Se ainda não tem endereço, tentar usar endereço da empresa nas configurações
+      if (!effectiveOriginAddress && settings?.address && settings?.city) {
+        effectiveOriginAddress = `${settings.address}, ${settings.city} - ${settings.state}`
+        console.log(`Usando endereço da empresa: ${effectiveOriginAddress}`)
+      }
+      
+      if (!effectiveOriginAddress) {
+        return NextResponse.json(
+          { error: "Configure o ponto principal ou endereço da empresa nas configurações para calcular distância automaticamente" },
+          { status: 400 }
+        )
+      }
+    }
+
     // Se já tem coordenadas, usa direto
     if (originLat && originLng && destLat && destLng) {
       distance = calculateDistance(originLat, originLng, destLat, destLng)
@@ -112,7 +147,7 @@ export async function POST(request: NextRequest) {
       destCoords = { lat: destLat, lng: destLng }
     } else {
       // Caso contrário, faz geocoding dos endereços
-      if (!originAddress || !destinationAddress) {
+      if (!effectiveOriginAddress || !destinationAddress) {
         return NextResponse.json(
           {
             error:
@@ -123,7 +158,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Geocode origem
-      originCoords = await geocodeAddress(originAddress)
+      originCoords = await geocodeAddress(effectiveOriginAddress)
       if (!originCoords) {
         return NextResponse.json(
           { error: "Não foi possível localizar o endereço de origem" },

@@ -17,7 +17,6 @@ import {
   DollarSign,
   Settings,
   Users,
-  MapPinned,
   TrendingUp,
 } from "lucide-react"
 import { useDeliveries } from "@/lib/useDeliveries"
@@ -147,14 +146,6 @@ export default function DeliveryPage() {
         </div>
         
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => window.location.href = "/dashboard/delivery/zones"}
-            className="hidden sm:flex"
-          >
-            <MapPinned className="w-4 h-4 mr-2" />
-            Zonas
-          </Button>
           <Button
             variant="outline"
             onClick={() => window.location.href = "/dashboard/delivery/drivers"}

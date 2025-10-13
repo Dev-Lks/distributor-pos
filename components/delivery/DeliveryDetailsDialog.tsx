@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useDelivery, useUpdateDelivery } from "@/lib/useDeliveries"
+import { useDeliveryDrivers } from "@/lib/useDeliveryDrivers"
 import type { DeliveryStatus } from "@/types/delivery"
 import { toast } from "sonner"
 import {
@@ -64,10 +65,12 @@ export function DeliveryDetailsDialog({
   onOpenChange,
 }: DeliveryDetailsDialogProps) {
   const [newStatus, setNewStatus] = useState<DeliveryStatus | "">("")
+  const [newDriverId, setNewDriverId] = useState<string>("")
   const [rating, setRating] = useState<number>(5)
   const [ratingComment, setRatingComment] = useState("")
   
   const { data: delivery, isLoading } = useDelivery(deliveryId)
+  const { data: drivers = [], isLoading: isLoadingDrivers } = useDeliveryDrivers({ activeOnly: true })
   const updateDelivery = useUpdateDelivery()
 
   const handleUpdateStatus = async () => {
@@ -83,6 +86,22 @@ export function DeliveryDetailsDialog({
       setNewStatus("")
     } catch (error: any) {
       toast.error(error.message || "Erro ao atualizar status")
+    }
+  }
+
+  const handleUpdateDriver = async () => {
+    if (!deliveryId) return
+
+    try {
+      await updateDelivery.mutateAsync({
+        id: deliveryId,
+        driverId: newDriverId || null,
+      })
+      
+      toast.success(newDriverId ? "Entregador atribuído com sucesso!" : "Entregador removido")
+      setNewDriverId("")
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atribuir entregador")
     }
   }
 
@@ -340,6 +359,44 @@ export function DeliveryDetailsDialog({
                   disabled={!newStatus || updateDelivery.isPending}
                 >
                   Atualizar
+                </Button>
+              </div>
+            </div>
+
+            {/* Atribuir/Alterar Entregador */}
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Truck className="h-4 w-4" />
+                {delivery.driver ? "Alterar Entregador" : "Atribuir Entregador"}
+              </h3>
+              <div className="flex gap-2">
+                <Select 
+                  value={newDriverId} 
+                  onValueChange={setNewDriverId}
+                  disabled={isLoadingDrivers}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder={
+                      delivery.driver 
+                        ? `Atual: ${delivery.driver.name}` 
+                        : "Selecione um entregador"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Remover entregador</SelectItem>
+                    {drivers.map((driver) => (
+                      <SelectItem key={driver.id} value={driver.id}>
+                        {driver.name} ({driver.vehicleType})
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleUpdateDriver}
+                  disabled={updateDelivery.isPending || isLoadingDrivers}
+                  variant={newDriverId === "" && delivery.driver ? "destructive" : "default"}
+                >
+                  {newDriverId === "" && delivery.driver ? "Remover" : "Atribuir"}
                 </Button>
               </div>
             </div>

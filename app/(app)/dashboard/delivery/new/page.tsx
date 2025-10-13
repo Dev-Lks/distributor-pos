@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { ImprovedCustomerSelector } from "@/components/customers/ImprovedCustomerSelector"
 import { useCreateDelivery } from "@/lib/useDeliveries"
+import { useDeliveryDrivers } from "@/lib/useDeliveryDrivers"
 import { useDeliveryCart } from "../hooks/useDeliveryCart"
 import { ProductSelector } from "../components/ProductSelector"
 import { DeliveryCart } from "../components/DeliveryCart"
@@ -73,6 +74,9 @@ interface DeliveryFormData {
   
   // Agendamento
   scheduledFor?: string | null
+  
+  // Entregador
+  driverId?: string | null
 }
 
 export default function NewDeliveryPage() {
@@ -91,6 +95,7 @@ export default function NewDeliveryPage() {
   const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null)
 
   const createDelivery = useCreateDelivery()
+  const { data: drivers = [], isLoading: isLoadingDrivers } = useDeliveryDrivers({ activeOnly: true })
   
   // Carrinho dinâmico
   const {
@@ -213,6 +218,7 @@ export default function NewDeliveryPage() {
         paidInAdvance: formData.paidInAdvance || false,
         changeFor: formData.changeFor || null,
         scheduledFor: formData.scheduledFor || null,
+        driverId: formData.driverId || null,
       }
 
       const result = await createDelivery.mutateAsync(deliveryData) as any
@@ -531,6 +537,35 @@ export default function NewDeliveryPage() {
                       onChange={(value) => setFormData({ ...formData, scheduledFor: value || undefined })}
                       label=""
                     />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Entregador
+                    </CardTitle>
+                    <CardDescription>Atribua um entregador (opcional)</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Select
+                      value={formData.driverId || ""}
+                      onValueChange={(value) => setFormData({ ...formData, driverId: value || null })}
+                      disabled={isLoadingDrivers}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o entregador..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Nenhum (atribuir depois)</SelectItem>
+                        {drivers.map((driver) => (
+                          <SelectItem key={driver.id} value={driver.id}>
+                            {driver.name} ({driver.vehicleType})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </CardContent>
                 </Card>
               </div>

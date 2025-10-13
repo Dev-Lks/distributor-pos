@@ -85,6 +85,7 @@ export default function SettingsPage() {
   const [cnpj, setCnpj] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
+  const [defaultPointOfSaleId, setDefaultPointOfSaleId] = useState<string | null>(null);
   const [enabledChannels, setEnabledChannels] = useState<
     Record<ChannelId, boolean>
   >({
@@ -113,6 +114,7 @@ export default function SettingsPage() {
       setCnpj(data.cnpj || "");
       setAddress(data.address || "");
       setPhone(data.phone || "");
+      setDefaultPointOfSaleId(data.defaultPointOfSaleId || null);
       setEnabledChannels(data.notifications || enabledChannels);
       setAutoSync(data.autoSync ?? true);
       setInventoryAlerts(data.alerts?.lowStock ?? true);
@@ -179,6 +181,7 @@ export default function SettingsPage() {
       receiptMessage,
       receiptShowQRCode,
       receiptWidth,
+      defaultPointOfSaleId,
       notifications: enabledChannels,
       autoSync,
       alerts: {
@@ -314,8 +317,12 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="default-point">Ponto principal</Label>
-                <Select defaultValue="main" disabled={!isAdmin}>
+                <Label htmlFor="default-point">Ponto principal (origem das entregas)</Label>
+                <Select 
+                  value={defaultPointOfSaleId || ""} 
+                  onValueChange={setDefaultPointOfSaleId}
+                  disabled={!isAdmin}
+                >
                   <SelectTrigger id="default-point">
                     <SelectValue placeholder="Selecione o ponto" />
                   </SelectTrigger>
@@ -327,6 +334,9 @@ export default function SettingsPage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Este ponto será usado como origem para calcular taxa de entrega
+                </p>
               </div>
 
               <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3">
