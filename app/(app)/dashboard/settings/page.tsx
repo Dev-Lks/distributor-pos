@@ -22,6 +22,7 @@ import {
   Save,
   AlertTriangle,
   CheckCircle2,
+  Receipt,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,11 @@ export default function SettingsPage() {
   const [businessName, setBusinessName] = useState("");
   const [supportEmail, setSupportEmail] = useState("");
   const [receiptMessage, setReceiptMessage] = useState("");
+  const [receiptShowQRCode, setReceiptShowQRCode] = useState(true);
+  const [receiptWidth, setReceiptWidth] = useState(48);
+  const [cnpj, setCnpj] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
   const [enabledChannels, setEnabledChannels] = useState<
     Record<ChannelId, boolean>
   >({
@@ -102,6 +108,11 @@ export default function SettingsPage() {
       setBusinessName(data.businessName || "");
       setSupportEmail(data.supportEmail || "");
       setReceiptMessage(data.receiptMessage || "");
+      setReceiptShowQRCode(data.receiptShowQRCode ?? true);
+      setReceiptWidth(data.receiptWidth || 48);
+      setCnpj(data.cnpj || "");
+      setAddress(data.address || "");
+      setPhone(data.phone || "");
       setEnabledChannels(data.notifications || enabledChannels);
       setAutoSync(data.autoSync ?? true);
       setInventoryAlerts(data.alerts?.lowStock ?? true);
@@ -161,8 +172,13 @@ export default function SettingsPage() {
   const handleSaveSettings = () => {
     updateSettings.mutate({
       businessName,
+      cnpj,
+      address,
+      phone,
       supportEmail,
       receiptMessage,
+      receiptShowQRCode,
+      receiptWidth,
       notifications: enabledChannels,
       autoSync,
       alerts: {
@@ -255,22 +271,62 @@ export default function SettingsPage() {
                     placeholder="Ex.: NitroBeer Tap House"
                     disabled={!isAdmin}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Este nome aparecerá nos recibos impressos
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="default-point">Ponto principal</Label>
-                  <Select defaultValue="main" disabled={!isAdmin}>
-                    <SelectTrigger id="default-point">
-                      <SelectValue placeholder="Selecione o ponto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {pointsOfSale?.map((pos: any) => (
-                        <SelectItem key={pos.id} value={pos.id}>
-                          {pos.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="cnpj">CNPJ</Label>
+                  <Input
+                    id="cnpj"
+                    value={cnpj}
+                    onChange={(e) => setCnpj(e.target.value)}
+                    placeholder="00.000.000/0001-00"
+                    disabled={!isAdmin}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Será exibido no cabeçalho dos recibos
+                  </p>
                 </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="address">Endereço</Label>
+                  <Input
+                    id="address"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Rua Exemplo, 123"
+                    disabled={!isAdmin}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Telefone</Label>
+                  <Input
+                    id="phone"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="(00) 0000-0000"
+                    disabled={!isAdmin}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="default-point">Ponto principal</Label>
+                <Select defaultValue="main" disabled={!isAdmin}>
+                  <SelectTrigger id="default-point">
+                    <SelectValue placeholder="Selecione o ponto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pointsOfSale?.map((pos: any) => (
+                      <SelectItem key={pos.id} value={pos.id}>
+                        {pos.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3">
@@ -304,18 +360,93 @@ export default function SettingsPage() {
                     disabled={!isAdmin}
                   />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Configurações de Recibos */}
+          <Card>
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Receipt className="h-5 w-5" />
+                Configurações de Recibos
+              </CardTitle>
+              <CardDescription>
+                Personalize a aparência e informações dos recibos impressos na impressora térmica
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="closing-message">
-                    Mensagem no comprovante
-                  </Label>
-                  <textarea
-                    id="closing-message"
-                    placeholder="Agradeça ao cliente e incentive a fidelidade"
-                    value={receiptMessage}
-                    onChange={(e) => setReceiptMessage(e.target.value)}
+                  <Label htmlFor="receipt-width">Largura do papel (mm)</Label>
+                  <Select 
+                    value={receiptWidth.toString()} 
+                    onValueChange={(value) => setReceiptWidth(parseInt(value))}
                     disabled={!isAdmin}
-                    className="min-h-[110px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 disabled:opacity-50"
+                  >
+                    <SelectTrigger id="receipt-width">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="32">32mm (Compacto)</SelectItem>
+                      <SelectItem value="48">48mm (Padrão)</SelectItem>
+                      <SelectItem value="58">58mm (Médio)</SelectItem>
+                      <SelectItem value="80">80mm (Grande)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Escolha conforme o tamanho do papel da sua impressora
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between border rounded-lg p-4">
+                  <div className="space-y-0.5">
+                    <Label>Exibir QR Code</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Inclui um QR Code no final do recibo para consulta rápida da venda
+                    </p>
+                  </div>
+                  <Switch
+                    checked={receiptShowQRCode}
+                    onCheckedChange={setReceiptShowQRCode}
+                    disabled={!isAdmin}
                   />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="receipt-footer">Mensagem de rodapé</Label>
+                <textarea
+                  id="receipt-footer"
+                  placeholder="Ex: Obrigado pela preferência! Volte sempre!"
+                  value={receiptMessage}
+                  onChange={(e) => setReceiptMessage(e.target.value)}
+                  disabled={!isAdmin}
+                  className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 disabled:opacity-50"
+                  maxLength={200}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {receiptMessage.length}/200 caracteres
+                </p>
+              </div>
+
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4">
+                <div className="flex gap-3">
+                  <div className="flex-shrink-0">
+                    <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
+                      📱 Sobre o QR Code
+                    </h4>
+                    <p className="text-xs text-blue-800 dark:text-blue-200">
+                      O QR Code impresso nos recibos contém o ID único da venda. Ele permite que clientes e funcionários 
+                      consultem rapidamente os detalhes da compra, facilitando trocas, devoluções e auditoria. 
+                      Basta escanear com qualquer leitor de QR Code no celular.
+                    </p>
+                  </div>
                 </div>
               </div>
             </CardContent>

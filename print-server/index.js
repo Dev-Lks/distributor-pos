@@ -321,7 +321,7 @@ app.post('/print', async (req, res) => {
 async function printDelivery(data) {
   printer.clear()
   
-  // Cabeçalho
+  // Cabeçalho - Melhor formatado
   printer.alignCenter()
   printer.bold(true)
   printer.setTextDoubleHeight()
@@ -330,13 +330,13 @@ async function printDelivery(data) {
   printer.bold(false)
   printer.newLine()
   
-  printer.println(`#${data.header.deliveryNumber}`)
+  printer.println(`Pedido #${data.header.deliveryNumber}`)
   printer.println(data.header.date)
   printer.newLine()
   
-  // Status
+  // Status com destaque
   printer.bold(true)
-  printer.println(`Status: ${data.header.status}`)
+  printer.println(`STATUS: ${data.header.status}`)
   printer.bold(false)
   printer.drawLine()
   printer.newLine()
@@ -352,7 +352,7 @@ async function printDelivery(data) {
   }
   printer.newLine()
   
-  // Endereço
+  // Endereço - Mais claro e organizado
   printer.bold(true)
   printer.println('ENDERECO DE ENTREGA')
   printer.bold(false)
@@ -368,7 +368,7 @@ async function printDelivery(data) {
   
   if (data.address.reference) {
     printer.newLine()
-    printer.println(`Ref: ${data.address.reference}`)
+    printer.println(`Referencia: ${data.address.reference}`)
   }
   
   if (data.address.instructions) {

@@ -22,6 +22,7 @@ interface ReceiptConfig {
   logoUrl?: string
   footerMessage?: string
   width: number
+  showQRCode?: boolean
 }
 
 export function generateSaleReceipt(
@@ -29,10 +30,11 @@ export function generateSaleReceipt(
   config: ReceiptConfig
 ): ReceiptTemplate {
   const commands: PrintCommand[] = []
+  const lineWidth = config.width || 48
   
-  // Header
+  // Header - Centralizado e bem formatado
   commands.push({ type: 'align', value: 'center' })
-  commands.push({ type: 'text', value: config.storeName, size: 'large', bold: true })
+  commands.push({ type: 'text', value: config.storeName.toUpperCase(), size: 'large', bold: true })
   commands.push({ type: 'feed', lines: 1 })
   
   if (config.storeDocument) {
@@ -48,13 +50,21 @@ export function generateSaleReceipt(
   }
   
   commands.push({ type: 'feed', lines: 1 })
+  // Separador com largura exata
   commands.push({ type: 'separator', char: '=' })
   commands.push({ type: 'feed', lines: 1 })
   
   // Informações da venda
   commands.push({ type: 'align', value: 'left' })
-  commands.push({ type: 'text', value: `Venda #: ${sale.id.slice(-8)}` })
-  commands.push({ type: 'text', value: `Data: ${new Date(sale.date).toLocaleString('pt-BR')}` })
+  commands.push({ type: 'text', value: `CUPOM NAO-FISCAL` })
+  commands.push({ type: 'text', value: `Venda #${sale.id.slice(-8).toUpperCase()}` })
+  commands.push({ type: 'text', value: `Data: ${new Date(sale.date).toLocaleString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })}` })
   
   if (sale.pointOfSale) {
     commands.push({ type: 'text', value: `PDV: ${sale.pointOfSale.name}` })
@@ -67,44 +77,47 @@ export function generateSaleReceipt(
   commands.push({ type: 'feed', lines: 1 })
   commands.push({ type: 'separator', char: '-' })
   
-  // Cabeçalho dos produtos
-  const itemHeader = padString('ITEM', 20) + padString('QTD', 5) + padString('VALOR', config.width - 25)
-  commands.push({ type: 'text', value: itemHeader })
+  // Cabeçalho dos produtos - Melhor formatado
+  commands.push({ type: 'text', value: padString('ITEM', 20) + ' ' + padString('QTD', 4, ' ') + ' ' + padString('TOTAL', lineWidth - 26) })
   commands.push({ type: 'separator', char: '-' })
   
-  // Produtos
+  // Produtos - Com melhor formatação
   for (const item of sale.items) {
-    const productName = truncateString(item.product.name, config.width - 2)
+    const productName = truncateString(item.product.name, lineWidth - 2)
     commands.push({ type: 'text', value: productName })
     
-    const qtyPrice = padString(`${item.quantity}x`, 5) + 
-                     padString(`R$ ${item.price.toFixed(2)}`, 12) +
-                     padString(`R$ ${(item.quantity * item.price).toFixed(2)}`, config.width - 17)
-    commands.push({ type: 'text', value: qtyPrice })
+    const qtyText = `${item.quantity}x`
+    const priceText = `R$ ${item.price.toFixed(2)}`
+    const totalText = `R$ ${(item.quantity * item.price).toFixed(2)}`
+    
+    const itemLine = '  ' + padString(qtyText, 5) + ' ' + 
+                     padString(priceText, 12) + ' ' + 
+                     padString(totalText, lineWidth - 20, ' ', 'right')
+    commands.push({ type: 'text', value: itemLine })
     commands.push({ type: 'feed', lines: 1 })
   }
   
   commands.push({ type: 'separator', char: '-' })
   
-  // Totais
+  // Totais - Melhor alinhamento
   if (sale.subtotal && sale.subtotal !== sale.total) {
     commands.push({ 
       type: 'text', 
-      value: padString('SUBTOTAL:', config.width - 15) + padString(`R$ ${sale.subtotal.toFixed(2)}`, 15)
+      value: padString('Subtotal:', lineWidth - 15) + padString(`R$ ${sale.subtotal.toFixed(2)}`, 15, ' ', 'right')
     })
   }
   
   if (sale.discountValue > 0) {
     commands.push({ 
       type: 'text', 
-      value: padString('DESCONTO:', config.width - 15) + padString(`-R$ ${sale.discountValue.toFixed(2)}`, 15)
+      value: padString('Desconto:', lineWidth - 15) + padString(`-R$ ${sale.discountValue.toFixed(2)}`, 15, ' ', 'right')
     })
   }
   
   commands.push({ type: 'separator', char: '=' })
   commands.push({ 
     type: 'text', 
-    value: padString('TOTAL:', config.width - 15) + padString(`R$ ${sale.total.toFixed(2)}`, 15),
+    value: padString('TOTAL:', lineWidth - 15) + padString(`R$ ${sale.total.toFixed(2)}`, 15, ' ', 'right'),
     size: 'large',
     bold: true
   })
@@ -113,15 +126,29 @@ export function generateSaleReceipt(
   
   // Pagamento
   if (sale.paymentMethod) {
-    commands.push({ type: 'text', value: `Pagamento: ${sale.paymentMethod}` })
+    const paymentMap: Record<string, string> = {
+      'cash': 'Dinheiro',
+      'card': 'Cartão',
+      'pix': 'PIX',
+      'debit': 'Cartão Débito',
+      'credit': 'Cartão Crédito',
+    }
+    commands.push({ 
+      type: 'text', 
+      value: `Forma de Pagamento: ${paymentMap[sale.paymentMethod] || sale.paymentMethod}` 
+    })
   }
   
   commands.push({ type: 'feed', lines: 2 })
   
-  // QR Code
-  commands.push({ type: 'align', value: 'center' })
-  commands.push({ type: 'qrcode', data: sale.id })
-  commands.push({ type: 'feed', lines: 1 })
+  // QR Code (se configurado)
+  if (config.showQRCode !== false) {
+    commands.push({ type: 'align', value: 'center' })
+    commands.push({ type: 'text', value: 'Consulte sua venda:' })
+    commands.push({ type: 'feed', lines: 1 })
+    commands.push({ type: 'qrcode', data: sale.id })
+    commands.push({ type: 'feed', lines: 1 })
+  }
   
   // Footer
   if (config.footerMessage) {
@@ -260,7 +287,10 @@ export function generateCashClosingReceipt(
 }
 
 // Funções auxiliares
-function padString(str: string, length: number, char: string = ' '): string {
+function padString(str: string, length: number, char: string = ' ', align: 'left' | 'right' = 'left'): string {
+  if (align === 'right') {
+    return str.padStart(length, char).slice(-length)
+  }
   return str.padEnd(length, char).slice(0, length)
 }
 

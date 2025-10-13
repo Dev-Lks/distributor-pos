@@ -18,24 +18,37 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Busca configurações do ponto de venda
+    // Busca configurações globais do sistema
+    let systemSettings = await prisma.systemSettings.findFirst();
+    
+    // Se não existir, criar com valores padrão
+    if (!systemSettings) {
+      systemSettings = await prisma.systemSettings.create({
+        data: {
+          businessName: "Minha Loja",
+        }
+      });
+    }
+
+    // Busca configurações de hardware do ponto de venda (se houver)
     const pointOfSaleId = data.pointOfSaleId
     let hardwareConfig = null
     
-    // TODO: Descomentar quando HardwareConfig estiver disponível
-    // if (pointOfSaleId) {
-    //   hardwareConfig = await prisma.hardwareConfig.findUnique({
-    //     where: { pointOfSaleId },
-    //   })
-    // }
+    if (pointOfSaleId) {
+      hardwareConfig = await prisma.hardwareConfig.findUnique({
+        where: { pointOfSaleId },
+      })
+    }
 
     const config = {
-      storeName: 'Minha Loja', // TODO: Buscar do banco
-      storeDocument: '00.000.000/0001-00', // TODO: Buscar do banco
-      storeAddress: undefined,
-      storePhone: '(00) 0000-0000', // TODO: Buscar do banco
-      footerMessage: 'Obrigado pela preferência!',
-      width: 48,
+      storeName: systemSettings.businessName,
+      storeDocument: systemSettings.cnpj || undefined,
+      storeAddress: systemSettings.address || undefined,
+      storePhone: systemSettings.phone || undefined,
+      footerMessage: hardwareConfig?.footerMessage || systemSettings.receiptFooterMessage || 'Obrigado pela preferência!',
+      logoUrl: hardwareConfig?.logoUrl || systemSettings.receiptLogoUrl || undefined,
+      showQRCode: systemSettings.receiptShowQRCode,
+      width: hardwareConfig?.printerWidth || systemSettings.receiptWidth || 48,
     }
 
     let template

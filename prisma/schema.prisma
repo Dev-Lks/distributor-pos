@@ -1145,3 +1145,53 @@ model Delivery {
   @@index([deliveryNumber])
   @@index([createdAt])
 }
+
+// ========================================
+// CONFIGURAÇÕES GLOBAIS DO SISTEMA
+// ========================================
+
+model SystemSettings {
+  id String @id @default(cuid())
+
+  // Informações da Empresa
+  businessName    String  @default("Minha Empresa")
+  cnpj            String?
+  address         String?
+  addressNumber   String?
+  district        String?
+  city            String?
+  state           String?
+  postalCode      String?
+  phone           String?
+  email           String?
+  website         String?
+  
+  // Configurações de Recibos/Impressão
+  receiptFooterMessage String? @default("Obrigado pela preferência!")
+  receiptLogoUrl       String?
+  receiptShowQRCode    Boolean @default(true)
+  receiptWidth         Int     @default(48) // Largura do papel (32, 48, 58, 80mm)
+  
+  // Notificações
+  notificationEmail   Boolean @default(true)
+  notificationPush    Boolean @default(true)
+  notificationDesktop Boolean @default(false)
+  
+  // Alertas
+  alertLowStock       Boolean @default(true)
+  alertAutoReceipt    Boolean @default(false)
+  lowStockThreshold   Int     @default(10)
+  
+  // Sincronização
+  autoSync     Boolean @default(true)
+  syncInterval Int     @default(5) // minutos
+  
+  // Outras configurações
+  defaultPointOfSaleId String?
+  metadata             Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("system_settings")
+}
