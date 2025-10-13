@@ -25,19 +25,25 @@ export function DeliveryPrintButtons({ deliveryId, deliveryData }: DeliveryPrint
     setIsPrinting(true)
     
     try {
-      const response = await fetch('/api/hardware/printer/print', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          data: deliveryData || { id: deliveryId }, 
-          type: 'delivery',
-          recipient: type 
-        }),
-      })
+      // Se for "all", imprime as 3 vias
+      const types = type === 'all' 
+        ? ['delivery-driver', 'delivery-customer', 'delivery-organizer'] 
+        : [`delivery-${type}`]
+      
+      for (const receiptType of types) {
+        const response = await fetch('/api/hardware/printer/print', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            data: deliveryData || { id: deliveryId }, 
+            type: receiptType,
+          }),
+        })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Erro ao imprimir')
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.message || 'Erro ao imprimir')
+        }
       }
 
       const recipientNames: Record<string, string> = {

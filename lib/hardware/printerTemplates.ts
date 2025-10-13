@@ -286,6 +286,197 @@ export function generateCashClosingReceipt(
   return { commands }
 }
 
+export function generateDeliveryReceipt(
+  delivery: any,
+  config: ReceiptConfig,
+  receiptType: 'driver' | 'customer' | 'organizer' = 'customer'
+): ReceiptTemplate {
+  const commands: PrintCommand[] = []
+  const lineWidth = config.width || 48
+  
+  // Header
+  commands.push({ type: 'align', value: 'center' })
+  commands.push({ type: 'text', value: config.storeName.toUpperCase(), size: 'large', bold: true })
+  commands.push({ type: 'feed', lines: 1 })
+  
+  if (config.storeAddress) {
+    commands.push({ type: 'text', value: config.storeAddress })
+  }
+  if (config.storePhone) {
+    commands.push({ type: 'text', value: `Tel: ${config.storePhone}` })
+  }
+  
+  commands.push({ type: 'feed', lines: 1 })
+  commands.push({ type: 'separator', char: '=' })
+  
+  // Tipo de comprovante
+  const titles: Record<typeof receiptType, string> = {
+    driver: 'COMPROVANTE - ENTREGADOR',
+    customer: 'COMPROVANTE - CLIENTE',
+    organizer: 'COMPROVANTE - ORGANIZADOR'
+  }
+  
+  commands.push({ type: 'text', value: titles[receiptType], size: 'large', bold: true })
+  commands.push({ type: 'feed', lines: 1 })
+  commands.push({ type: 'separator', char: '-' })
+  commands.push({ type: 'feed', lines: 1 })
+  
+  // Informações da Entrega
+  commands.push({ type: 'align', value: 'left' })
+  commands.push({ type: 'text', value: `Entrega: #${delivery.deliveryNumber || delivery.id}`, bold: true })
+  commands.push({ type: 'text', value: `Data: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}` })
+  
+  if (delivery.scheduledFor) {
+    commands.push({ type: 'text', value: `Agendado: ${new Date(delivery.scheduledFor).toLocaleString('pt-BR')}` })
+  }
+  
+  commands.push({ type: 'feed', lines: 1 })
+  commands.push({ type: 'separator', char: '-' })
+  
+  // Cliente
+  commands.push({ type: 'text', value: 'CLIENTE', bold: true })
+  commands.push({ type: 'text', value: delivery.customer?.name || delivery.customerName || 'N/A' })
+  
+  const phone = delivery.customer?.phone || delivery.customerPhone
+  if (phone) {
+    commands.push({ type: 'text', value: `Tel: ${phone}` })
+  }
+  
+  commands.push({ type: 'feed', lines: 1 })
+  commands.push({ type: 'separator', char: '-' })
+  
+  // Endereço de Entrega
+  commands.push({ type: 'text', value: 'ENDERECO DE ENTREGA', bold: true })
+  
+  const address = delivery.deliveryAddress || delivery.address || ''
+  const number = delivery.addressNumber || ''
+  const complement = delivery.addressComplement || ''
+  const district = delivery.district || ''
+  const city = delivery.city || ''
+  const state = delivery.state || ''
+  
+  commands.push({ type: 'text', value: `${address}${number ? ', ' + number : ''}` })
+  if (complement) {
+    commands.push({ type: 'text', value: `Compl: ${complement}` })
+  }
+  commands.push({ type: 'text', value: `${district} - ${city}/${state}` })
+  
+  if (delivery.referencePoint) {
+    commands.push({ type: 'text', value: `Ref: ${delivery.referencePoint}` })
+  }
+  
+  if (delivery.deliveryInstructions) {
+    commands.push({ type: 'feed', lines: 1 })
+    commands.push({ type: 'text', value: 'INSTRUCOES:', bold: true })
+    commands.push({ type: 'text', value: delivery.deliveryInstructions })
+  }
+  
+  commands.push({ type: 'feed', lines: 1 })
+  commands.push({ type: 'separator', char: '-' })
+  
+  // Items (se houver)
+  if (delivery.items && delivery.items.length > 0) {
+    commands.push({ type: 'text', value: 'ITENS', bold: true })
+    commands.push({ type: 'feed', lines: 1 })
+    
+    delivery.items.forEach((item: any) => {
+      const itemName = truncateString(item.name || item.product?.name || 'Item', lineWidth - 12)
+      const qty = `${item.quantity}x`
+      const price = `R$ ${(item.price * item.quantity).toFixed(2)}`
+      
+      commands.push({ type: 'text', value: `${qty} ${itemName}` })
+      commands.push({ type: 'text', value: `    ${price}`, align: 'right' })
+    })
+    
+    commands.push({ type: 'feed', lines: 1 })
+    commands.push({ type: 'separator', char: '-' })
+  }
+  
+  // Valores
+  commands.push({ type: 'text', value: 'VALORES', bold: true })
+  commands.push({ type: 'feed', lines: 1 })
+  
+  const subtotal = delivery.subtotal || 0
+  const deliveryFee = delivery.deliveryFee || 0
+  const discount = delivery.discountValue || 0
+  const total = delivery.total || (subtotal + deliveryFee - discount)
+  
+  const createValueLine = (label: string, value: number) => {
+    const valueStr = `R$ ${value.toFixed(2)}`
+    const spaces = lineWidth - label.length - valueStr.length
+    return label + ' '.repeat(Math.max(1, spaces)) + valueStr
+  }
+  
+  if (subtotal > 0) {
+    commands.push({ type: 'text', value: createValueLine('Subtotal:', subtotal) })
+  }
+  commands.push({ type: 'text', value: createValueLine('Taxa de Entrega:', deliveryFee) })
+  if (discount > 0) {
+    commands.push({ type: 'text', value: createValueLine('Desconto:', -discount) })
+  }
+  
+  commands.push({ type: 'separator', char: '-' })
+  commands.push({ type: 'text', value: createValueLine('TOTAL:', total), bold: true, size: 'large' })
+  
+  // Forma de pagamento
+  if (delivery.paymentMethod) {
+    commands.push({ type: 'feed', lines: 1 })
+    commands.push({ type: 'text', value: `Pagamento: ${delivery.paymentMethod}` })
+    
+    if (delivery.paidInAdvance) {
+      commands.push({ type: 'text', value: '** JA PAGO **', bold: true })
+    } else if (delivery.changeFor) {
+      commands.push({ type: 'text', value: `Troco para: R$ ${delivery.changeFor.toFixed(2)}` })
+      commands.push({ type: 'text', value: `Troco: R$ ${(delivery.changeFor - total).toFixed(2)}` })
+    }
+  }
+  
+  // Entregador (para comprovante do motorista e organizador)
+  if ((receiptType === 'driver' || receiptType === 'organizer') && delivery.driver) {
+    commands.push({ type: 'feed', lines: 1 })
+    commands.push({ type: 'separator', char: '-' })
+    commands.push({ type: 'text', value: 'ENTREGADOR', bold: true })
+    commands.push({ type: 'text', value: delivery.driver.name || 'N/A' })
+    if (delivery.driver.phone) {
+      commands.push({ type: 'text', value: `Tel: ${delivery.driver.phone}` })
+    }
+    if (delivery.driver.vehicleType) {
+      commands.push({ type: 'text', value: `Veiculo: ${delivery.driver.vehicleType}` })
+    }
+  }
+  
+  // Observações
+  if (delivery.notes) {
+    commands.push({ type: 'feed', lines: 1 })
+    commands.push({ type: 'separator', char: '-' })
+    commands.push({ type: 'text', value: 'OBS:', bold: true })
+    commands.push({ type: 'text', value: delivery.notes })
+  }
+  
+  // Assinatura (para comprovante do cliente)
+  if (receiptType === 'customer') {
+    commands.push({ type: 'feed', lines: 2 })
+    commands.push({ type: 'separator', char: '-' })
+    commands.push({ type: 'align', value: 'center' })
+    commands.push({ type: 'text', value: 'Assinatura do Recebedor' })
+    commands.push({ type: 'feed', lines: 1 })
+  }
+  
+  // Footer
+  commands.push({ type: 'feed', lines: 1 })
+  commands.push({ type: 'separator', char: '=' })
+  commands.push({ type: 'align', value: 'center' })
+  
+  if (config.footerMessage) {
+    commands.push({ type: 'text', value: config.footerMessage })
+  }
+  
+  commands.push({ type: 'feed', lines: 3 })
+  commands.push({ type: 'cut' })
+  
+  return { commands }
+}
+
 // Funções auxiliares
 function padString(str: string, length: number, char: string = ' ', align: 'left' | 'right' = 'left'): string {
   if (align === 'right') {

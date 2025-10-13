@@ -53,7 +53,16 @@ export interface ReceiptTemplate {
   commands: PrintCommand[]
 }
 
-export type ReceiptType = 'sale' | 'cash-transaction' | 'cash-opening' | 'cash-closing' | 'report'
+export type ReceiptType = 
+  | 'sale' 
+  | 'cash-transaction' 
+  | 'cash-opening' 
+  | 'cash-closing' 
+  | 'report'
+  | 'delivery'
+  | 'delivery-driver'
+  | 'delivery-customer'
+  | 'delivery-organizer'
 
 export interface PrintJob {
   id: string

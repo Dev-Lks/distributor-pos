@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { 
   generateSaleReceipt, 
   generateCashTransactionReceipt,
-  generateCashClosingReceipt 
+  generateCashClosingReceipt,
+  generateDeliveryReceipt 
 } from '@/lib/hardware/printerTemplates'
 import { prisma } from '@/lib/prisma'
 import type { ReceiptType } from '@/lib/hardware/types'
@@ -96,6 +97,43 @@ export async function POST(request: NextRequest) {
 
       case 'cash-closing':
         template = generateCashClosingReceipt(data, config)
+        break
+
+      case 'delivery':
+      case 'delivery-driver':
+      case 'delivery-customer':
+      case 'delivery-organizer':
+        // Busca entrega completa se for um ID
+        let deliveryData = data
+        if (data.id || data.deliveryId) {
+          const delivery = await prisma.delivery.findUnique({
+            where: { id: data.id || data.deliveryId },
+            include: {
+              customer: true,
+              driver: true,
+            },
+          })
+          
+          if (!delivery) {
+            return NextResponse.json(
+              { success: false, message: 'Entrega não encontrada' },
+              { status: 404 }
+            )
+          }
+          
+          deliveryData = {
+            ...delivery,
+            items: data.items || [],
+          }
+        }
+        
+        // Determina o tipo de recibo
+        let receiptType: 'driver' | 'customer' | 'organizer' = 'customer'
+        if (type === 'delivery-driver') receiptType = 'driver'
+        else if (type === 'delivery-organizer') receiptType = 'organizer'
+        else if (data.receiptType) receiptType = data.receiptType
+        
+        template = generateDeliveryReceipt(deliveryData, config, receiptType)
         break
 
       default:
