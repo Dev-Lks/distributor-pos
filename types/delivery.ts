@@ -279,6 +279,7 @@ export interface DeliverySummary {
   district: string
   city: string
   status: DeliveryStatus
+  subtotal: number
   total: number
   deliveryFee: number
   scheduledFor?: string | Date | null

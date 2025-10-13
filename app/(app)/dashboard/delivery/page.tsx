@@ -91,8 +91,8 @@ export default function DeliveryPage() {
     }
     
     const delivered = deliveries.filter(d => d.status === "DELIVERED")
-    const totalRevenue = deliveries.reduce((sum, d) => sum + d.total, 0)
-    const totalDeliveryFees = deliveries.reduce((sum, d) => sum + d.deliveryFee, 0)
+    const totalRevenue = deliveries.reduce((sum, d) => sum + (d.total ?? 0), 0)
+    const totalDeliveryFees = deliveries.reduce((sum, d) => sum + (d.deliveryFee ?? 0), 0)
     const ratingsCount = deliveries.filter(d => d.rating).length
     const totalRating = deliveries.reduce((sum, d) => sum + (d.rating || 0), 0)
     
@@ -330,7 +330,7 @@ export default function DeliveryPage() {
                       
                       <div className="flex items-center gap-1">
                         <DollarSign className="w-3 h-3" />
-                        R$ {delivery.total.toFixed(2)}
+                        R$ {(delivery.total ?? 0).toFixed(2)}
                       </div>
                     </div>
                   </div>
