@@ -184,7 +184,7 @@ Adicione:
 
 ```
 PRINT_SERVER_URL = https://print.nitrobeer.com.br
-PRINT_SERVER_TOKEN = SuaChaveSecretaSuperSegura123!@#
+PRINT_SERVER_TOKEN =  
 ```
 
 **⚠️ Use os mesmos valores do `.env` do print-server!**
