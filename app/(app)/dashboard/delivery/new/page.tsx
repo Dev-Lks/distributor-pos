@@ -88,6 +88,7 @@ export default function NewDeliveryPage() {
     distance: number
     estimatedTime: number
   } | null>(null)
+  const [createdDeliveryId, setCreatedDeliveryId] = useState<string | null>(null)
 
   const createDelivery = useCreateDelivery()
   
@@ -214,7 +215,11 @@ export default function NewDeliveryPage() {
         scheduledFor: formData.scheduledFor || null,
       }
 
-      await createDelivery.mutateAsync(deliveryData)
+      const result = await createDelivery.mutateAsync(deliveryData) as any
+      
+      if (result?.id) {
+        setCreatedDeliveryId(result.id)
+      }
 
       toast.success("Entrega criada com sucesso!")
       clearCart()
@@ -577,6 +582,23 @@ export default function NewDeliveryPage() {
                 <h2 className="text-xl font-semibold">Revisar Entrega</h2>
                 <p className="text-sm text-muted-foreground">Confira todos os dados antes de finalizar</p>
               </div>
+              {createdDeliveryId && (
+                <DeliveryPrintButtons 
+                  deliveryId={createdDeliveryId} 
+                  deliveryData={{
+                    customer: { name: formData.customerName, phone: formData.customerPhone },
+                    deliveryAddress: formData.deliveryAddress,
+                    addressNumber: formData.addressNumber,
+                    district: formData.district,
+                    city: formData.city,
+                    state: formData.state,
+                    items: cart,
+                    subtotal,
+                    deliveryFee: formData.deliveryFee,
+                    total,
+                  }}
+                />
+              )}
             </div>
             
             <Card>

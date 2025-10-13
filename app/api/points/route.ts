@@ -16,14 +16,26 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { name, isActive = true } = body as { name?: string; isActive?: boolean }
+    const { name, isActive = true, address, city, state } = body as { 
+      name?: string
+      isActive?: boolean
+      address?: string
+      city?: string
+      state?: string
+    }
 
     if (!name) {
       return NextResponse.json({ error: 'Name is required' }, { status: 400 })
     }
 
     const point = await prisma.pointOfSale.create({
-      data: { name, isActive }
+      data: { 
+        name, 
+        isActive,
+        address: address || null,
+        city: city || null,
+        state: state || null,
+      }
     })
     return NextResponse.json(point, { status: 201 })
   } catch (error) {
@@ -35,15 +47,29 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { id, name, isActive } = body as { id?: string; name?: string; isActive?: boolean }
+    const { id, name, isActive, address, city, state } = body as { 
+      id?: string
+      name?: string
+      isActive?: boolean
+      address?: string
+      city?: string
+      state?: string
+    }
 
     if (!id) {
       return NextResponse.json({ error: 'ID is required' }, { status: 400 })
     }
 
+    const updateData: any = {}
+    if (name !== undefined) updateData.name = name
+    if (isActive !== undefined) updateData.isActive = isActive
+    if (address !== undefined) updateData.address = address || null
+    if (city !== undefined) updateData.city = city || null
+    if (state !== undefined) updateData.state = state || null
+
     const point = await prisma.pointOfSale.update({
       where: { id },
-      data: { name, isActive }
+      data: updateData
     })
     return NextResponse.json(point)
   } catch (error) {

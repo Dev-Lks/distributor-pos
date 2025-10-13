@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { PointAddressForm } from "@/components/points/PointAddressForm"
 import {
   usePointsOfSale,
   useCreatePointOfSale,
@@ -24,26 +25,50 @@ export default function PointsOfSalePage() {
   const deleteMutation = useDeletePointOfSale()
 
   const [newName, setNewName] = useState("")
+  const [newAddress, setNewAddress] = useState("")
+  const [newCity, setNewCity] = useState("")
+  const [newState, setNewState] = useState("")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState("")
+  const [editAddress, setEditAddress] = useState("")
+  const [editCity, setEditCity] = useState("")
+  const [editState, setEditState] = useState("")
   const [editActive, setEditActive] = useState(true)
 
   const handleCreate = () => {
     if (newName.trim()) {
-      createMutation.mutate({ name: newName.trim() })
+      createMutation.mutate({ 
+        name: newName.trim(),
+        address: newAddress || undefined,
+        city: newCity || undefined,
+        state: newState || undefined,
+      })
       setNewName("")
+      setNewAddress("")
+      setNewCity("")
+      setNewState("")
     }
   }
 
   const handleEdit = (point: PointOfSale) => {
     setEditingId(point.id)
     setEditName(point.name)
+    setEditAddress(point.address || "")
+    setEditCity(point.city || "")
+    setEditState(point.state || "")
     setEditActive(point.isActive)
   }
 
   const handleSaveEdit = () => {
     if (editingId) {
-      updateMutation.mutate({ id: editingId, name: editName.trim(), isActive: editActive })
+      updateMutation.mutate({ 
+        id: editingId, 
+        name: editName.trim(), 
+        isActive: editActive,
+        address: editAddress || undefined,
+        city: editCity || undefined,
+        state: editState || undefined,
+      })
       setEditingId(null)
     }
   }
@@ -83,8 +108,8 @@ export default function PointsOfSalePage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-col gap-3 md:flex-row md:gap-4">
-            <div className="flex-1">
+          <div className="space-y-4">
+            <div>
               <Label htmlFor="newName">Nome do ponto</Label>
               <Input
                 id="newName"
@@ -93,12 +118,25 @@ export default function PointsOfSalePage() {
                 placeholder="Ex: Bar Central"
               />
             </div>
-            <div className="flex items-end">
+
+            <PointAddressForm
+              address={newAddress}
+              city={newCity}
+              state={newState}
+              onAddressChange={(field, value) => {
+                if (field === 'address') setNewAddress(value)
+                else if (field === 'city') setNewCity(value)
+                else if (field === 'state') setNewState(value)
+              }}
+            />
+
+            <div className="flex justify-end">
               <Button onClick={handleCreate} disabled={!newName.trim() || createMutation.isPending}>
                 {createMutation.isPending ? "Adicionando..." : "Adicionar"}
               </Button>
             </div>
           </div>
+
           {createMutation.error && (
             <p className="mt-2 text-sm text-red-500">Erro ao criar: {createMutation.error.message}</p>
           )}

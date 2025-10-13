@@ -4,6 +4,9 @@ export interface PointOfSale {
   id: string
   name: string
   isActive: boolean
+  address?: string | null
+  city?: string | null
+  state?: string | null
   createdAt: string
   updatedAt: string
 }
@@ -26,7 +29,7 @@ export function usePointsOfSale() {
 export function useCreatePointOfSale() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (data: { name: string; isActive?: boolean }) => {
+    mutationFn: async (data: { name: string; isActive?: boolean; address?: string; city?: string; state?: string }) => {
       const res = await fetch('/api/points', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,7 +50,7 @@ export function useCreatePointOfSale() {
 export function useUpdatePointOfSale() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (data: { id: string; name?: string; isActive?: boolean }) => {
+    mutationFn: async (data: { id: string; name?: string; isActive?: boolean; address?: string; city?: string; state?: string }) => {
       const res = await fetch('/api/points', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
