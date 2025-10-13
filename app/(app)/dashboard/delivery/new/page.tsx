@@ -550,15 +550,15 @@ export default function NewDeliveryPage() {
                   </CardHeader>
                   <CardContent>
                     <Select
-                      value={formData.driverId || ""}
-                      onValueChange={(value) => setFormData({ ...formData, driverId: value || null })}
+                      value={formData.driverId || "NONE"}
+                      onValueChange={(value) => setFormData({ ...formData, driverId: value === "NONE" ? null : value })}
                       disabled={isLoadingDrivers}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione o entregador..." />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum (atribuir depois)</SelectItem>
+                        <SelectItem value="NONE">Nenhum (atribuir depois)</SelectItem>
                         {drivers.map((driver) => (
                           <SelectItem key={driver.id} value={driver.id}>
                             {driver.name} ({driver.vehicleType})

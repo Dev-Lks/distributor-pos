@@ -95,10 +95,10 @@ export function DeliveryDetailsDialog({
     try {
       await updateDelivery.mutateAsync({
         id: deliveryId,
-        driverId: newDriverId || null,
+        driverId: newDriverId === "REMOVE" ? null : newDriverId || null,
       })
       
-      toast.success(newDriverId ? "Entregador atribuído com sucesso!" : "Entregador removido")
+      toast.success(newDriverId === "REMOVE" ? "Entregador removido" : "Entregador atribuído com sucesso!")
       setNewDriverId("")
     } catch (error: any) {
       toast.error(error.message || "Erro ao atribuir entregador")
@@ -383,7 +383,7 @@ export function DeliveryDetailsDialog({
                     } />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Remover entregador</SelectItem>
+                    <SelectItem value="REMOVE">Remover entregador</SelectItem>
                     {drivers.map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name} ({driver.vehicleType})
@@ -394,9 +394,9 @@ export function DeliveryDetailsDialog({
                 <Button
                   onClick={handleUpdateDriver}
                   disabled={updateDelivery.isPending || isLoadingDrivers}
-                  variant={newDriverId === "" && delivery.driver ? "destructive" : "default"}
+                  variant={newDriverId === "REMOVE" && delivery.driver ? "destructive" : "default"}
                 >
-                  {newDriverId === "" && delivery.driver ? "Remover" : "Atribuir"}
+                  {newDriverId === "REMOVE" && delivery.driver ? "Remover" : "Atribuir"}
                 </Button>
               </div>
             </div>

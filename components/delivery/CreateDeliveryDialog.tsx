@@ -22,7 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { CustomerSelector } from "@/components/customers/CustomerSelector"
-import { useDeliveryZones } from "@/lib/useDeliveryZones"
 import { useDeliveryDrivers } from "@/lib/useDeliveryDrivers"
 import { useCreateDelivery, useCalculateDeliveryFee } from "@/lib/useDeliveries"
 import type { CustomerSummary } from "@/lib/useCustomers"
@@ -79,7 +78,6 @@ export function CreateDeliveryDialog({
 }: CreateDeliveryDialogProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSummary | null>(null)
   
-  const { data: zones = [], isLoading: isLoadingZones } = useDeliveryZones(true)
   const { data: drivers = [], isLoading: isLoadingDrivers } = useDeliveryDrivers({ activeOnly: true })
   
   const createDelivery = useCreateDelivery()
@@ -103,7 +101,6 @@ export function CreateDeliveryDialog({
     },
   })
 
-  const watchedZoneId = watch("zoneId")
   const watchedSubtotal = watch("subtotal")
   const watchedDeliveryFee = watch("deliveryFee")
   const watchedDiscount = watch("discountValue")
@@ -121,27 +118,6 @@ export function CreateDeliveryDialog({
         setValue("city", addressParts[3] || "São Paulo")
         setValue("state", addressParts[4] || "SP")
       }
-    }
-  }
-
-  // Calcular taxa quando zona mudar
-  const handleZoneChange = async (zoneId: string) => {
-    setValue("zoneId", zoneId)
-    
-    try {
-      const zone = zones.find(z => z.id === zoneId)
-      if (zone) {
-        setValue("deliveryFee", zone.baseDeliveryFee)
-        setValue("estimatedTime", zone.estimatedTime)
-        
-        // Se tem frete grátis e o subtotal está acima
-        if (zone.freeDeliveryAbove && watchedSubtotal >= zone.freeDeliveryAbove) {
-          setValue("deliveryFee", 0)
-          toast.info("Frete grátis aplicado! 🎉")
-        }
-      }
-    } catch (error) {
-      console.error("Erro ao calcular taxa:", error)
     }
   }
 
@@ -322,43 +298,23 @@ export function CreateDeliveryDialog({
             </div>
           </div>
 
-          {/* Zona e Entregador */}
+          {/* Entregador e Agendamento */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold">Logística</h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="zoneId">Zona de Entrega</Label>
-                <Select
-                  value={watchedZoneId}
-                  onValueChange={handleZoneChange}
-                  disabled={isLoadingZones}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a zona" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {zones.map((zone) => (
-                      <SelectItem key={zone.id} value={zone.id}>
-                        {zone.name} - R$ {zone.baseDeliveryFee.toFixed(2)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
                 <Label htmlFor="driverId">Entregador</Label>
                 <Select
-                  value={watch("driverId")}
-                  onValueChange={(value) => setValue("driverId", value)}
+                  value={watch("driverId") || "NONE"}
+                  onValueChange={(value) => setValue("driverId", value === "NONE" ? undefined : value)}
                   disabled={isLoadingDrivers}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o entregador" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Nenhum (atribuir depois)</SelectItem>
+                    <SelectItem value="NONE">Nenhum (atribuir depois)</SelectItem>
                     {drivers.map((driver) => (
                       <SelectItem key={driver.id} value={driver.id}>
                         {driver.name} ({driver.vehicleType})
