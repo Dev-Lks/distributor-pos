@@ -100,6 +100,14 @@ export async function POST(request: NextRequest) {
       notes: payload.data.notes,
     })
 
+    if (snapshot) {
+      logger.audit('cash_session_opened', user.email || 'unknown', {
+        sessionId: snapshot.id,
+        openingAmount: payload.data.openingAmount,
+        pointOfSaleId: payload.data.pointOfSaleId,
+      })
+    }
+
     return NextResponse.json(snapshot, { status: 201 })
   } catch (error) {
     if (error instanceof Error) {

@@ -13,6 +13,28 @@ import {
 // Tipo de cliente
 export const customerTypeSchema = z.enum(['INDIVIDUAL', 'BUSINESS'])
 
+// Schema simplificado para o sistema atual (sem CPF/CNPJ validation aqui)
+export const createCustomerCurrentSchema = z.object({
+  name: nameSchema,
+  phone: z.string().trim().max(20).optional().nullable(),
+  address: z.string().trim().max(500).optional().nullable(),
+  document: z.string().trim().max(20).optional().nullable(),
+  email: emailSchema.optional().nullable(),
+})
+
+export const updateCustomerCurrentSchema = z.object({
+  id: cuidSchema,
+  name: nameSchema.optional(),
+  phone: z.string().trim().max(20).optional().nullable(),
+  address: z.string().trim().max(500).optional().nullable(),
+  document: z.string().trim().max(20).optional().nullable(),
+  email: emailSchema.optional().nullable(),
+})
+
+export const deleteCustomerCurrentSchema = z.object({
+  id: cuidSchema,
+})
+
 // Schema de endereço
 export const addressSchema = z.object({
   street: z.string().trim().min(3, 'Logradouro obrigatório').max(200),

@@ -277,6 +277,15 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    logger.audit('order_created', session.user.email || 'unknown', {
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      customerId: order.customerId,
+      customerName: order.customerName,
+      total: order.total,
+      itemsCount: data.items.length,
+    })
+
     return NextResponse.json(order, { status: 201 })
   } catch (error: any) {
     if (error instanceof z.ZodError) {

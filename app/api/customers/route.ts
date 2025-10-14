@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
-
 import { prisma, type Prisma } from "@/lib/prisma"
 import { detectPersonType, sanitizeDocument, validateCpfCnpj } from "@/lib/documents"
 import { getServerAuth, notAuthenticated, unauthorized } from "@/lib/serverAuth"
 import { logger } from "@/lib/logger"
-import { sanitizeString, sanitizeEmail } from "@/lib/utils/sanitize"
-import { LIMITS } from "@/lib/constants/limits"
+import { z } from 'zod'
+import {
+  createCustomerCurrentSchema,
+  updateCustomerCurrentSchema,
+  deleteCustomerCurrentSchema,
+} from '@/lib/validations'
 
 const CUSTOMER_SELECT = {
   id: true,
@@ -105,32 +108,22 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json()
-    if (typeof body !== "object" || body === null) {
-      return NextResponse.json({ error: "Payload inválido." }, { status: 400 })
-    }
+    
+    // Validação com Zod
+    const validated = createCustomerCurrentSchema.parse(body)
 
-    const { name, phone, address, document } = body as {
-      name?: string
-      phone?: string | null
-      address?: string | null
-      document?: string | null
-    }
-
-    if (!name?.trim()) {
-      return NextResponse.json({ error: "O nome do cliente é obrigatório." }, { status: 400 })
-    }
-
-    const sanitizedDocument = document !== undefined ? sanitizeDocument(document) ?? null : null
+    // Validação de CPF/CNPJ usando funções existentes (validação de negócio)
+    const sanitizedDocument = validated.document ? sanitizeDocument(validated.document) ?? null : null
     if (sanitizedDocument && !validateCpfCnpj(sanitizedDocument)) {
       return NextResponse.json({ error: "CPF ou CNPJ inválido." }, { status: 400 })
     }
 
     // Verificar duplicados por telefone ou documento
-    if (phone?.trim() || sanitizedDocument) {
+    if (validated.phone?.trim() || sanitizedDocument) {
       const existing = await prisma.customer.findFirst({
         where: {
           OR: [
-            phone?.trim() ? { phone: phone.trim() } : {},
+            validated.phone?.trim() ? { phone: validated.phone.trim() } : {},
             sanitizedDocument ? { document: sanitizedDocument } : {},
           ].filter((condition) => Object.keys(condition).length > 0),
         },
@@ -150,17 +143,28 @@ export async function POST(request: NextRequest) {
 
     const customer = await prisma.customer.create({
       data: {
-        name: name.trim(),
-        phone: phone?.trim() || null,
-        address: address?.trim() || null,
+        name: validated.name,
+        phone: validated.phone?.trim() || null,
+        address: validated.address?.trim() || null,
         document: sanitizedDocument,
-        type: detectPersonType(document ?? undefined),
+        type: detectPersonType(validated.document ?? undefined),
       },
       select: CUSTOMER_SELECT,
     })
 
+    logger.audit('customer_created', session.user.email || 'unknown', {
+      customerId: customer.id,
+      customerName: customer.name,
+    })
+
     return NextResponse.json(mapCustomer(customer), { status: 201 })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Dados inválidos", details: error.errors },
+        { status: 400 }
+      )
+    }
     logger.error("Failed to create customer", { error })
     return handlePrismaError(error)
   }
@@ -174,45 +178,44 @@ export async function PATCH(request: NextRequest) {
 
   try {
     const body = await request.json()
-    if (typeof body !== "object" || body === null) {
-      return NextResponse.json({ error: "Payload inválido." }, { status: 400 })
-    }
-
-    const { id, name, phone, address, document } = body as {
-      id?: string
-      name?: string
-      phone?: string | null
-      address?: string | null
-      document?: string | null
-    }
-
-    if (!id) {
-      return NextResponse.json({ error: "ID do cliente é obrigatório." }, { status: 400 })
-    }
+    
+    // Validação com Zod
+    const validated = updateCustomerCurrentSchema.parse(body)
 
     const data: Prisma.CustomerUpdateInput = {
-      ...(name !== undefined ? { name: name.trim() } : {}),
-      ...(phone !== undefined ? { phone: phone?.trim() || null } : {}),
-      ...(address !== undefined ? { address: address?.trim() || null } : {}),
+      ...(validated.name !== undefined ? { name: validated.name } : {}),
+      ...(validated.phone !== undefined ? { phone: validated.phone?.trim() || null } : {}),
+      ...(validated.address !== undefined ? { address: validated.address?.trim() || null } : {}),
     }
 
-    if (document !== undefined) {
-      const sanitizedDocument = sanitizeDocument(document) ?? null
+    if (validated.document !== undefined) {
+      const sanitizedDocument = sanitizeDocument(validated.document) ?? null
       if (sanitizedDocument && !validateCpfCnpj(sanitizedDocument)) {
         return NextResponse.json({ error: "CPF ou CNPJ inválido." }, { status: 400 })
       }
-  data.document = sanitizedDocument
-  data.type = detectPersonType(document ?? undefined)
+      data.document = sanitizedDocument
+      data.type = detectPersonType(validated.document ?? undefined)
     }
 
     const customer = await prisma.customer.update({
-      where: { id },
+      where: { id: validated.id },
       data,
       select: CUSTOMER_SELECT,
     })
 
+    logger.audit('customer_updated', session.user.email || 'unknown', {
+      customerId: customer.id,
+      customerName: customer.name,
+    })
+
     return NextResponse.json(mapCustomer(customer))
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Dados inválidos", details: error.errors },
+        { status: 400 }
+      )
+    }
     logger.error("Failed to update customer", { error })
     return handlePrismaError(error)
   }
@@ -226,15 +229,38 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const body = await request.json().catch(() => null)
-    const id = (body as { id?: string } | null)?.id
+    
+    // Validação com Zod
+    const validated = deleteCustomerCurrentSchema.parse(body)
 
-    if (!id) {
-      return NextResponse.json({ error: "ID do cliente é obrigatório." }, { status: 400 })
+    // Verificar se o cliente existe antes de deletar
+    const existing = await prisma.customer.findUnique({
+      where: { id: validated.id },
+      select: { id: true, name: true },
+    })
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Cliente não encontrado." },
+        { status: 404 }
+      )
     }
 
-    await prisma.customer.delete({ where: { id } })
+    await prisma.customer.delete({ where: { id: validated.id } })
+
+    logger.audit('customer_deleted', session.user.email || 'unknown', {
+      customerId: validated.id,
+      customerName: existing.name,
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Dados inválidos", details: error.errors },
+        { status: 400 }
+      )
+    }
     logger.error("Failed to delete customer", { error })
     return NextResponse.json({ error: "Não foi possível remover o cliente." }, { status: 500 })
   }

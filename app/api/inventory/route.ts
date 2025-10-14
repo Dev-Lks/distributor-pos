@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
-import { LIMITS } from '@/lib/constants/limits'
+import { z } from 'zod'
+import { inventoryUpdateCurrentSchema } from '@/lib/validations'
 
 export async function GET() {
   try {
@@ -28,40 +29,17 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { productId, location, quantity } = body as {
-      productId: string
-      location: 'coldRoom' | 'house' | 'salePoint'
-      quantity: number
-    }
+    
+    // Validar com Zod
+    const validatedData = inventoryUpdateCurrentSchema.parse(body)
+    
+    const { productId, location, quantity } = validatedData
 
-    if (!productId || typeof quantity !== 'number' || !location) {
-      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
-    }
-
-    // Validar range de quantidade
-    if (quantity < 0) {
-      return NextResponse.json(
-        { error: 'Quantidade não pode ser negativa' },
-        { status: 400 }
-      )
-    }
-
-    if (quantity > LIMITS.MAX_QUANTITY) {
-      return NextResponse.json(
-        { error: `Quantidade excede limite máximo (${LIMITS.MAX_QUANTITY})` },
-        { status: 400 }
-      )
-    }
-
-    if (!['coldRoom', 'house', 'salePoint'].includes(location)) {
-      return NextResponse.json({ error: 'Invalid location' }, { status: 400 })
-    }
-
-    const fieldMap: Record<typeof location, 'coldRoomQuantity' | 'houseQuantity' | 'salePointQuantity'> = {
+    const fieldMap = {
       coldRoom: 'coldRoomQuantity',
       house: 'houseQuantity',
       salePoint: 'salePointQuantity',
-    }
+    } as const
 
     const field = fieldMap[location]
 
@@ -70,51 +48,47 @@ export async function POST(request: NextRequest) {
       update: { [field]: quantity },
       create: { productId, [field]: quantity },
     })
+    
+    logger.info('Inventory updated', {
+      productId,
+      location,
+      quantity,
+    })
 
     return NextResponse.json(inventory, { status: 201 })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { 
+          error: 'Dados inválidos',
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+    
     logger.error('Failed to update inventory', { error })
-    return NextResponse.json({ error: 'Failed to update inventory' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao atualizar inventário' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json()
-    const { productId, location, quantity } = body as {
-      productId: string
-      location: 'coldRoom' | 'house' | 'salePoint'
-      quantity: number
-    }
+    
+    // Validar com Zod
+    const validatedData = inventoryUpdateCurrentSchema.parse(body)
+    
+    const { productId, location, quantity } = validatedData
 
-    if (!productId || typeof quantity !== 'number' || !location) {
-      return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
-    }
-
-    // Validar range de quantidade
-    if (quantity < 0) {
-      return NextResponse.json(
-        { error: 'Quantidade não pode ser negativa' },
-        { status: 400 }
-      )
-    }
-
-    if (quantity > LIMITS.MAX_QUANTITY) {
-      return NextResponse.json(
-        { error: `Quantidade excede limite máximo (${LIMITS.MAX_QUANTITY})` },
-        { status: 400 }
-      )
-    }
-
-    if (!['coldRoom', 'house', 'salePoint'].includes(location)) {
-      return NextResponse.json({ error: 'Invalid location' }, { status: 400 })
-    }
-
-    const fieldMap: Record<typeof location, 'coldRoomQuantity' | 'houseQuantity' | 'salePointQuantity'> = {
+    const fieldMap = {
       coldRoom: 'coldRoomQuantity',
       house: 'houseQuantity',
       salePoint: 'salePointQuantity',
-    }
+    } as const
 
     const field = fieldMap[location]
 
@@ -123,10 +97,29 @@ export async function PATCH(request: NextRequest) {
       update: { [field]: quantity },
       create: { productId, [field]: quantity },
     })
+    
+    logger.info('Inventory patched', {
+      productId,
+      location,
+      quantity,
+    })
 
     return NextResponse.json(inventory)
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { 
+          error: 'Dados inválidos',
+          details: error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        },
+        { status: 400 }
+      )
+    }
+    
     logger.error('Failed to update inventory', { error })
-    return NextResponse.json({ error: 'Failed to update inventory' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro ao atualizar inventário' }, { status: 500 })
   }
 }

@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { z } from 'zod'
+import { 
+  createPointOfSaleSchema, 
+  updatePointOfSaleSchema, 
+  deletePointOfSaleSchema 
+} from '@/lib/validations'
 
 export async function GET() {
   try {
@@ -8,91 +17,128 @@ export async function GET() {
     })
     return NextResponse.json(points)
   } catch (error) {
-    console.error('Failed to fetch points of sale:', error)
-    return NextResponse.json({ error: 'Failed to fetch points of sale' }, { status: 500 })
+    logger.error('Failed to fetch points of sale', { error })
+    return NextResponse.json({ error: 'Erro ao buscar pontos de venda' }, { status: 500 })
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { name, isActive = true, address, city, state } = body as { 
-      name?: string
-      isActive?: boolean
-      address?: string
-      city?: string
-      state?: string
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    if (!name) {
-      return NextResponse.json({ error: 'Name is required' }, { status: 400 })
-    }
+    const body = await request.json()
+    const validated = createPointOfSaleSchema.parse(body)
 
     const point = await prisma.pointOfSale.create({
       data: { 
-        name, 
-        isActive,
-        address: address || null,
-        city: city || null,
-        state: state || null,
+        name: validated.name, 
+        isActive: validated.isActive,
+        address: validated.address,
+        city: validated.city,
+        state: validated.state,
       }
     })
+
+    logger.audit('point_of_sale_created', session.user.email || 'unknown', {
+      pointId: point.id,
+      pointName: point.name,
+    })
+
     return NextResponse.json(point, { status: 201 })
   } catch (error) {
-    console.error('Failed to create point of sale:', error)
-    return NextResponse.json({ error: 'Failed to create point of sale' }, { status: 500 })
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Dados inválidos', details: error.errors },
+        { status: 400 }
+      )
+    }
+    logger.error('Failed to create point of sale', { error })
+    return NextResponse.json({ error: 'Erro ao criar ponto de venda' }, { status: 500 })
   }
 }
 
 export async function PATCH(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { id, name, isActive, address, city, state } = body as { 
-      id?: string
-      name?: string
-      isActive?: boolean
-      address?: string
-      city?: string
-      state?: string
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    if (!id) {
-      return NextResponse.json({ error: 'ID is required' }, { status: 400 })
-    }
+    const body = await request.json()
+    const validated = updatePointOfSaleSchema.parse(body)
 
     const updateData: any = {}
-    if (name !== undefined) updateData.name = name
-    if (isActive !== undefined) updateData.isActive = isActive
-    if (address !== undefined) updateData.address = address || null
-    if (city !== undefined) updateData.city = city || null
-    if (state !== undefined) updateData.state = state || null
+    if (validated.name !== undefined) updateData.name = validated.name
+    if (validated.isActive !== undefined) updateData.isActive = validated.isActive
+    if (validated.address !== undefined) updateData.address = validated.address
+    if (validated.city !== undefined) updateData.city = validated.city
+    if (validated.state !== undefined) updateData.state = validated.state
 
     const point = await prisma.pointOfSale.update({
-      where: { id },
+      where: { id: validated.id },
       data: updateData
     })
+
+    logger.audit('point_of_sale_updated', session.user.email || 'unknown', {
+      pointId: point.id,
+      pointName: point.name,
+    })
+
     return NextResponse.json(point)
   } catch (error) {
-    console.error('Failed to update point of sale:', error)
-    return NextResponse.json({ error: 'Failed to update point of sale' }, { status: 500 })
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Dados inválidos', details: error.errors },
+        { status: 400 }
+      )
+    }
+    logger.error('Failed to update point of sale', { error })
+    return NextResponse.json({ error: 'Erro ao atualizar ponto de venda' }, { status: 500 })
   }
 }
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await getServerSession(authOptions)
+    if (!session) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
+    
+    const validated = deletePointOfSaleSchema.parse({ id })
 
-    if (!id) {
-      return NextResponse.json({ error: 'ID required' }, { status: 400 })
+    const existing = await prisma.pointOfSale.findUnique({
+      where: { id: validated.id },
+      select: { id: true, name: true },
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: 'Ponto de venda não encontrado' }, { status: 404 })
     }
 
     await prisma.pointOfSale.delete({
-      where: { id }
+      where: { id: validated.id }
     })
+
+    logger.audit('point_of_sale_deleted', session.user.email || 'unknown', {
+      pointId: validated.id,
+      pointName: existing.name,
+    })
+
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Failed to delete point of sale:', error)
-    return NextResponse.json({ error: 'Failed to delete point of sale' }, { status: 500 })
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Dados inválidos', details: error.errors },
+        { status: 400 }
+      )
+    }
+    logger.error('Failed to delete point of sale', { error })
+    return NextResponse.json({ error: 'Erro ao deletar ponto de venda' }, { status: 500 })
   }
 }

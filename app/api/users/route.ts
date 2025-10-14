@@ -5,6 +5,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import type { UserWhereInput } from "@/types";
+import { z } from 'zod'
+import { createUserSchema, searchUsersSchema } from '@/lib/validations'
 
 // GET /api/users - Listar usuários com filtros
 export async function GET(req: NextRequest) {
@@ -69,76 +71,83 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { fullName, email, password, phone, cpf, isAdmin, pointsOfSaleIds, permissions } =
-    body;
+  try {
+    const body = await req.json();
+    
+    // Validação com Zod
+    const validated = createUserSchema.parse(body);
 
-  // Validações
-  if (!fullName || !email || !password) {
-    return NextResponse.json(
-      { error: "Nome, email e senha são obrigatórios" },
-      { status: 400 }
-    );
-  }
+    // Verificar se email já existe
+    const existingUser = await prisma.user.findUnique({
+      where: { email: validated.email },
+    });
 
-  if (!pointsOfSaleIds || pointsOfSaleIds.length === 0) {
-    return NextResponse.json(
-      { error: "Selecione pelo menos um ponto de venda" },
-      { status: 400 }
-    );
-  }
+    if (existingUser) {
+      return NextResponse.json(
+        { error: "Email já cadastrado" },
+        { status: 400 }
+      );
+    }
 
-  // Verificar se email já existe
-  const existingUser = await prisma.user.findUnique({
-    where: { email },
-  });
+    // Hash da senha
+    const passwordHash = await hash(validated.password, 10);
 
-  if (existingUser) {
-    return NextResponse.json(
-      { error: "Email já cadastrado" },
-      { status: 400 }
-    );
-  }
-
-  // Hash da senha
-  const passwordHash = await hash(password, 10);
-
-  // Criar usuário com vinculações aos PDVs e permissões
-  const user = await prisma.user.create({
-    data: {
-      fullName,
-      email,
-      passwordHash,
-      password: passwordHash, // Compatibilidade legado
-      name: fullName, // Compatibilidade legado
-      phone,
-      cpf,
-      isAdmin: isAdmin || false,
-      createdById: session.user.id,
-      userPointsOfSale: {
-        create: pointsOfSaleIds.map((posId: string, index: number) => ({
-          pointOfSaleId: posId,
-          isPrimary: index === 0, // Primeiro PDV é o primário
-          assignedBy: session.user.id,
-        })),
-      },
-      permissions: {
-        create: (permissions || []).map((perm: string) => ({
-          permission: perm,
-          granted: true,
-          grantedBy: session.user.id,
-        })),
-      },
-    },
-    include: {
-      permissions: true,
-      userPointsOfSale: {
-        include: {
-          pointOfSale: true,
+    // Criar usuário com vinculações aos PDVs e permissões
+    const user = await prisma.user.create({
+      data: {
+        fullName: validated.fullName,
+        email: validated.email,
+        passwordHash,
+        password: passwordHash, // Compatibilidade legado
+        name: validated.fullName, // Compatibilidade legado
+        phone: validated.phone,
+        cpf: validated.cpf,
+        isAdmin: validated.isAdmin,
+        createdById: session.user.id,
+        userPointsOfSale: {
+          create: validated.pointsOfSaleIds.map((posId: string, index: number) => ({
+            pointOfSaleId: posId,
+            isPrimary: index === 0, // Primeiro PDV é o primário
+            assignedBy: session.user.id,
+          })),
+        },
+        permissions: {
+          create: (validated.permissions || []).map((perm: string) => ({
+            permission: perm as any, // Type assertion para PermissionKey
+            granted: true,
+            grantedBy: session.user.id,
+          })),
         },
       },
-    },
-  });
+      include: {
+        permissions: true,
+        userPointsOfSale: {
+          include: {
+            pointOfSale: true,
+          },
+        },
+      },
+    });
 
-  return NextResponse.json(user, { status: 201 });
+    logger.audit('user_created', session.user.email || 'unknown', {
+      userId: user.id,
+      userEmail: user.email,
+      isAdmin: user.isAdmin,
+      pointsOfSaleCount: validated.pointsOfSaleIds.length,
+    })
+
+    return NextResponse.json(user, { status: 201 });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: "Dados inválidos", details: error.errors },
+        { status: 400 }
+      );
+    }
+    logger.error('Failed to create user', { error })
+    return NextResponse.json(
+      { error: "Erro ao criar usuário" },
+      { status: 500 }
+    );
+  }
 }

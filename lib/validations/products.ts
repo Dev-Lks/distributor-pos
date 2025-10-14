@@ -82,8 +82,13 @@ export const bulkPriceUpdateSchema = z.object({
   }
 )
 
-// Schema para deletar produto (com verificação)
+// Schema para deletar produto (simplificado para API)
 export const deleteProductSchema = z.object({
+  id: cuidSchema,
+})
+
+// Schema para deletar com confirmação (UI)
+export const deleteProductConfirmSchema = z.object({
   id: cuidSchema,
   confirmDelete: z.literal(true, {
     errorMap: () => ({ message: 'Confirmação de exclusão obrigatória' }),

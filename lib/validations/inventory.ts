@@ -14,6 +14,13 @@ export const inventoryLocationSchema = z.enum([
   'transit'
 ])
 
+// Schema específico para o sistema atual (3 localizações fixas)
+export const inventoryLocationCurrentSchema = z.enum([
+  'coldRoom',
+  'house',
+  'salePoint'
+])
+
 // Tipo de movimentação
 export const inventoryMovementTypeSchema = z.enum([
   'PURCHASE',      // Compra
@@ -26,7 +33,15 @@ export const inventoryMovementTypeSchema = z.enum([
   'CONSUMPTION'    // Consumo interno
 ])
 
-// Schema para adicionar/remover estoque
+// Schema para adicionar/remover estoque (sistema atual)
+export const inventoryUpdateCurrentSchema = z.object({
+  productId: cuidSchema,
+  location: inventoryLocationCurrentSchema,
+  quantity: quantitySchema,
+  notes: notesSchema,
+})
+
+// Schema para adicionar/remover estoque (sistema futuro)
 export const inventoryUpdateSchema = z.object({
   productId: cuidSchema,
   location: inventoryLocationSchema,

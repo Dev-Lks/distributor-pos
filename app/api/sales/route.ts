@@ -730,6 +730,16 @@ export async function POST(request: NextRequest) {
       return createdSale
     })
 
+    // Audit logging
+    logger.audit('sale_created', session.user.email || 'unknown', {
+      saleId: sale.id,
+      total: sale.total,
+      itemCount: sale.items.length,
+      customerId: sale.customerId,
+      customerName: sale.customerName,
+      paymentMethod: sale.paymentMethod,
+    })
+
     return NextResponse.json(sale, { status: 201 })
   } catch (error) {
     if (error instanceof Error && error.message === 'INSUFFICIENT_STOCK') {
