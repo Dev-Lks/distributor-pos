@@ -84,6 +84,19 @@ export async function POST(request: NextRequest) {
     // Detectar se é cadastro rápido (tem price mas não tem sku)
     const isQuickCreate = body.price !== undefined && !body.sku
     
+    // Campos permitidos no banco de produção (whitelist)
+    const allowedFields = [
+      'name', 'size', 'cost', 'salePrice', 'isBonified', 'bonifications',
+      'category', 'supplier', 'isActive', 'sku', 'brand', 'origin',
+      'packaging', 'abv', 'ibu', 'shelfLifeDays', 'tags',
+      'lastPurchaseCost', 'lastPurchaseAt', 'avgCost', 'priceLastUpdatedAt',
+      'expirationDate', 'batchNumber', 'supplierProductCode', 'barcode',
+      'weight', 'volume', 'image', 'description', 'nutritionalInfo',
+      'allergens', 'storageInstructions', 'isOrderOnly', 'leadTimeDays',
+      'minOrderQuantity', 'maxOrderQuantity', 'requiresDeposit',
+      'depositPercentage', 'availableForOrder'
+    ]
+    
     let productData: any
     
     if (isQuickCreate) {
@@ -108,14 +121,21 @@ export async function POST(request: NextRequest) {
       // Validar com schema completo
       const validated = createProductSchemaBase.parse(body)
       
-      // Mapear 'price' para 'salePrice' para compatibilidade com Prisma
-      productData = {
-        ...validated,
-        salePrice: validated.price,
-        size: validated.size || '-',
+      // Filtrar apenas campos permitidos e mapear 'price' para 'salePrice'
+      productData = Object.keys(validated)
+        .filter(key => key !== 'price' && allowedFields.includes(key))
+        .reduce((obj, key) => {
+          obj[key] = validated[key]
+          return obj
+        }, {} as any)
+      
+      // Adicionar salePrice mapeado de price
+      productData.salePrice = validated.price
+      
+      // Garantir size tem valor
+      if (!productData.size) {
+        productData.size = '-'
       }
-      // Remove 'price' pois Prisma não o reconhece
-      delete productData.price
     }
 
     const product = await prisma.product.create({
