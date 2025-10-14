@@ -25,7 +25,11 @@ export default withAuth(
     }
 
     // Check if admin requires password change
-    if (token.requiresPasswordChange && path !== '/change-password') {
+    // EXCETO para a rota de API de change-password (que precisa funcionar)
+    if (token.requiresPasswordChange && 
+        path !== '/change-password' && 
+        !path.includes('/api/users/') && 
+        !path.includes('/change-password')) {
       logger.info('Redirecting admin to change password', { email: token.email })
       return NextResponse.redirect(new URL('/change-password', req.url))
     }
