@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
@@ -72,7 +73,7 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error("Erro ao servir CSV:", error)
+    logger.error("Erro ao servir CSV:", { error })
     return NextResponse.json(
       { error: "Erro ao carregar CSV" },
       { status: 500 }

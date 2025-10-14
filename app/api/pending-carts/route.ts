@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 import { z } from "zod"
 
@@ -64,7 +65,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    console.error("Failed to list pending carts", error)
+    logger.error("Failed to list pending carts", { error })
     return NextResponse.json({ error: "Failed to list pending carts" }, { status: 500 })
   }
 }
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    console.error("Failed to create pending cart", error)
+    logger.error("Failed to create pending cart", { error })
     return NextResponse.json({ error: "Failed to create pending cart" }, { status: 500 })
   }
 }

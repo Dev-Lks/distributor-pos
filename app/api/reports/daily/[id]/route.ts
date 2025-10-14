@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 
 import { authOptions } from "@/lib/auth"
@@ -35,7 +36,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    console.error("Failed to load daily report", error)
+    logger.error("Failed to load daily report", { error })
     return NextResponse.json({ error: "Failed to load daily report" }, { status: 500 })
   }
 }

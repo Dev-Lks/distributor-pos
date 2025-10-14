@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { startOfDay, subDays, endOfDay } from 'date-fns'
 
@@ -135,7 +136,7 @@ export async function GET() {
       },
     })
   } catch (error) {
-    console.error('Error fetching KPIs:', error)
+    logger.error('Error fetching KPIs:', { error })
     return NextResponse.json(
       { error: 'Failed to fetch KPIs' },
       { status: 500 }

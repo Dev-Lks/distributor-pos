@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 /**
  * Proxy para o print-server separado.
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(data, { status: response.status })
   } catch (error: any) {
-    console.error('Erro ao conectar ao print-server:', error)
+    logger.error('Erro ao conectar ao print-server:', { error })
     return NextResponse.json(
       { 
         success: false, 

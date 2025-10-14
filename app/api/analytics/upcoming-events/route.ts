@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { addDays, startOfDay, endOfDay } from 'date-fns'
 
@@ -173,7 +174,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(events)
   } catch (error) {
-    console.error('Error fetching upcoming events:', error)
+    logger.error('Error fetching upcoming events:', { error })
     return NextResponse.json(
       { error: 'Failed to fetch upcoming events' },
       { status: 500 }

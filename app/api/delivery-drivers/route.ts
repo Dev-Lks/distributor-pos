@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
@@ -54,7 +55,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(driversWithStats)
   } catch (error) {
-    console.error("Failed to fetch drivers:", error)
+    logger.error("Failed to fetch drivers:", { error })
     return NextResponse.json(
       { error: "Erro ao buscar entregadores" },
       { status: 500 }
@@ -126,7 +127,7 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
-    console.error("Failed to create driver:", error)
+    logger.error("Failed to create driver:", { error })
     return NextResponse.json(
       { error: "Erro ao criar entregador" },
       { status: 500 }

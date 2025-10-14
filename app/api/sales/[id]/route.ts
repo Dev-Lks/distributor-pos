@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { z } from 'zod'
@@ -126,7 +127,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: 'Sale cancelled successfully' })
   } catch (error) {
-    console.error('Error cancelling sale:', error)
+    logger.error('Error cancelling sale:', { error })
     return NextResponse.json({ error: 'Failed to cancel sale' }, { status: 500 })
   }
 }
@@ -242,7 +243,7 @@ export async function PATCH(
 
     return NextResponse.json(updatedSale as any)
   } catch (error) {
-    console.error('Failed to update sale:', error)
+    logger.error('Failed to update sale:', { error })
     return NextResponse.json({ error: 'Failed to update sale' }, { status: 500 })
   }
 }

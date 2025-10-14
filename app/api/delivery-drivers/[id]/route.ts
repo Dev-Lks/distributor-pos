@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
@@ -54,7 +55,7 @@ export async function GET(
 
     return NextResponse.json(driver)
   } catch (error) {
-    console.error("Failed to fetch driver:", error)
+    logger.error("Failed to fetch driver:", { error })
     return NextResponse.json(
       { error: "Erro ao buscar entregador" },
       { status: 500 }
@@ -106,7 +107,7 @@ export async function PATCH(
         { status: 400 }
       )
     }
-    console.error("Failed to update driver:", error)
+    logger.error("Failed to update driver:", { error })
     return NextResponse.json(
       { error: "Erro ao atualizar entregador" },
       { status: 500 }
@@ -147,7 +148,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Failed to delete driver:", error)
+    logger.error("Failed to delete driver:", { error })
     return NextResponse.json(
       { error: "Erro ao deletar entregador" },
       { status: 500 }

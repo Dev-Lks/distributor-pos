@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
@@ -133,7 +134,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(deliverySummaries)
   } catch (error) {
-    console.error("Error fetching deliveries:", error)
+    logger.error("Error fetching deliveries:", { error })
     return NextResponse.json(
       { error: "Erro ao buscar deliveries" },
       { status: 500 }
@@ -285,7 +286,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    console.error("Error creating delivery:", error)
+    logger.error("Error creating delivery:", { error })
     return NextResponse.json(
       { error: "Erro ao criar delivery" },
       { status: 500 }

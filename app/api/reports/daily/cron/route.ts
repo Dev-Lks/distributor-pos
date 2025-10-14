@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 
 import { prisma } from "@/lib/prisma"
 import { generateDailyReport } from "@/lib/dailyReports"
@@ -45,7 +46,7 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     })
   } catch (error) {
-    console.error("Daily report cron failed", error)
+    logger.error("Daily report cron failed", { error })
     return NextResponse.json({ error: "Daily report cron failed" }, { status: 500 })
   }
 }

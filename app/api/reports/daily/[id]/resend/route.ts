@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 import { z } from "zod"
 
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       }
     }
 
-    console.error("Failed to resend daily report", error)
+    logger.error("Failed to resend daily report", { error })
     return NextResponse.json({ error: "Failed to resend daily report" }, { status: 500 })
   }
 }

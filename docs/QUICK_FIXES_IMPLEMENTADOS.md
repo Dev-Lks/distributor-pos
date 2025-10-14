@@ -138,6 +138,7 @@ NODE_ENV=production pnpm build && pnpm start
 # Testar quantidade excessiva
 curl -X POST http://localhost:3000/api/inventory \
   -H "Content-Type: application/json" \
+  
   -d '{"productId":"test","location":"coldRoom","quantity":9999999999}'
 
 # Deve retornar: 400 Bad Request - "Quantidade excede limite máximo"

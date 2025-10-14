@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 const prismaProductPoints = (prisma as unknown as {
   productPointOfSale: {
@@ -19,7 +20,7 @@ export async function GET() {
   }) as unknown[]
     return NextResponse.json(productPointsOfSale)
   } catch (error) {
-    console.error('Failed to fetch product points of sale:', error)
+    logger.error('Failed to fetch product points of sale:', { error })
     return NextResponse.json({ error: 'Failed to fetch product points of sale' }, { status: 500 })
   }
 }
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
   }) as Record<string, unknown>
     return NextResponse.json(productPointOfSale, { status: 201 })
   } catch (error) {
-    console.error('Failed to create product point of sale:', error)
+    logger.error('Failed to create product point of sale:', { error })
     return NextResponse.json({ error: 'Failed to create product point of sale' }, { status: 500 })
   }
 }
@@ -83,7 +84,7 @@ export async function PATCH(request: NextRequest) {
   }) as Record<string, unknown>
     return NextResponse.json(productPointOfSale)
   } catch (error) {
-    console.error('Failed to update product point of sale:', error)
+    logger.error('Failed to update product point of sale:', { error })
     return NextResponse.json({ error: 'Failed to update product point of sale' }, { status: 500 })
   }
 }
@@ -102,7 +103,7 @@ export async function DELETE(request: NextRequest) {
     })
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error('Failed to delete product point of sale:', error)
+    logger.error('Failed to delete product point of sale:', { error })
     return NextResponse.json({ error: 'Failed to delete product point of sale' }, { status: 500 })
   }
 }

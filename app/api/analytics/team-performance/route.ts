@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { subDays, startOfDay, subWeeks, startOfWeek, subMonths, startOfMonth } from 'date-fns'
 
@@ -96,7 +97,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(performance)
   } catch (error) {
-    console.error('Error fetching team performance:', error)
+    logger.error('Error fetching team performance:', { error })
     return NextResponse.json(
       { error: 'Failed to fetch team performance' },
       { status: 500 }

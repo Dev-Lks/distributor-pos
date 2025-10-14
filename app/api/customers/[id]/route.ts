@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 
 import { prisma, type Prisma } from "@/lib/prisma"
 import { getServerAuth, notAuthenticated, unauthorized } from "@/lib/serverAuth"
@@ -71,7 +72,7 @@ export async function GET(
       salesCount: customer._count?.sales ?? 0,
     })
   } catch (error) {
-    console.error("Failed to fetch customer", error)
+    logger.error("Failed to fetch customer", { error })
     return NextResponse.json({ error: "Não foi possível carregar o cliente." }, { status: 500 })
   }
 }

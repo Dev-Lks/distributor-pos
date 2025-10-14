@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { subDays, startOfDay, endOfDay, subWeeks, subMonths, startOfWeek, startOfMonth } from 'date-fns'
 
@@ -132,7 +133,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(topProducts)
   } catch (error) {
-    console.error('Error fetching top products:', error)
+    logger.error('Error fetching top products:', { error })
     return NextResponse.json(
       { error: 'Failed to fetch top products' },
       { status: 500 }

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 import { z } from "zod"
 
@@ -100,7 +101,7 @@ export async function POST(
       }
     }
 
-    console.error("Failed to create cash transaction", error)
+    logger.error("Failed to create cash transaction", { error })
     return NextResponse.json({ error: "Failed to create cash transaction" }, { status: 500 })
   }
 }

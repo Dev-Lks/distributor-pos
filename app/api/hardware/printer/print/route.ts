@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { 
   generateSaleReceipt, 
   generateCashTransactionReceipt,
@@ -185,7 +186,7 @@ export async function POST(request: NextRequest) {
       message: 'Recibo impresso com sucesso' 
     })
   } catch (error) {
-    console.error('Erro ao imprimir:', error)
+    logger.error('Erro ao imprimir:', { error })
     
     // TODO: Registra falha no job quando PrintJob estiver disponível
     // try {
@@ -199,7 +200,7 @@ export async function POST(request: NextRequest) {
     //     },
     //   })
     // } catch (dbError) {
-    //   console.error('Erro ao registrar falha:', dbError)
+    //   logger.error('Erro ao registrar falha:', dbError)
     // }
 
     return NextResponse.json(

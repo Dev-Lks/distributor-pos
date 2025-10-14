@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(audits);
   } catch (error) {
-    console.error('Error fetching audits:', error);
+    logger.error('Error fetching audits:', { error });
     return NextResponse.json(
       { error: 'Failed to fetch audits' },
       { status: 500 }
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(audit, { status: 201 });
   } catch (error) {
-    console.error('Error creating audit:', error);
+    logger.error('Error creating audit:', { error });
     return NextResponse.json(
       { error: 'Failed to create audit' },
       { status: 500 }

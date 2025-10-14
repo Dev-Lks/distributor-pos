@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 
 export async function GET() {
@@ -77,7 +78,7 @@ export async function GET() {
 
     return NextResponse.json(alerts)
   } catch (error) {
-    console.error('Error fetching stock alerts:', error)
+    logger.error('Error fetching stock alerts:', { error })
     return NextResponse.json(
       { error: 'Failed to fetch stock alerts' },
       { status: 500 }

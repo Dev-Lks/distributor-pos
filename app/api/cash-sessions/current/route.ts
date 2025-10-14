@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 
 import { authOptions } from "@/lib/auth"
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    console.error("Failed to fetch current cash session", error)
+    logger.error("Failed to fetch current cash session", { error })
     return NextResponse.json({ error: "Failed to fetch current cash session" }, { status: 500 })
   }
 }

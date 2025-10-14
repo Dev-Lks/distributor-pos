@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 import { z } from "zod"
 
@@ -52,7 +53,7 @@ export async function GET(
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    console.error("Failed to load cash session", error)
+    logger.error("Failed to load cash session", { error })
     return NextResponse.json({ error: "Failed to load cash session" }, { status: 500 })
   }
 }
@@ -106,7 +107,7 @@ export async function PATCH(
       }
     }
 
-    console.error("Failed to close cash session", error)
+    logger.error("Failed to close cash session", { error })
     return NextResponse.json({ error: "Failed to close cash session" }, { status: 500 })
   }
 }

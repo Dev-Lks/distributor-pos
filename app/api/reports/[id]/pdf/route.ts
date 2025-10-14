@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { prisma } from "@/lib/prisma"
 
 export const dynamic = "force-dynamic"
@@ -67,7 +68,7 @@ export async function GET(
       },
     })
   } catch (error) {
-    console.error("Erro ao servir PDF:", error)
+    logger.error("Erro ao servir PDF:", { error })
     return NextResponse.json(
       { error: "Erro ao carregar PDF" },
       { status: 500 }

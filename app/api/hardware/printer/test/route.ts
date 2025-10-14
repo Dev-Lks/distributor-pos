@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 
 /**
  * Proxy para teste de impressão no print-server
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const data = await response.json()
     return NextResponse.json(data, { status: response.status })
   } catch (error: any) {
-    console.error('Erro ao conectar ao print-server:', error)
+    logger.error('Erro ao conectar ao print-server:', { error })
     return NextResponse.json(
       { 
         success: false, 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { logger } from '@/lib/logger'
 import { getServerSession } from "next-auth"
 import { z } from "zod"
 
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    console.error("Failed to list daily reports", error)
+    logger.error("Failed to list daily reports", { error })
     return NextResponse.json({ error: "Failed to list daily reports" }, { status: 500 })
   }
 }
@@ -91,7 +92,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    console.error("Failed to generate daily report", error)
+    logger.error("Failed to generate daily report", { error })
     return NextResponse.json({ error: "Failed to generate daily report" }, { status: 500 })
   }
 }

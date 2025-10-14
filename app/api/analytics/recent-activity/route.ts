@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -152,7 +153,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(limitedActivities)
   } catch (error) {
-    console.error('Error fetching recent activity:', error)
+    logger.error('Error fetching recent activity:', { error })
     return NextResponse.json(
       { error: 'Failed to fetch recent activity' },
       { status: 500 }
