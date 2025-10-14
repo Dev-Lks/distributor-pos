@@ -102,7 +102,9 @@ Rastreamento de erros em produção
 
 - ✅ **Rate Limiting** - 100%
 - ✅ **Validações Zod (schemas)** - 100%
-- ✅ **Logger Melhorado** - 80%
+- ✅ **Logger Melhorado** - 60% (sanitização + console, sem persistência em arquivo*)
+
+> *Nota: Persistência em arquivo foi removida para compatibilidade com Edge Runtime da Vercel. Logs aparecem no console da Vercel.
 
 ---
 
