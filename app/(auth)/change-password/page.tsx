@@ -21,6 +21,12 @@ export default function ChangePasswordPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    console.log('📝 Form submitted', {
+      newPasswordLength: newPassword.length,
+      confirmPasswordLength: confirmPassword.length,
+      match: newPassword === confirmPassword
+    })
+
     if (newPassword !== confirmPassword) {
       toast.error('Senhas não coincidem')
       return
@@ -36,6 +42,12 @@ export default function ChangePasswordPage() {
     const hasLowerCase = /[a-z]/.test(newPassword)
     const hasNumber = /[0-9]/.test(newPassword)
     
+    console.log('🔐 Password strength validation', {
+      hasUpperCase,
+      hasLowerCase,
+      hasNumber
+    })
+    
     if (!hasUpperCase || !hasLowerCase || !hasNumber) {
       toast.error('Senha deve conter letras maiúsculas, minúsculas e números')
       return
@@ -43,27 +55,66 @@ export default function ChangePasswordPage() {
 
     setLoading(true)
 
+    const url = `/api/users/${session?.user?.id}/change-password`
+    console.log('🌐 Making API request', {
+      url,
+      userId: session?.user?.id,
+      hasSession: !!session
+    })
+
     try {
-      const response = await fetch(`/api/users/${session?.user?.id}/change-password`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPassword })
       })
 
+      console.log('📡 API response', {
+        status: response.status,
+        ok: response.ok,
+        contentType: response.headers.get('content-type')
+      })
+
+      // Log do corpo da resposta como texto primeiro
+      const responseText = await response.text()
+      console.log('📄 Response body (text):', responseText)
+
       if (response.ok) {
+        let data
+        try {
+          // Tentar parsear o texto como JSON
+          data = responseText ? JSON.parse(responseText) : { success: true }
+          console.log('✅ Password changed successfully', data)
+        } catch (parseError) {
+          console.warn('⚠️ Could not parse JSON response, but status is OK', parseError)
+          data = { success: true }
+        }
+        
         toast.success('Senha alterada! Redirecionando para login...')
         
         // Fazer logout para forçar novo login com token atualizado
         setTimeout(async () => {
+          console.log('🚪 Signing out...')
           await signOut({ redirect: false })
           router.push('/login?callbackUrl=/dashboard&passwordChanged=true')
         }, 1500)
       } else {
-        const data = await response.json()
+        let data
+        try {
+          data = responseText ? JSON.parse(responseText) : { error: 'Erro desconhecido' }
+        } catch (parseError) {
+          console.error('❌ Could not parse error response', parseError)
+          data = { error: responseText || 'Erro ao alterar senha' }
+        }
+        console.error('❌ API error', {
+          status: response.status,
+          error: data
+        })
         toast.error(data.error || 'Erro ao alterar senha')
         setLoading(false)
       }
     } catch (error) {
+      console.error('❌ Request failed', error)
       toast.error('Erro ao alterar senha')
       setLoading(false)
     }
