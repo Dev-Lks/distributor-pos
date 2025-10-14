@@ -122,12 +122,12 @@ export async function POST(request: NextRequest) {
       const validated = createProductSchemaBase.parse(body)
       
       // Filtrar apenas campos permitidos e mapear 'price' para 'salePrice'
-      productData = Object.keys(validated)
-        .filter(key => key !== 'price' && allowedFields.includes(key))
+      productData = (Object.keys(validated) as Array<keyof typeof validated>)
+        .filter(key => key !== 'price' && allowedFields.includes(key as string))
         .reduce((obj, key) => {
           obj[key] = validated[key]
           return obj
-        }, {} as any)
+        }, {} as Record<string, string | number | boolean | undefined>)
       
       // Adicionar salePrice mapeado de price
       productData.salePrice = validated.price
