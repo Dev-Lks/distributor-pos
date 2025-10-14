@@ -44,6 +44,20 @@ export const createProductSchema = createProductSchemaBase
     }
   )
 
+// Schema para cadastro rápido via código de barras
+export const quickCreateProductSchema = z.object({
+  name: nameSchema,
+  barcode: barcodeSchema,
+  price: moneySchema,
+  cost: moneySchema.optional(),
+  size: z.string().max(50, 'Tamanho muito longo').optional(),
+  isActive: z.boolean().default(true),
+  // Campos que serão preenchidos automaticamente:
+  // - sku será gerado automaticamente a partir do barcode
+  // - description será gerado a partir do name + size
+  // - image será vazio/placeholder
+})
+
 // Schema para atualizar produto
 export const updateProductSchema = createProductSchemaBase.partial()
 

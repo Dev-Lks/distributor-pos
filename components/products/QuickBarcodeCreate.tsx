@@ -89,7 +89,7 @@ export function QuickBarcodeCreate({ open, onOpenChange, onSuccess }: QuickBarco
         name: formData.name.trim(),
         size: formData.size.trim(),
         cost: parseFloat(formData.cost),
-        salePrice: parseFloat(formData.salePrice),
+        price: parseFloat(formData.salePrice), // Usar 'price' ao invés de 'salePrice'
         barcode: formData.barcode.trim(),
         isActive: true,
       }

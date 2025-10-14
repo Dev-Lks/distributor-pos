@@ -5,6 +5,7 @@ import { logger } from '@/lib/logger'
 import { z } from 'zod'
 import {
   createProductSchemaBase,
+  quickCreateProductSchema,
   updateProductSchema,
   deleteProductSchema,
 } from '@/lib/validations'
@@ -80,11 +81,31 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     
-    // Validar com Zod
-    const validatedData = createProductSchemaBase.parse(body)
+    // Detectar se é cadastro rápido (tem price mas não tem sku)
+    const isQuickCreate = body.price !== undefined && !body.sku
+    
+    let productData: any
+    
+    if (isQuickCreate) {
+      // Validar com schema de cadastro rápido
+      const validatedData = quickCreateProductSchema.parse(body)
+      
+      // Preencher campos obrigatórios automaticamente
+      productData = {
+        ...validatedData,
+        sku: validatedData.barcode, // Usar barcode como SKU
+        description: validatedData.size 
+          ? `${validatedData.name} - ${validatedData.size}`
+          : validatedData.name,
+        image: '', // Placeholder
+      }
+    } else {
+      // Validar com schema completo
+      productData = createProductSchemaBase.parse(body)
+    }
 
     const product = await prisma.product.create({
-      data: validatedData as any, // TODO: Ajustar schema Zod para match exato com Prisma
+      data: productData,
     })
     
     // Audit log
@@ -92,9 +113,10 @@ export async function POST(request: NextRequest) {
       productId: product.id,
       productName: product.name,
       sku: product.sku,
+      quickCreate: isQuickCreate,
     })
     
-    logger.info('Product created successfully', { productId: product.id })
+    logger.info('Product created successfully', { productId: product.id, quickCreate: isQuickCreate })
     
     return NextResponse.json(product, { status: 201 })
   } catch (error) {
