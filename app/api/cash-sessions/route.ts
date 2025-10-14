@@ -9,11 +9,13 @@ import {
   openCashSession,
 } from "@/lib/cashSessions"
 import { CashSessionStatus } from "@prisma/client"
+import { logger } from "@/lib/logger"
+import { LIMITS } from "@/lib/constants/limits"
 
 const openSessionSchema = z.object({
-  openingAmount: z.number().min(0, "Opening amount must be zero or greater"),
+  openingAmount: z.number().min(0, "Opening amount must be zero or greater").max(LIMITS.MAX_CASH_SESSION_AMOUNT, `Valor não pode exceder ${LIMITS.MAX_CASH_SESSION_AMOUNT}`),
   pointOfSaleId: z.string().trim().min(1).optional(),
-  notes: z.string().trim().optional(),
+  notes: z.string().trim().max(LIMITS.MAX_NOTES_LENGTH).optional(),
 })
 
 const statusParamSchema = z
@@ -69,7 +71,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
 
-    console.error("Failed to list cash sessions", error)
+    logger.error("Failed to list cash sessions", { error })
     return NextResponse.json({ error: "Failed to list cash sessions" }, { status: 500 })
   }
 }
@@ -116,7 +118,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.error("Failed to open cash session", error)
+    logger.error("Failed to open cash session", { error })
     return NextResponse.json({ error: "Failed to open cash session" }, { status: 500 })
   }
 }

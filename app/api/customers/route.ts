@@ -3,6 +3,9 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma, type Prisma } from "@/lib/prisma"
 import { detectPersonType, sanitizeDocument, validateCpfCnpj } from "@/lib/documents"
 import { getServerAuth, notAuthenticated, unauthorized } from "@/lib/serverAuth"
+import { logger } from "@/lib/logger"
+import { sanitizeString, sanitizeEmail } from "@/lib/utils/sanitize"
+import { LIMITS } from "@/lib/constants/limits"
 
 const CUSTOMER_SELECT = {
   id: true,
@@ -89,7 +92,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(customers.map(mapCustomer))
   } catch (error) {
-    console.error("Failed to fetch customers", error)
+    logger.error("Failed to fetch customers", { error })
     return NextResponse.json({ error: "Não foi possível carregar os clientes." }, { status: 500 })
   }
 }
@@ -158,7 +161,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(mapCustomer(customer), { status: 201 })
   } catch (error) {
-    console.error("Failed to create customer", error)
+    logger.error("Failed to create customer", { error })
     return handlePrismaError(error)
   }
 }
@@ -210,7 +213,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(mapCustomer(customer))
   } catch (error) {
-    console.error("Failed to update customer", error)
+    logger.error("Failed to update customer", { error })
     return handlePrismaError(error)
   }
 }
@@ -232,7 +235,7 @@ export async function DELETE(request: NextRequest) {
     await prisma.customer.delete({ where: { id } })
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Failed to delete customer", error)
+    logger.error("Failed to delete customer", { error })
     return NextResponse.json({ error: "Não foi possível remover o cliente." }, { status: 500 })
   }
 }

@@ -8,14 +8,16 @@ import { authOptions } from '@/lib/auth'
 import { CashSessionStatus, PaymentStatus, PendingCartStatus, PersonType } from '@prisma/client'
 import { detectPersonType, sanitizeDocument, validateCpfCnpj } from '@/lib/documents'
 import { markPendingCartConverted } from '@/lib/pendingCarts'
+import { logger } from '@/lib/logger'
+import { LIMITS } from '@/lib/constants/limits'
 
 const saleItemSchema = z.object({
   productId: z.string().min(1, 'Product ID is required'),
-  quantity: z.number().int().positive('Quantity must be greater than zero'),
+  quantity: z.number().int().positive('Quantity must be greater than zero').max(LIMITS.MAX_QUANTITY, `Quantidade não pode exceder ${LIMITS.MAX_QUANTITY}`),
 })
 
 const createSaleSchema = z.object({
-  items: z.array(saleItemSchema).min(1, 'At least one item is required'),
+  items: z.array(saleItemSchema).min(1, 'At least one item is required').max(LIMITS.MAX_ITEMS_PER_SALE, `Máximo de ${LIMITS.MAX_ITEMS_PER_SALE} itens por venda`),
   paymentMethod: z.enum(['cash', 'card', 'pix', 'other']).optional(),
   customerName: z.string().optional(),
   customerEmail: z.string().email('E-mail inválido').optional(),
@@ -24,10 +26,10 @@ const createSaleSchema = z.object({
   customerAddress: z.string().optional(),
   customerId: z.string().optional(),
   channel: z.string().optional(),
-  discountValue: z.number().nonnegative().optional(),
+  discountValue: z.number().nonnegative().max(LIMITS.MAX_DISCOUNT_VALUE, `Desconto não pode exceder ${LIMITS.MAX_DISCOUNT_VALUE}`).optional(),
   taxValue: z.number().nonnegative().optional(),
   serviceCharge: z.number().optional(),
-  notes: z.string().optional(),
+  notes: z.string().max(LIMITS.MAX_NOTES_LENGTH, `Notas não podem exceder ${LIMITS.MAX_NOTES_LENGTH} caracteres`).optional(),
   pointOfSaleId: z.string().optional(),
   pendingCartId: z.string().optional(),
   registerCustomer: z.boolean().optional(),
@@ -153,7 +155,7 @@ export async function GET() {
     })
     return NextResponse.json(sales as any)
   } catch (error) {
-    console.error('Failed to fetch sales:', error)
+    logger.error('Failed to fetch sales', { error })
     return NextResponse.json({ error: 'Failed to fetch sales' }, { status: 500 })
   }
 }
@@ -739,7 +741,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.error('Failed to create sale:', error)
+    logger.error('Failed to create sale', { error })
     return NextResponse.json({ error: 'Failed to create sale' }, { status: 500 })
   }
 }

@@ -2,7 +2,14 @@
 require('dotenv').config()
 
 const SERVER_URL = process.env.TEST_SERVER_URL || 'http://localhost:3001'
-const AUTH_TOKEN = process.env.AUTH_TOKEN || 'meu-token-super-secreto-123456'
+const AUTH_TOKEN = process.env.AUTH_TOKEN
+
+if (!AUTH_TOKEN) {
+  console.error('❌ AUTH_TOKEN não configurado')
+  console.log('Configure a variável de ambiente AUTH_TOKEN antes de executar os testes')
+  console.log('Exemplo: AUTH_TOKEN=seu-token-secreto node test.js')
+  process.exit(1)
+}
 
 async function testServer() {
   console.log('🧪 Testando Servidor de Impressão')

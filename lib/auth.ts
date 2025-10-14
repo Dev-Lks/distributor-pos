@@ -118,6 +118,8 @@ export const authOptions: NextAuthOptions = {
           tenantId?: string;
           permissions?: PermissionKey[];
           pointsOfSale?: any[];
+          passwordChangedAt?: Date;
+          createdAt?: Date;
         };
         token.id = user.id;
         token.isAdmin = typedUser.isAdmin || false;
@@ -125,6 +127,12 @@ export const authOptions: NextAuthOptions = {
         token.tenantId = typedUser.tenantId;
         token.permissions = typedUser.permissions || [];
         token.pointsOfSale = typedUser.pointsOfSale;
+        
+        // Verificar se admin nunca mudou senha
+        token.requiresPasswordChange = false
+        if (typedUser.isAdmin && !typedUser.passwordChangedAt) {
+          token.requiresPasswordChange = true
+        }
       }
       return token;
     },

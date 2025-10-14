@@ -20,6 +20,27 @@ interface LogContext {
 
 class Logger {
   private isDevelopment = process.env.NODE_ENV === 'development'
+  private get isProd() {
+    return process.env.NODE_ENV === 'production'
+  }
+
+  /**
+   * Sanitizar dados sensíveis antes de logar
+   */
+  private sanitize(context?: LogContext): LogContext {
+    if (!context) return {}
+    
+    const sanitized = { ...context }
+    const sensitiveKeys = ['password', 'token', 'secret', 'apiKey', 'authorization', 'passwordHash']
+    
+    Object.keys(sanitized).forEach(key => {
+      if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
+        sanitized[key] = '[REDACTED]'
+      }
+    })
+    
+    return sanitized
+  }
 
   /**
    * Log de debug - apenas em desenvolvimento
@@ -31,24 +52,29 @@ class Logger {
   }
 
   /**
-   * Log informativo - sempre exibido
+   * Log informativo - em produção, apenas erros e warnings no console
    */
   info(message: string, context?: LogContext) {
-    console.info('ℹ️', message, context || '')
+    const sanitized = this.sanitize(context)
+    if (!this.isProd) {
+      console.info('ℹ️', message, sanitized)
+    }
   }
 
   /**
    * Log de aviso - sempre exibido
    */
   warn(message: string, context?: LogContext) {
-    console.warn('⚠️', message, context || '')
+    const sanitized = this.sanitize(context)
+    console.warn('⚠️', message, sanitized)
   }
 
   /**
    * Log de erro - sempre exibido
    */
   error(message: string, context?: LogContext) {
-    console.error('❌', message, context || '')
+    const sanitized = this.sanitize(context)
+    console.error('❌', message, sanitized)
   }
 
   /**

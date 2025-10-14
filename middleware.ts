@@ -24,6 +24,17 @@ export default withAuth(
       return redirectToLogin(req);
     }
 
+    // Check if admin requires password change
+    if (token.requiresPasswordChange && path !== '/change-password') {
+      logger.info('Redirecting admin to change password', { email: token.email })
+      return NextResponse.redirect(new URL('/change-password', req.url))
+    }
+
+    // Allow access to change-password page if flag is set
+    if (path === '/change-password' && token.requiresPasswordChange) {
+      return NextResponse.next()
+    }
+
     // Extract user info from token
     const isAdmin = token.isAdmin as boolean;
     const permissions = (token.permissions as string[]) || [];

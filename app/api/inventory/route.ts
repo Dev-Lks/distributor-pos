@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { logger } from '@/lib/logger'
+import { LIMITS } from '@/lib/constants/limits'
 
 export async function GET() {
   try {
@@ -18,7 +20,7 @@ export async function GET() {
     }))
     return NextResponse.json(inventoryWithAlerts)
   } catch (error) {
-    console.error('Failed to fetch inventory:', error)
+    logger.error('Failed to fetch inventory', { error })
     return NextResponse.json({ error: 'Failed to fetch inventory' }, { status: 500 })
   }
 }
@@ -34,6 +36,21 @@ export async function POST(request: NextRequest) {
 
     if (!productId || typeof quantity !== 'number' || !location) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+
+    // Validar range de quantidade
+    if (quantity < 0) {
+      return NextResponse.json(
+        { error: 'Quantidade não pode ser negativa' },
+        { status: 400 }
+      )
+    }
+
+    if (quantity > LIMITS.MAX_QUANTITY) {
+      return NextResponse.json(
+        { error: `Quantidade excede limite máximo (${LIMITS.MAX_QUANTITY})` },
+        { status: 400 }
+      )
     }
 
     if (!['coldRoom', 'house', 'salePoint'].includes(location)) {
@@ -56,7 +73,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(inventory, { status: 201 })
   } catch (error) {
-    console.error('Failed to update inventory:', error)
+    logger.error('Failed to update inventory', { error })
     return NextResponse.json({ error: 'Failed to update inventory' }, { status: 500 })
   }
 }
@@ -72,6 +89,21 @@ export async function PATCH(request: NextRequest) {
 
     if (!productId || typeof quantity !== 'number' || !location) {
       return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
+    }
+
+    // Validar range de quantidade
+    if (quantity < 0) {
+      return NextResponse.json(
+        { error: 'Quantidade não pode ser negativa' },
+        { status: 400 }
+      )
+    }
+
+    if (quantity > LIMITS.MAX_QUANTITY) {
+      return NextResponse.json(
+        { error: `Quantidade excede limite máximo (${LIMITS.MAX_QUANTITY})` },
+        { status: 400 }
+      )
     }
 
     if (!['coldRoom', 'house', 'salePoint'].includes(location)) {
@@ -94,7 +126,7 @@ export async function PATCH(request: NextRequest) {
 
     return NextResponse.json(inventory)
   } catch (error) {
-    console.error('Failed to update inventory:', error)
+    logger.error('Failed to update inventory', { error })
     return NextResponse.json({ error: 'Failed to update inventory' }, { status: 500 })
   }
 }
