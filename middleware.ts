@@ -8,11 +8,38 @@ import {
   redirectToLogin,
   redirectToUnauthorized,
 } from "@/lib/middleware/utils";
+import { limiter, authLimiter } from "@/lib/rate-limit";
 
 export default withAuth(
-  function middleware(req) {
+  async function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
+
+    // Get IP for rate limiting
+    const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'anonymous';
+
+    // Rate limiting para rotas de API
+    if (path.startsWith('/api/')) {
+      try {
+        // Rate limiting mais restritivo para autenticação
+        if (path.startsWith('/api/auth/') || path === '/api/login') {
+          await authLimiter.check(5, ip); // 5 tentativas em 15min
+        } else {
+          await limiter.check(100, ip); // 100 req/min para outras APIs
+        }
+      } catch {
+        logger.warn('Rate limit exceeded', { ip, path });
+        return NextResponse.json(
+          { error: 'Too many requests. Please try again later.' },
+          { 
+            status: 429,
+            headers: {
+              'Retry-After': '60'
+            }
+          }
+        );
+      }
+    }
 
     // Public routes - allow with no-cache headers
     if (isPublicRoute(path)) {
