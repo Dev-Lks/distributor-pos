@@ -18,14 +18,20 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
 
   const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard"
   const defaultError = searchParams.get("error")
+  const passwordChanged = searchParams.get("passwordChanged")
 
   useEffect(() => {
     setMounted(true)
-  }, [])
+    // Mostrar mensagem de sucesso se senha foi alterada
+    if (passwordChanged === 'true') {
+      setSuccessMessage('Senha alterada com sucesso! Faça login com sua nova senha.')
+    }
+  }, [passwordChanged])
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -146,6 +152,13 @@ export default function LoginPage() {
                 </button>
               </div>
             </div>
+
+            {successMessage && (
+              <div className="flex items-center gap-3 rounded-lg border border-green-500/50 bg-green-500/10 px-4 py-3 text-sm text-green-200 animate-in slide-in-from-top-2 backdrop-blur-sm">
+                <AlertCircle className="h-5 w-5 flex-shrink-0" />
+                <span>{successMessage}</span>
+              </div>
+            )}
 
             {resolvedError && (
               <div className="flex items-center gap-3 rounded-lg border border-red-500/50 bg-red-500/10 px-4 py-3 text-sm text-red-200 animate-in slide-in-from-top-2 backdrop-blur-sm">

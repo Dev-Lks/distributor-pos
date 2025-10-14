@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { signOut, useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -10,7 +10,7 @@ import { toast } from 'sonner'
 import { ShieldAlert, Lock, Eye, EyeOff } from 'lucide-react'
 
 export default function ChangePasswordPage() {
-  const { data: session, update } = useSession()
+  const { data: session } = useSession()
   const router = useRouter()
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -51,17 +51,20 @@ export default function ChangePasswordPage() {
       })
 
       if (response.ok) {
-        toast.success('Senha alterada com sucesso!')
-        // Atualizar sessão para remover flag de mudança obrigatória
-        await update()
-        router.push('/dashboard')
+        toast.success('Senha alterada! Redirecionando para login...')
+        
+        // Fazer logout para forçar novo login com token atualizado
+        setTimeout(async () => {
+          await signOut({ redirect: false })
+          router.push('/login?callbackUrl=/dashboard&passwordChanged=true')
+        }, 1500)
       } else {
         const data = await response.json()
         toast.error(data.error || 'Erro ao alterar senha')
+        setLoading(false)
       }
     } catch (error) {
       toast.error('Erro ao alterar senha')
-    } finally {
       setLoading(false)
     }
   }

@@ -110,7 +110,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         const typedUser = user as AdapterUser & {
           isAdmin?: boolean;
@@ -134,6 +134,18 @@ export const authOptions: NextAuthOptions = {
           token.requiresPasswordChange = true
         }
       }
+
+      // Se o token está sendo atualizado (ex: após mudança de senha), revalidar
+      if (trigger === "update" && token.id && token.isAdmin) {
+        const currentUser = await prisma.user.findUnique({
+          where: { id: token.id as string },
+          select: { passwordChangedAt: true }
+        })
+        
+        // Atualizar flag baseado no estado atual do banco
+        token.requiresPasswordChange = !currentUser?.passwordChangedAt
+      }
+      
       return token;
     },
     async session({ session, token }) {
