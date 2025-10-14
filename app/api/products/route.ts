@@ -90,18 +90,32 @@ export async function POST(request: NextRequest) {
       // Validar com schema de cadastro rápido
       const validatedData = quickCreateProductSchema.parse(body)
       
-      // Preencher campos obrigatórios automaticamente
+      // Preencher campos obrigatórios automaticamente para o Prisma
       productData = {
-        ...validatedData,
+        name: validatedData.name,
+        barcode: validatedData.barcode,
         sku: validatedData.barcode, // Usar barcode como SKU
+        size: validatedData.size || '-', // Obrigatório no Prisma
+        cost: validatedData.cost || 0, // Obrigatório no Prisma
+        salePrice: validatedData.price, // Prisma usa 'salePrice', não 'price'
         description: validatedData.size 
           ? `${validatedData.name} - ${validatedData.size}`
           : validatedData.name,
-        image: '', // Placeholder
+        image: validatedData.image || '', // Placeholder
+        isActive: validatedData.isActive,
       }
     } else {
       // Validar com schema completo
-      productData = createProductSchemaBase.parse(body)
+      const validated = createProductSchemaBase.parse(body)
+      
+      // Mapear 'price' para 'salePrice' para compatibilidade com Prisma
+      productData = {
+        ...validated,
+        salePrice: validated.price,
+        size: validated.size || '-',
+      }
+      // Remove 'price' pois Prisma não o reconhece
+      delete productData.price
     }
 
     const product = await prisma.product.create({
@@ -133,8 +147,17 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    logger.error('Failed to create product', { error })
-    return NextResponse.json({ error: 'Erro ao criar produto' }, { status: 500 })
+    // Log detalhado do erro
+    logger.error('Failed to create product', { 
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+    })
+    
+    return NextResponse.json({ 
+      error: 'Erro ao criar produto',
+      details: error instanceof Error ? error.message : 'Erro desconhecido'
+    }, { status: 500 })
   }
 }
 

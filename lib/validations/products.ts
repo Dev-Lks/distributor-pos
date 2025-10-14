@@ -15,6 +15,7 @@ export const createProductSchemaBase = z.object({
   name: nameSchema,
   sku: skuSchema,
   barcode: barcodeSchema,
+  size: z.string().min(1, 'Tamanho obrigatório').max(100, 'Tamanho muito longo').optional(),
   description: descriptionSchema,
   price: moneySchema,
   cost: moneySchema.optional(),
@@ -51,11 +52,11 @@ export const quickCreateProductSchema = z.object({
   price: moneySchema,
   cost: moneySchema.optional(),
   size: z.string().max(50, 'Tamanho muito longo').optional(),
+  image: z.string().max(500, 'URL muito longa').optional(),
   isActive: z.boolean().default(true),
   // Campos que serão preenchidos automaticamente:
   // - sku será gerado automaticamente a partir do barcode
   // - description será gerado a partir do name + size
-  // - image será vazio/placeholder
 })
 
 // Schema para atualizar produto
