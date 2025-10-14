@@ -13,9 +13,9 @@ async function createAdmin() {
   try {
     console.log('🔧 Criando usuário administrador...\n');
 
-    const email = process.env.ADMIN_EMAIL || 'admin@nitrobeer.com';
-    const password = process.env.ADMIN_PASSWORD || 'admin123';
-    const fullName = process.env.ADMIN_NAME || 'Administrador';
+    const email = process.env.ADMIN_EMAIL || 'nitrobeer.chopp@gmail.com';
+    const password = process.env.ADMIN_PASSWORD || 'Clk26267*';
+    const fullName = process.env.ADMIN_NAME || 'Administrador Geral';
 
     // Verificar se já existe
     const existing = await prisma.user.findUnique({

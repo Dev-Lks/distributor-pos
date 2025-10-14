@@ -105,6 +105,8 @@ export const authOptions: NextAuthOptions = {
             name: ups.pointOfSale.name,
             isPrimary: ups.isPrimary,
           })),
+          passwordChangedAt: user.passwordChangedAt, // ✅ Adicionar campo
+          createdAt: user.createdAt,
         } as any;
       },
     }),
@@ -132,6 +134,15 @@ export const authOptions: NextAuthOptions = {
         token.requiresPasswordChange = false
         if (typedUser.isAdmin && !typedUser.passwordChangedAt) {
           token.requiresPasswordChange = true
+          console.log('🔒 Admin requires password change:', {
+            email: user.email,
+            passwordChangedAt: typedUser.passwordChangedAt
+          })
+        } else if (typedUser.isAdmin) {
+          console.log('✅ Admin has changed password:', {
+            email: user.email,
+            passwordChangedAt: typedUser.passwordChangedAt
+          })
         }
       }
 
@@ -144,6 +155,10 @@ export const authOptions: NextAuthOptions = {
         
         // Atualizar flag baseado no estado atual do banco
         token.requiresPasswordChange = !currentUser?.passwordChangedAt
+        console.log('🔄 Token updated, revalidated:', {
+          passwordChangedAt: currentUser?.passwordChangedAt,
+          requiresPasswordChange: token.requiresPasswordChange
+        })
       }
       
       return token;
