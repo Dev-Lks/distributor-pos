@@ -14,7 +14,9 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "backup": "tsx scripts/backup-database.ts",
+    "backup:cron": "tsx scripts/backup-database.ts >> logs/backup.log 2>&1"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.10.0",

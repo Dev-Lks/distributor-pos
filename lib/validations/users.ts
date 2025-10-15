@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod'
-import { emailSchema, cpfSchema } from './common'
+import { emailSchema, cpfSchema, cuidSchema } from './common'
 
 /**
  * Schema para criar novo usuário
@@ -35,7 +35,7 @@ export const createUserSchema = z.object({
   
   isAdmin: z.boolean().default(false),
   
-  pointsOfSaleIds: z.array(z.string().uuid('ID de ponto de venda inválido'))
+  pointsOfSaleIds: z.array(cuidSchema)
     .min(1, 'Selecione pelo menos um ponto de venda')
     .max(10, 'Máximo de 10 pontos de venda'),
   
@@ -46,7 +46,7 @@ export const createUserSchema = z.object({
  * Schema para atualizar usuário existente
  */
 export const updateUserSchema = z.object({
-  id: z.string().uuid('ID do usuário inválido'),
+  id: cuidSchema,
   
   fullName: z.string()
     .trim()
@@ -68,26 +68,33 @@ export const updateUserSchema = z.object({
   
   status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
   
-  pointsOfSaleIds: z.array(z.string().uuid('ID de ponto de venda inválido'))
+  pointsOfSaleIds: z.array(cuidSchema)
     .min(1, 'Selecione pelo menos um ponto de venda')
     .max(10, 'Máximo de 10 pontos de venda')
     .optional(),
   
   permissions: z.array(z.string()).optional(),
+  newPassword: z.string()
+    .min(8, 'Senha deve ter no mínimo 8 caracteres')
+    .max(100, 'Senha deve ter no máximo 100 caracteres')
+    .regex(/[A-Z]/, 'Senha deve conter pelo menos uma letra maiúscula')
+    .regex(/[a-z]/, 'Senha deve conter pelo menos uma letra minúscula')
+    .regex(/[0-9]/, 'Senha deve conter pelo menos um número')
+    .optional(),
 })
 
 /**
  * Schema para deletar usuário
  */
 export const deleteUserSchema = z.object({
-  id: z.string().uuid('ID do usuário inválido'),
+  id: cuidSchema,
 })
 
 /**
  * Schema para alterar senha de usuário
  */
 export const changePasswordSchema = z.object({
-  id: z.string().uuid('ID do usuário inválido'),
+  id: cuidSchema,
   
   currentPassword: z.string().min(1, 'Senha atual é obrigatória'),
   
@@ -110,7 +117,12 @@ export const changePasswordSchema = z.object({
 export const searchUsersSchema = z.object({
   search: z.string().trim().optional(),
   status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).optional(),
-  isAdmin: z.boolean().optional(),
+  isAdmin: z
+    .union([
+      z.boolean(),
+      z.string().transform((value) => value === 'true'),
+    ])
+    .optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),
 })

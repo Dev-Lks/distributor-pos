@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { softDelete, withoutDeleted } from '@/lib/soft-delete';
 
 // GET /api/inventory/batches/[id] - Buscar lote específico
 export async function GET(
@@ -15,8 +16,8 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const batch = await prisma.batch.findUnique({
-      where: { id: id },
+    const batch = await prisma.batch.findFirst({
+      where: withoutDeleted({ id }),
       include: {
         product: true,
         inventoryMovements: {
@@ -55,6 +56,14 @@ export async function PATCH(
     }
 
     const data = await request.json();
+
+    const existingBatch = await prisma.batch.findFirst({
+      where: withoutDeleted({ id }),
+    });
+
+    if (!existingBatch) {
+      return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+    }
 
     const batch = await prisma.batch.update({
       where: { id: id },
@@ -97,8 +106,17 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    await prisma.batch.delete({
-      where: { id: id },
+    const existingBatch = await prisma.batch.findFirst({
+      where: withoutDeleted({ id }),
+    });
+
+    if (!existingBatch) {
+      return NextResponse.json({ error: 'Batch not found' }, { status: 404 });
+    }
+
+    await softDelete('batch', id, {
+      sessionUserId: session.user?.id,
+      data: { status: 'DEPLETED' },
     });
 
     return NextResponse.json({ success: true });

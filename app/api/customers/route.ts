@@ -9,6 +9,7 @@ import {
   updateCustomerCurrentSchema,
   deleteCustomerCurrentSchema,
 } from '@/lib/validations'
+import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 
 const CUSTOMER_SELECT = {
   id: true,
@@ -87,7 +88,7 @@ export async function GET(request: NextRequest) {
     }
 
     const customers = await prisma.customer.findMany({
-      where,
+      where: withoutDeleted(where),
       orderBy,
       take: limit,
       select: CUSTOMER_SELECT,
@@ -121,12 +122,12 @@ export async function POST(request: NextRequest) {
     // Verificar duplicados por telefone ou documento
     if (validated.phone?.trim() || sanitizedDocument) {
       const existing = await prisma.customer.findFirst({
-        where: {
+        where: withoutDeleted({
           OR: [
             validated.phone?.trim() ? { phone: validated.phone.trim() } : {},
             sanitizedDocument ? { document: sanitizedDocument } : {},
           ].filter((condition) => Object.keys(condition).length > 0),
-        },
+        }),
         select: { id: true, name: true, phone: true, document: true },
       })
 
@@ -182,6 +183,18 @@ export async function PATCH(request: NextRequest) {
     // Validação com Zod
     const validated = updateCustomerCurrentSchema.parse(body)
 
+    const existing = await prisma.customer.findFirst({
+      where: withoutDeleted({ id: validated.id }),
+      select: { id: true },
+    })
+
+    if (!existing) {
+      return NextResponse.json(
+        { error: "Cliente não encontrado." },
+        { status: 404 }
+      )
+    }
+
     const data: Prisma.CustomerUpdateInput = {
       ...(validated.name !== undefined ? { name: validated.name } : {}),
       ...(validated.phone !== undefined ? { phone: validated.phone?.trim() || null } : {}),
@@ -234,8 +247,8 @@ export async function DELETE(request: NextRequest) {
     const validated = deleteCustomerCurrentSchema.parse(body)
 
     // Verificar se o cliente existe antes de deletar
-    const existing = await prisma.customer.findUnique({
-      where: { id: validated.id },
+    const existing = await prisma.customer.findFirst({
+      where: withoutDeleted({ id: validated.id }),
       select: { id: true, name: true },
     })
 
@@ -246,7 +259,7 @@ export async function DELETE(request: NextRequest) {
       )
     }
 
-    await prisma.customer.delete({ where: { id: validated.id } })
+  await softDelete('customer', validated.id)
 
     logger.audit('customer_deleted', session.user.email || 'unknown', {
       customerId: validated.id,

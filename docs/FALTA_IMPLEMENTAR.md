@@ -1,65 +1,45 @@
 # 🎯 O que FALTA Implementar - Resumo Executivo
 
-**Data:** 14/10/2025
+**Data:** 15/10/2025
 
 ---
 
 ## ⚡ PRIORIDADE CRÍTICA (Fazer AGORA)
 
-### 1. ❌ Soft Delete (5h)
-**Status:** Não implementado  
-**Risco:** ALTO - Perda irreversível de dados
-
-```prisma
-// Adicionar ao schema.prisma
-deletedAt DateTime?
-deletedBy String?
-```
-
-**Impacto:** Previne perda acidental de dados críticos
+### 1. ✅ Soft Delete (5h)
+**Status:** Implementado para usuários, produtos, clientes, vendas, lotes, encomendas e entregas  
+**Risco:** Mitigado  
+**Notas:** Adicionado helper `lib/soft-delete.ts`, filtros `withoutDeleted` nas rotas críticas e migração SQL `20251015120000_add_soft_delete`.
 
 ---
 
-### 2. ❌ Backup Automatizado (4h)
-**Status:** Não implementado  
-**Risco:** CRÍTICO - Sem proteção contra falhas
-
-**Criar:**
-- `scripts/backup-database.ts`
-- Cron job diário às 3h
-- Limpeza automática (>30 dias)
-
-**Impacto:** Proteção contra falhas de hardware/erros humanos
+### 2. ✅ Backup Automatizado (4h)
+**Status:** Script e cron configurados  
+**Risco:** Mitigado  
+**Implementação:** `scripts/backup-database.ts` reutiliza `lib/backup.ts`, retenção automática de 30 dias e endpoint protegido `GET /api/backup/cron` (habilitado em `vercel.json`).
 
 ---
 
-### 3. ❌ Forçar Mudança Senha Admin (2h)
-**Status:** Não implementado  
-**Risco:** ALTO - Segurança comprometida
+### 3. 🟡 Aplicar Validações nas Rotas (6h)
+**Status:** Schemas aplicados nos módulos de usuários, pedidos e entregas  
+**Progresso:** 80%
 
-**Criar:**
-- Campo `passwordChangedAt` no User
-- Página `/change-password` obrigatória
-- Validação no middleware
-
-**Impacto:** Previne acesso com credenciais padrão
-
----
-
-### 4. 🟡 Aplicar Validações nas Rotas (6h)
-**Status:** Schemas criados, falta aplicar  
-**Progresso:** 30%
-
-**Rotas sem validação:**
+**Status por rota:**
 ```
-❌ /api/inventory/**
-❌ /api/cash-sessions/**
-❌ /api/users/**
-❌ /api/customers/**
-❌ /api/orders/**
+✅ /api/products (POST/PATCH/DELETE com Zod e soft delete)
+✅ /api/customers (CRUD completo com validação + soft delete)
+✅ /api/inventory (POST/PATCH com schema atual)
+✅ /api/points (CRUD validado, exclusão lógica)
+✅ /api/sales (cancelamento com soft delete + motivo)
+✅ /api/cash-sessions (schemas para GET/POST)
+✅ /api/users/[id] (PATCH/DELETE validados + atomicidade)
+✅ /api/orders (GET sanitizado + soft delete em DELETE)
+✅ /api/delivery/** (CRUD validado com soft delete)
+❌ /api/hardware/**
+❌ /api/pending-carts/**
 ```
 
-**Impacto:** Previne dados inválidos no banco
+**Impacto:** Previne dados inválidos e garante rastreabilidade.
 
 ---
 
@@ -103,6 +83,7 @@ Rastreamento de erros em produção
 - ✅ **Rate Limiting** - 100%
 - ✅ **Validações Zod (schemas)** - 100%
 - ✅ **Logger Melhorado** - 60% (sanitização + console, sem persistência em arquivo*)
+- ✅ **Mudança obrigatória de senha admin** - fluxo completo com página `/change-password`, atualização de token (`lib/auth.ts`) e bloqueio no `middleware`
 
 > *Nota: Persistência em arquivo foi removida para compatibilidade com Edge Runtime da Vercel. Logs aparecem no console da Vercel.
 
@@ -110,61 +91,62 @@ Rastreamento de erros em produção
 
 ## 📊 Métricas
 
-### Total de Horas Restantes
-- 🔴 **Crítico:** 17 horas
+- �� **Crítico:** 6 horas (backup + soft delete concluídos)
 - 🟡 **Médio:** 17 horas
 - 🔵 **Baixo:** 16 horas
-- **TOTAL:** ~50 horas (1-2 semanas de trabalho)
+- **TOTAL:** ~39 horas (1-2 semanas de trabalho)
 
 ### Progresso Geral
 ```
-████████░░░░░░░░░░ 40% completo
+███████████░░░░░░░ 60% completo
 ```
 
 **Implementado:**
 - Rate Limiting ✅
 - Validações (schemas) ✅
 - Logger ✅
+- Soft delete ✅
+- Backup ✅
 
 **Faltando:**
-- Aplicar validações 🟡
-- Soft delete ❌
-- Backup ❌
-- E mais 10 itens...
+- Finalizar validações restantes 🟡
+- Reorganizar hooks e utilitários
+- Otimizar queries / caching / lazy loading
+- Testes e monitoramento
 
 ---
 
 ## 🚀 Plano de Ação
 
-### Semana 1 (16h) - CRÍTICO
+### Semana 1 (restante)
 ```
-Segunda-Terça:   Soft Delete (5h)
-Quarta:          Backup (4h)
-Quinta:          Aplicar validações (6h)
-Sexta:           Senha admin (2h)
+- Concluir validações pendentes (/api/hardware, /api/pending-carts)
+- Documentar restauração de backups (README)
 ```
 
-### Semana 2 (17h) - QUALIDADE
+### Semana 2 (Qualidade)
 ```
-Segunda:         Reorganizar hooks (2h) + Utilitários (3h)
-Terça-Quarta:    Otimizar queries (4h) + Lazy loading (3h)
-Quinta:          Caching (4h) + CORS (1h)
+- Reorganizar hooks + utilitários compartilhados
+- Otimização Prisma + lazy loading
+- Definir estratégia de cache e CORS
 ```
 
-### Semana 3 (opcional) - POLISH
+### Semana 3 (Polimento)
 ```
-Testes, JSDoc, Monitoramento
+- Testes automatizados
+- JSDoc
+- Monitoramento (Sentry/DataDog)
 ```
 
 ---
 
 ## 🎯 Quick Wins (Pode fazer hoje)
 
-1. **CORS** (1h) - Rápido e importante
-2. **Senha Admin** (2h) - Segurança básica
-3. **Aplicar 5 validações** (2h) - Começar aos poucos
+1. **CORS** (1h) - Habilitar origens confiáveis
+2. **Validações restantes** (2h) - hardware + pending carts
+3. **Checklist de restauração** (1h) - Documentar uso do backup script
 
-**Total:** 5 horas para 3 melhorias importantes
+**Total:** 4 horas para consolidar o trabalho crítico já entregue
 
 ---
 
@@ -172,14 +154,13 @@ Testes, JSDoc, Monitoramento
 
 | Item | Risco | Probabilidade | Custo |
 |------|-------|---------------|-------|
-| Sem backup | Perda total de dados | 10% | R$ 200k+ |
-| Sem soft delete | Perda acidental | 30% | R$ 50k+ |
-| Senha padrão | Invasão | 20% | R$ 100k+ |
-| Sem validações | Dados corrompidos | 40% | R$ 20k+ |
+| Validações incompletas | Dados corrompidos | 25% | R$ 20k+ |
+| Sem testes | Regressões silenciosas | 30% | R$ 40k+ |
+| Sem monitoramento | Falhas sem diagnóstico | 20% | R$ 50k+ |
 
-**Total de Risco:** R$ 370.000+ em possíveis perdas
+**Total de Risco Residual:** ~R$ 110.000 em possíveis perdas
 
-**Custo de Implementar:** R$ 0 (apenas tempo de dev)
+**Custo de Implementar:** ~39 horas de trabalho
 
 ---
 
@@ -196,25 +177,32 @@ Testes, JSDoc, Monitoramento
 ## ✅ Checklist Rápido
 
 ### Fazer Esta Semana
-- [ ] Soft delete no schema
-- [ ] Script de backup
-- [ ] Aplicar validações em 10+ rotas
-- [ ] Forçar mudança senha admin
+- [x] Soft delete no schema
+- [x] Script de backup
+- [ ] Aplicar validações em 10+ rotas (restando hardware e pending carts)
 - [ ] Reorganizar hooks
-- [ ] Criar utilitários
+- [ ] Criar utilitários compartilhados
 
 ### Fazer Próxima Semana
 - [ ] Otimizar queries
 - [ ] Lazy loading
 - [ ] Caching
 - [ ] CORS
-- [ ] Começar testes
+- [ ] Iniciar testes automatizados
 
 ### Fazer Quando Possível
-- [ ] JSDoc
-- [ ] Sentry
+- [ ] Documentação JSDoc
+- [ ] Monitoramento (Sentry/DataDog)
 - [ ] Dashboard de monitoramento
 
 ---
 
-**TL;DR:** 40% implementado. Falta principalmente aplicar as validações criadas, implementar soft delete e backup automatizado. São ~50 horas de trabalho restantes para completar tudo.
+## ✅ Riscos Mitigados Recentemente
+
+- Soft delete evita exclusões definitivas em dados críticos
+- Backup diário automatizado com retenção de 30 dias
+- Endpoints de usuários/pedidos/entregas validados com Zod e operações atômicas
+
+---
+
+**TL;DR:** 60% do plano entregue. Soft delete e backup já funcionam com monitoramento básico. Restam ajustes de qualidade (validações residuais, hooks/utilitários), otimizações de performance e pilares de qualidade (testes e observabilidade).

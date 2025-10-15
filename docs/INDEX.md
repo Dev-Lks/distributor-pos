@@ -1,7 +1,7 @@
 # 📑 Índice da Documentação
 
 **Criado em:** 14/10/2025  
-**Última atualização:** 14/10/2025
+**Última atualização:** 15/10/2025
 
 ---
 
@@ -56,7 +56,7 @@ Correções rápidas de segurança implementadas:
 Novas funcionalidades implementadas:
 - ✅ Rate Limiting Global (proteção DDoS)
 - ✅ Sistema de Validações Zod (centralizado)
-- ✅ Logging Melhorado (persistência + audit)
+- ✅ Logging Melhorado (sanitização + audit compatível com Edge)
 - ✅ Mais de 1.500 linhas de código
 - ✅ TypeScript type-safe completo
 
@@ -97,11 +97,11 @@ Entender rapidamente a situação e decisões necessárias.
 Conhecer os riscos reais e sua gravidade.
 
 **Destaques:**
-- Ausência de rate limiting (DDoS)
-- Logs excessivos em produção
-- Validações incompletas
-- Senha admin padrão
+- Logs ainda sem observabilidade externa
+- Validações incompletas em rotas secundárias
+- Soft delete ausente
 - Sem backup automatizado
+- CORS/CSRF pendentes
 
 ---
 
@@ -121,12 +121,12 @@ Conhecer os riscos reais e sua gravidade.
 Mitigar 50% dos riscos críticos com apenas 3 horas de trabalho.
 
 **Fixes incluídos:**
-1. Melhorar logger existente (30 min)
-2. Validação de ranges (45 min)
-3. Forçar mudança senha admin (45 min)
-4. Sanitização de buscas (20 min)
-5. Headers de segurança (15 min)
-6. Remover tokens hardcoded (5 min)
+1. Melhorar logger existente (30 min) — ✅ concluído (sanitização + compat Edge)
+2. Validação de ranges (45 min) — ✅ concluído
+3. Forçar mudança senha admin (45 min) — ✅ concluído
+4. Sanitização de buscas (20 min) — ✅ concluído
+5. Headers de segurança (15 min) — ✅ concluído
+6. Remover tokens hardcoded (5 min) — ✅ concluído
 
 ---
 
@@ -148,10 +148,10 @@ Sistema production-ready com segurança enterprise.
 **Sprints:**
 ```
 Sprint 1: Segurança Crítica (Semana 1)
-├─ Rate Limiting
-├─ Logger Centralizado
-├─ Validação de Inputs
-└─ Senha Admin
+├─ Rate Limiting ✅
+├─ Logger Centralizado 🟡 (faltam integrações externas)
+├─ Validação de Inputs 🟡 (rotas secundárias pendentes)
+└─ Senha Admin ✅
 
 Sprint 2: Robustez (Semana 2)
 ├─ Soft Delete
@@ -330,17 +330,17 @@ graph TD
 - [ ] Planejamento de sprints
 
 ### Fase 2: Quick Wins (3 horas)
-- [ ] Logger melhorado
-- [ ] Validações de range
-- [ ] Senha admin obrigatória
-- [ ] Sanitização de buscas
-- [ ] Headers de segurança
-- [ ] Tokens removidos
+- [x] Logger melhorado
+- [x] Validações de range
+- [x] Senha admin obrigatória
+- [x] Sanitização de buscas
+- [x] Headers de segurança
+- [x] Tokens removidos
 - [ ] Testado localmente
 - [ ] Deploy staging
 
 ### Fase 3: Segurança (2-3 semanas)
-- [ ] Rate limiting implementado
+- [x] Rate limiting implementado
 - [ ] Logger centralizado
 - [ ] Validações completas
 - [ ] Soft delete

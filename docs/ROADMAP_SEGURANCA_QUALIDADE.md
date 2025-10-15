@@ -1,127 +1,71 @@
 # 🛡️ Roadmap: Segurança e Qualidade de Código
 
 **Objetivo:** Elevar o projeto a padrões enterprise de segurança e qualidade  
-**Duração Estimada:** 3-4 semanas  
-**Prioridade:** 🔴 ALTA
+**Objetivo:** Substituir `console.log` por sistema robusto e compatível com Edge Runtime
+**Status:** � Em andamento — sanitização concluída, falta integrar monitoramento externo
 
----
-
-## 📅 Sprint 1: Segurança Crítica (Semana 1)
-
-### Task 1.1: Implementar Rate Limiting Global
-**Prioridade:** 🔴 CRÍTICA  
-**Estimativa:** 4 horas
-
-**Objetivo:** Proteger todas as APIs contra abuso e DDoS
-
-**Implementação:**
+**Pontos-chave do `lib/logger.ts`:**
 ```typescript
-// lib/rate-limit.ts
-import { LRUCache } from 'lru-cache'
+class Logger {
+  private isDevelopment = process.env.NODE_ENV === 'development'
 
-type RateLimitOptions = {
-  interval: number
-  uniqueTokenPerInterval: number
-}
-
-export function rateLimit(options: RateLimitOptions) {
-  const tokenCache = new LRUCache({
-    max: options.uniqueTokenPerInterval || 500,
-    ttl: options.interval || 60000,
-  })
-
-  return {
-    check: (limit: number, token: string) =>
-      new Promise<void>((resolve, reject) => {
-        const tokenCount = (tokenCache.get(token) as number[]) || [0]
-        if (tokenCount[0] === 0) {
-          tokenCache.set(token, tokenCount)
-        }
-        tokenCount[0] += 1
-
-        const currentUsage = tokenCount[0]
-        const isRateLimited = currentUsage >= limit
-        
-        if (isRateLimited) {
-          reject(new Error('Rate limit exceeded'))
-        } else {
-          resolve()
-        }
-      }),
+  private sanitize(context?: LogContext) {
+    if (!context) return {}
+    const sanitized = { ...context }
+    const sensitiveKeys = ['password', 'token', 'secret', 'apiKey', 'authorization', 'passwordHash', 'jwt']
+    Object.keys(sanitized).forEach(key => {
+      if (sensitiveKeys.some(s => key.toLowerCase().includes(s))) {
+        sanitized[key] = '[REDACTED]'
+      }
+    })
+    return sanitized
   }
-}
 
-// Limites por tipo de endpoint
-export const limiter = rateLimit({
-  interval: 60 * 1000, // 1 minuto
-  uniqueTokenPerInterval: 500,
-})
-
-export const authLimiter = rateLimit({
-  interval: 15 * 60 * 1000, // 15 minutos
-  uniqueTokenPerInterval: 500,
-})
-```
-
-**Aplicar em:**
-```typescript
-// middleware.ts
-import { limiter } from '@/lib/rate-limit'
-
-// Adicionar rate limiting por IP
-const ip = req.ip ?? req.headers.get('x-forwarded-for') ?? 'anonymous'
-
-// Para rotas de API
-if (path.startsWith('/api/')) {
-  try {
-    await limiter.check(100, ip) // 100 req/min
-  } catch {
-    return NextResponse.json(
-      { error: 'Rate limit exceeded' },
-      { status: 429 }
-    )
-  }
-}
-
-// Para autenticação - mais restritivo
+  debug(message: string, context?: LogContext) {
 if (path.startsWith('/api/auth/') || path === '/login') {
   try {
     await authLimiter.check(5, ip) // 5 tentativas em 15min
   } catch {
     return NextResponse.json(
       { error: 'Too many attempts. Try again later.' },
-      { status: 429 }
-    )
+    const sanitized = this.sanitize(context)
+    if (!process.env.NODE_ENV || this.isDevelopment) {
+      console.info('ℹ️', message, sanitized)
+    }
+**Dependência:**
+
+  warn(message: string, context?: LogContext) {
+    console.warn('⚠️', message, this.sanitize(context))
+  }
+
+  error(message: string, context?: LogContext) {
+    console.error('❌', message, this.sanitize(context))
+    // TODO: Integrar Sentry/DataDog aqui
+  }
+
+  performance(label: string, startTime: number) {
+    const duration = Date.now() - startTime
+    if (this.isDevelopment || duration > 1000) {
+      this.info(`⏱️  ${label}: ${duration}ms`, { duration })
+    }
+  }
+
+  audit(action: string, userId: string, context?: LogContext) {
+    this.info(`[AUDIT] ${action}`, {
+      userId,
+      timestamp: new Date().toISOString(),
+      ...this.sanitize(context),
+    })
   }
 }
+
+export const logger = new Logger()
 ```
 
-**Dependência:**
-```bash
-pnpm add lru-cache
-pnpm add -D @types/lru-cache
-```
-
-**Testes:**
-- [ ] Testar limite de requisições normais
-- [ ] Testar limite de login
-- [ ] Verificar headers de rate limit
-- [ ] Testar múltiplos IPs
-
----
-
-### Task 1.2: Sistema de Logging Centralizado
-**Prioridade:** 🔴 CRÍTICA  
-**Estimativa:** 3 horas
-
-**Objetivo:** Substituir console.log por sistema robusto
-
-**Melhorias no logger existente:**
-```typescript
-// lib/logger.ts - EXPANDIR
-import { writeFileSync, appendFileSync, existsSync, mkdirSync } from 'fs'
-import { join } from 'path'
-
+**Como usar:**
+- `logger.error('Failed to create product', { error })`
+- `logger.audit('CREATE_SALE', userId, { saleId })`
+- `logger.performance('DB query', start)`
 class Logger {
   private logDir = join(process.cwd(), 'logs')
   private isDevelopment = process.env.NODE_ENV === 'development'

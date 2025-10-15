@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 
 const updateStatusSchema = z.object({
   status: z.enum([
@@ -25,8 +26,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   try {
     const { id } = await params
-    const delivery = await prisma.delivery.findUnique({
-      where: { id },
+    const delivery = await prisma.delivery.findFirst({
+      where: withoutDeleted({ id }),
       include: {
         customer: {
           select: {
@@ -97,6 +98,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json()
 
     // Atualizar delivery
+    const existing = await prisma.delivery.findFirst({
+      where: withoutDeleted({ id }),
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: "Delivery não encontrado" }, { status: 404 })
+    }
+
     const delivery = await prisma.delivery.update({
       where: { id },
       data: {
@@ -120,8 +129,20 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
   try {
     const { id } = await params
-    await prisma.delivery.delete({
-      where: { id },
+    const existing = await prisma.delivery.findFirst({
+      where: withoutDeleted({ id }),
+    })
+
+    if (!existing) {
+      return NextResponse.json({ error: "Delivery não encontrado" }, { status: 404 })
+    }
+
+    await softDelete('delivery', id, {
+      sessionUserId: session.user?.id,
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+      },
     })
 
     return NextResponse.json({ success: true })

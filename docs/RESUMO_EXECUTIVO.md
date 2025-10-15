@@ -32,6 +32,8 @@
    - Headers de segurança configurados
    - Hash de senhas com bcrypt
    - Bloqueio de conta após tentativas falhas
+   - Rate limiting global nas rotas críticas
+   - Fluxo obrigatório de troca de senha para administradores
    - .env no .gitignore
    - Middleware de permissões
    - Validação Zod em algumas rotas
@@ -39,11 +41,9 @@
 ### ⚠️ O que precisa MELHORAR
 
 1. **Segurança (URGENTE)**
-   - ❌ Sem rate limiting (risco de DDoS)
-   - ⚠️ Logs excessivos (podem expor dados)
-   - ⚠️ Validações incompletas em algumas rotas
-   - ⚠️ Senha admin padrão
-   - ⚠️ Deleção permanente de dados críticos
+   - ⚠️ Validações incompletas em rotas secundárias
+   - ⚠️ Logs sem pipeline centralizada/persistência (apenas console)
+   - ❌ Deleção permanente de dados críticos (sem soft delete)
 
 2. **Qualidade de Código**
    - 🔶 Console.log espalhado (100+ ocorrências)
@@ -64,37 +64,35 @@
 
 | Risco | Impacto | Probabilidade | Ação |
 |-------|---------|---------------|------|
-| DDoS por falta de rate limiting | Alto | Média | Implementar rate limiting |
-| Vazamento de dados em logs | Alto | Baixa | Sanitizar logs |
-| Senha admin nunca trocada | Médio | Alta | Forçar mudança de senha |
 | Sem backup automatizado | Muito Alto | Baixa | Configurar backup diário |
+| Exclusão permanente de dados (sem soft delete) | Alto | Média | Implementar soft delete |
 
 ### 🟡 MÉDIOS (Corrigir em 1-2 semanas)
 
 | Risco | Impacto | Probabilidade | Ação |
 |-------|---------|---------------|------|
-| Perda acidental de dados | Alto | Baixa | Implementar soft delete |
-| Validações incompletas | Médio | Média | Adicionar validação Zod |
+| Validações incompletas em rotas secundárias | Médio | Média | Adicionar validação Zod nas rotas restantes |
+| Logs apenas em console (sem observabilidade central) | Médio | Baixa | Integrar Sentry/Log service |
 | CORS mal configurado | Médio | Baixa | Configurar origens |
 
 ---
 
 ## 💰 Custo de Não Agir
 
-### Cenário 1: Ataque DDoS
-- **Probabilidade:** 20% nos próximos 6 meses
-- **Custo:** R$ 50.000+ (downtime, perda de vendas)
-- **Prevenção:** R$ 0 (apenas desenvolvimento)
-
-### Cenário 2: Vazamento de Dados
-- **Probabilidade:** 5% nos próximos 12 meses  
-- **Custo:** R$ 100.000+ (LGPD, multas, reputação)
-- **Prevenção:** R$ 0 (apenas desenvolvimento)
-
-### Cenário 3: Perda de Dados sem Backup
+### Cenário 1: Perda de Dados sem Backup
 - **Probabilidade:** 10% nos próximos 12 meses
 - **Custo:** R$ 200.000+ (irrecuperável)
 - **Prevenção:** R$ 0 (apenas configuração)
+
+### Cenário 2: Exclusão Acidental sem Soft Delete
+- **Probabilidade:** 20% nos próximos 12 meses  
+- **Custo:** R$ 50.000+ (tempo de reposição, perda de histórico)
+- **Prevenção:** R$ 0 (apenas desenvolvimento)
+
+### Cenário 3: Dados Inválidos por Falta de Validação
+- **Probabilidade:** 15% nos próximos 6 meses
+- **Custo:** R$ 30.000+ (retrabalho, inconsistências)
+- **Prevenção:** R$ 0 (apenas desenvolvimento)
 
 **ROI de Segurança: INFINITO** (prevenção é grátis, dano é caro)
 
@@ -107,12 +105,12 @@
 
 ```
 ✅ QUICK FIXES (3h)
-├─ Melhorar logger e sanitizar (30min)
-├─ Adicionar validações de range (45min)
-├─ Forçar mudança senha admin (45min)
-├─ Sanitizar buscas (20min)
-├─ Headers de segurança (15min)
-└─ Remover tokens hardcoded (5min)
+├─ Melhorar logger e sanitizar (30min) — concluído
+├─ Adicionar validações de range (45min) — concluído
+├─ Forçar mudança senha admin (45min) — concluído
+├─ Sanitizar buscas (20min) — concluído
+├─ Headers de segurança (15min) — concluído
+└─ Remover tokens hardcoded (5min) — concluído
 ```
 
 **Entregável:** Sistema 50% mais seguro
@@ -125,14 +123,14 @@
 ```
 🛡️ SEGURANÇA (2 semanas)
 ├─ Sprint 1: Segurança Crítica (1 semana)
-│   ├─ Rate limiting (4h)
-│   ├─ Logger centralizado (3h)
-│   ├─ Validações completas (6h)
-│   └─ Senha admin (2h)
+│   ├─ Rate limiting (4h) — ✅ concluído
+│   ├─ Logger centralizado (3h) — 🟡 faltam integrações externas
+│   ├─ Validações completas (6h) — 🟡 em andamento
+│   └─ Senha admin (2h) — ✅ concluído
 └─ Sprint 2: Robustez (1 semana)
     ├─ Soft delete (5h)
     ├─ Backup automatizado (4h)
-    ├─ Validações Zod (4h)
+   ├─ Validações Zod (4h) — 🟡 continuar cobrindo rotas restantes
     └─ CSRF (3h)
 ```
 
@@ -185,22 +183,22 @@
 ## 📊 Métricas de Sucesso
 
 ### Segurança
-- ✅ 0 vulnerabilidades críticas
-- ✅ Rate limiting ativo em 100% das rotas
-- ✅ Logs sanitizados
-- ✅ Backup diário funcionando
-- ✅ Soft delete implementado
+- ✅ Rate limiting ativo em 100% das rotas protegidas
+- ✅ Fluxo obrigatório de troca de senha admin funcionando
+- 🟡 Logs sanitizados via console (faltam integrações externas/alertas)
+- ⚠️ Backup diário ainda não configurado
+- ⚠️ Soft delete ainda não implementado
 
 ### Qualidade
-- ✅ 0 console.log em produção
-- ✅ +70% cobertura de testes
-- ✅ -30% bundle size
-- ✅ +50% manutenibilidade
+- ⚠️ console.log remanescentes em alguns módulos
+- ❌ Cobertura de testes automatizados praticamente nula
+- 🟡 Estrutura de hooks/utilitários em revisão
+- 🟡 Documentação técnica parcial
 
 ### Performance
-- ✅ Lighthouse score > 90
-- ✅ Load time < 2s
-- ✅ Query time < 200ms
+- ℹ️ Última medição Lighthouse > 90 (necessário revalidar)
+- 🟡 Monitoramento de performance manual (sem dashboards)
+- ✅ Query time médio < 200ms (conforme logs recentes)
 
 ---
 
@@ -216,8 +214,8 @@ Sistema funciona bem mas tem riscos de segurança que podem causar:
 - ❌ Perda de reputação
 
 **Investimento Necessário:**
-- 3 horas (esta semana) - URGENTE
-- 60 horas (1-2 meses) - Essencial
+- 0 horas (quick fixes já concluídos)
+- 48 horas (1-2 semanas) - Essencial para segurança/qualidade
 - Budget: $0 (apenas tempo de dev)
 
 **ROI:**
@@ -249,9 +247,9 @@ Sistema funciona bem mas tem riscos de segurança que podem causar:
    - `ROADMAP_FUNCIONALIDADES_NOVAS.md`
 
 **O que fazer:**
-1. Implementar Quick Fixes (3h)
-2. Code review de segurança
-3. Começar Sprint 1 de Segurança
+1. Revisar e monitorar Quick Fixes aplicados
+2. Code review de segurança focado nas rotas restantes
+3. Continuar Sprint 1 de Segurança (soft delete + backup)
 4. Testar tudo em staging
 
 ---
@@ -259,22 +257,22 @@ Sistema funciona bem mas tem riscos de segurança que podem causar:
 ## 📞 Próximos Passos
 
 ### Imediato (Hoje)
-- [ ] Ler `ANALISE_SEGURANCA_CRITICA.md`
-- [ ] Implementar `QUICK_FIXES_IMEDIATOS.md`
-- [ ] Testar localmente
-- [ ] Deploy para staging
+- [ ] Revisar logs/aplicação dos quick fixes em staging
+- [ ] Mapear rotas restantes que precisam de validação Zod
+- [ ] Definir abordagem de soft delete (modelo + migrations)
+- [ ] Atualizar board com estado real das tarefas críticas
 
 ### Esta Semana
-- [ ] Code review completo
-- [ ] Iniciar Sprint 1 (Segurança)
-- [ ] Configurar monitoramento básico
-- [ ] Documentar processo
+- [ ] Implementar soft delete no schema e rotas principais
+- [ ] Criar script de backup automatizado e testar restore
+- [ ] Aplicar validações nas rotas pendentes
+- [ ] Especificar integração de monitoramento (Sentry/Log service)
 
 ### Este Mês
-- [ ] Completar Fase 1 e 2 (Segurança)
-- [ ] Testes de penetração
-- [ ] Deploy para produção
-- [ ] Treinamento da equipe
+- [ ] Completar Fase 2 (Segurança)
+- [ ] Iniciar reorganização de hooks/utilitários
+- [ ] Planejar bateria de testes automatizados
+- [ ] Preparar checklist para deploy em produção
 
 ---
 

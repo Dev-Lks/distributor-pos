@@ -191,11 +191,11 @@ export async function POST(request: NextRequest) {
 
 ## ✅ 3. Sistema de Logging Melhorado
 
-**Objetivo:** Logging robusto com sanitização e persistência
+**Objetivo:** Logging robusto com sanitização e compatibilidade com Edge Runtime
 
 **Arquivos Modificados:**
 - ✅ `lib/logger.ts` - Sistema expandido
-- ✅ `.gitignore` - Adicionar `/logs`
+- ♻️ `.gitignore` mantém `/logs` para compatibilidade com ambientes legacy
 
 **Melhorias Implementadas:**
 
@@ -212,22 +212,10 @@ logger.error('Login failed', {
 })
 ```
 
-### Persistência em Arquivo
-```typescript
-// Em produção, logs são salvos em arquivos diários:
-logs/2025-10-14.log          // Logs gerais
-logs/audit-2025-10-14.log    // Logs de auditoria
-
-// Formato JSON para análise:
-{
-  "timestamp": "2025-10-14T10:30:00.000Z",
-  "level": "ERROR",
-  "message": "Failed to process payment",
-  "context": { ... },
-  "stack": "Error: ...",
-  "errorMessage": "Payment gateway timeout"
-}
-```
+### Compatível com Edge Runtime
+- Removidas dependências de `fs`, `path` e `process.cwd()`
+- Logs ficam centralizados no console (capturados pela Vercel)
+- Facilita deploy em runtimes restritivos sem perda de informações
 
 ### Novos Métodos
 
@@ -259,11 +247,11 @@ logger.error()  // Sempre no console + arquivo em prod
 
 **Benefícios:**
 - ✅ Dados sensíveis nunca vazam em logs
-- ✅ Histórico persistente em produção
+- ✅ Compatível com Edge/Serverless (sem acesso a filesystem)
 - ✅ Auditoria de ações críticas
 - ✅ Performance tracking
 - ✅ Pronto para integração com Sentry/DataDog
-- ✅ Rotação automática de logs por data
+- ✅ Possibilidade de plugar backends de log externos via API
 
 ---
 
@@ -306,15 +294,13 @@ curl -X POST http://localhost:3000/api/customers \
 
 ### Teste 3: Logging
 ```bash
-# Iniciar aplicação em produção
+# Iniciar aplicação em produção simulada
 NODE_ENV=production pnpm build && pnpm start
 
-# Fazer algumas operações
+# Fazer algumas operações (criar produto, cliente, venda)
 
-# Verificar logs
-ls -la logs/
-cat logs/$(date +%Y-%m-%d).log | jq
-cat logs/audit-$(date +%Y-%m-%d).log | jq
+# Verificar saída do console (Vercel ou terminal)
+# Deve exibir logs com emojis e campos sensíveis como [REDACTED]
 ```
 
 ---

@@ -9,6 +9,7 @@ import {
   updateProductSchema,
   deleteProductSchema,
 } from '@/lib/validations'
+import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 
 const prismaProductPoints = (prisma as unknown as {
   productPointOfSale: {
@@ -25,6 +26,7 @@ export async function GET() {
   try {
     const [products, productPoints] = await Promise.all([
       prisma.product.findMany({
+        where: withoutDeleted({}),
         include: {
           inventory: true,
         },
@@ -244,16 +246,16 @@ export async function DELETE(request: NextRequest) {
     const { id } = deleteProductSchema.parse(body)
     
     // Buscar produto antes de deletar para o log
-    const product = await prisma.product.findUnique({
-      where: { id }
+    const product = await prisma.product.findFirst({
+      where: withoutDeleted({ id }),
     })
     
     if (!product) {
       return NextResponse.json({ error: 'Produto não encontrado' }, { status: 404 })
     }
     
-    await prisma.product.delete({
-      where: { id },
+    await softDelete('product', id, {
+      data: { isActive: false },
     })
     
     // Audit log

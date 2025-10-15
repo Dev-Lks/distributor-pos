@@ -4,6 +4,7 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 import { z } from "zod"
+import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 
 const updateOrderSchema = z.object({
   customerId: z.string().optional().nullable(),
@@ -41,8 +42,8 @@ export async function GET(
       return NextResponse.json({ error: "Não autorizado" }, { status: 401 })
     }
 
-    const order = await prisma.order.findUnique({
-      where: { id: id },
+    const order = await prisma.order.findFirst({
+      where: withoutDeleted({ id: id }),
       include: {
         customer: {
           select: {
@@ -108,8 +109,8 @@ export async function PATCH(
     const data = updateOrderSchema.parse(body)
 
     // Buscar ordem existente
-    const existingOrder = await prisma.order.findUnique({
-      where: { id: id },
+    const existingOrder = await prisma.order.findFirst({
+      where: withoutDeleted({ id: id }),
       include: { items: true },
     })
 
@@ -224,8 +225,12 @@ export async function DELETE(
       )
     }
 
-    await prisma.order.delete({
-      where: { id: id },
+    await softDelete('order', id, {
+      data: {
+        status: 'CANCELLED',
+        cancelledAt: new Date(),
+      },
+      sessionUserId: session.user?.id,
     })
 
     // Atualizar estatísticas do cliente se vinculado

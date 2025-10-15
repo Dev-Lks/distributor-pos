@@ -87,19 +87,22 @@ Implemente hoje:
 
 ### Para Desenvolvedores
 
-```bash
-# 1. Leia a análise crítica
-cd docs
-less ANALISE_SEGURANCA_CRITICA.md
+```
+Semana 1
+├─ Soft delete (schema + rotas principais)
+├─ Script de backup automatizado + restore
+└─ Cobrir rotas pendentes com Zod
 
-# 2. Implemente quick fixes (3 horas)
-less QUICK_FIXES_IMEDIATOS.md
-# Seguir passo a passo
+Semana 2
+├─ Integrar logger com Sentry/monitoramento
+├─ Configurar CORS/CSRF
+└─ Limpar console.log remanescentes
 
-# 3. Teste
-pnpm build
-pnpm lint
-
+Semana 3
+├─ Reorganizar hooks/utilitários
+├─ Planejar testes automatizados
+└─ Revisão final + preparação para produção
+```
 # 4. Deploy staging
 git add .
 git commit -m "security: implement quick fixes"
@@ -173,43 +176,45 @@ SCORE GERAL: 87%
 
 ## 🚨 Problemas Críticos Identificados
 
-### 🔴 Urgentes (Corrigir Esta Semana)
+### 🔴 Urgentes (Prioridade Máxima)
 
-1. **Ausência de Rate Limiting**
-   - Risco: DDoS, abuso de recursos
-   - Impacto: Sistema pode cair
-   - Solução: Implementar em todas APIs
+1. **Sem Backup Automatizado**
+   - Risco: Perda de dados irrecuperável
+   - Ação: Criar script diário + retenção de 30 dias
 
-2. **Logs Excessivos**
-   - Risco: Vazamento de dados sensíveis
-   - Impacto: LGPD, performance
-   - Solução: Sanitizar e centralizar
+2. **Soft Delete Ausente**
+   - Risco: Deleção acidental definitiva
+   - Ação: Adicionar `deletedAt`/`deletedBy` e ajustar rotas
 
-3. **Senha Admin Padrão**
-   - Risco: Acesso não autorizado
-   - Impacto: Controle total do sistema
-   - Solução: Forçar mudança no primeiro login
+3. **Logs sem Observabilidade Externa**
+   - Risco: Falta de alerta em falhas críticas
+   - Ação: Integrar Sentry/DataDog e padronizar `logger`
 
-4. **Sem Backup Automatizado**
-   - Risco: Perda de dados
-   - Impacto: Irrecuperável
-   - Solução: Configurar backup diário
+4. **Validações Incompletas em Rotas Secundárias**
+   - Risco: Dados incorretos/corrompidos
+   - Ação: Aplicar Zod em `users/[id]`, `orders`, `delivery`, `hardware`, `pending-carts`
 
 ### 🟡 Importantes (Corrigir em 2 Semanas)
 
-5. Validações incompletas
-6. Deleção permanente de dados
-7. CORS mal configurado
-8. Falta de CSRF protection
+5. CORS mal configurado
+6. Falta de CSRF protection
+7. Falta de testes automatizados
+8. Reorganização de hooks/utilitários
+
+### ✅ Mitigados Recentemente
+
+- Rate limiting global aplicado via `middleware.ts`
+- Fluxo obrigatório de troca de senha admin ativo (`/change-password`)
+- Validações de range e sanitização de logger implementadas
 
 ---
 
 ## 💰 ROI da Implementação
 
 ### Investimento
-- **Tempo:** 60-90 horas de desenvolvimento
+- **Tempo:** 48 horas de desenvolvimento (soft delete, backup, validações, observabilidade)
 - **Custo:** R$ 0 (apenas tempo interno)
-- **Prazo:** 1-2 meses
+- **Prazo:** 2-3 semanas
 
 ### Retorno
 - **Previne:** R$ 350.000+ em potenciais perdas

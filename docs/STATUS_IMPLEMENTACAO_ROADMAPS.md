@@ -44,21 +44,38 @@
 
 ---
 
-#### 3. Sistema de Logging (✅ 80%)
-**Status:** IMPLEMENTADO, precisa expansão  
+#### 3. Sistema de Logging (✅ 70%)
+**Status:** IMPLEMENTADO, compatível com Edge, aguarda expansão  
 **Localização:** `/lib/logger.ts`
 
 **Implementado:**
-- ✅ Sanitização de dados sensíveis
-- ✅ Persistência em arquivos
-- ✅ Níveis de log (debug, info, warn, error)
-- ✅ Performance tracking
-- ✅ Audit logging
+- ✅ Sanitização de dados sensíveis (remove passwords, tokens, etc.)
+- ✅ Controle de verbosidade por ambiente (debug somente em dev, info suprimido em prod)
+- ✅ Audit logging via `logger.audit()`
+- ✅ Performance logging com `logger.performance()`
+- ✅ Preparado para integração com serviços externos (hooks comentados)
 
 **Faltando:**
-- [ ] Rotação automática de logs (remover > 30 dias)
-- [ ] Integração com Sentry/DataDog
-- [ ] Dashboard de monitoramento
+- [ ] Pipeline de persistência (API/log service) para produção
+- [ ] Integração com Sentry/DataDog ou equivalente
+- [ ] Dashboard/alertas automatizados
+
+---
+
+#### 4. Fluxo de Mudança Obrigatória de Senha Admin (✅ 100%)
+**Status:** COMPLETO  
+**Localização:** `prisma/schema.prisma`, `lib/auth.ts`, `middleware.ts`, `app/(auth)/change-password/page.tsx`, `app/api/users/[id]/change-password/route.ts`
+
+**Implementado:**
+- ✅ Campo `passwordChangedAt` no modelo `User`
+- ✅ `lib/auth.ts` atualiza `token.requiresPasswordChange` e revalida com `trigger === "update"`
+- ✅ Middleware força redirecionamento para `/change-password` até a troca ocorrer
+- ✅ Página dedicada para alterar senha com validação de força e logout automático
+- ✅ API segura para alteração da própria senha (hash com `bcryptjs`)
+
+**Próximos Passos:**
+- [ ] Monitorar tentativas fracassadas e bloquear após N tentativas (já parcialmente implementado)
+- [ ] Adicionar lembretes periódicos de troca de senha para contas antigas (opcional)
 
 ---
 
@@ -126,41 +143,24 @@ model Product {
 
 ---
 
-#### 3. Forçar Mudança de Senha Admin (0%)
-**Estimativa:** 2 horas  
-**Impacto:** ALTO - Segurança básica
-
-**O que fazer:**
-1. Adicionar campo `passwordChangedAt` no modelo User
-2. Modificar callback JWT para detectar senha não alterada
-3. Criar página `/change-password` obrigatória
-4. Adicionar validação no middleware
-
-**Arquivos:**
-- `prisma/schema.prisma`
-- `lib/auth.ts`
-- `middleware.ts`
-- `app/(auth)/change-password/page.tsx` (criar)
-
----
-
-#### 4. Aplicar Validações Zod nas Rotas (30%)
+#### 3. Aplicar Validações Zod nas Rotas (60%)
 **Estimativa:** 6 horas  
 **Impacto:** ALTO - Previne dados inválidos
 
-**Rotas SEM validação (prioridade):**
+**Status das rotas prioritárias:**
 ```
-❌ app/api/inventory/route.ts
-❌ app/api/inventory/[id]/route.ts
-❌ app/api/inventory/transfer/route.ts
-❌ app/api/cash-sessions/route.ts
-❌ app/api/cash-sessions/[id]/close/route.ts
-❌ app/api/users/route.ts
-❌ app/api/users/[id]/route.ts
-❌ app/api/customers/route.ts
-❌ app/api/customers/[id]/route.ts
-❌ app/api/orders/route.ts
-❌ app/api/orders/[id]/route.ts
+✅ app/api/products/route.ts (create/update/delete usando schemas dedicados)
+✅ app/api/customers/route.ts (CRUD completo com validação + sanitização)
+✅ app/api/inventory/route.ts (POST/PATCH com schema central)
+✅ app/api/points/route.ts (CRUD validado)
+✅ app/api/sales/route.ts (schema inline abrangente)
+✅ app/api/cash-sessions/route.ts (safeParse + limites)
+❌ app/api/users/[id]/route.ts (PATCH/DELETE sem validação estruturada)
+❌ app/api/inventory/** extras (transfer, history, etc.)
+❌ app/api/orders/** (GET com filtros básicos, rotas adicionais pendentes)
+❌ app/api/delivery/**
+❌ app/api/hardware/**
+❌ app/api/pending-carts/**
 ```
 
 **Padrão a seguir:**
@@ -395,16 +395,16 @@ pnpm add @sentry/nextjs
 
 ### Implementado
 - ✅ **Rate Limiting:** 100%
-- ✅ **Validações Zod:** 100% (schemas criados)
-- ✅ **Logger:** 80%
+- ✅ **Validações Zod:** 100% (schemas centralizados)
+- ✅ **Fluxo de Mudança de Senha Admin:** 100%
+- ✅ **Logger Console/Audit:** 70%
 
 ### Parcialmente Implementado
-- 🟡 **Aplicação de Validações:** 30% (falta aplicar nas rotas)
+- 🟡 **Aplicação de Validações nas Rotas:** 60% (principais endpoints cobertos)
 
 ### Não Implementado
 - ❌ **Soft Delete:** 0%
 - ❌ **Backup:** 0%
-- ❌ **Senha Admin:** 0%
 - ❌ **Reorganização Hooks:** 0%
 - ❌ **Utilitários:** 0%
 - ❌ **Otimização Queries:** 0%
@@ -425,10 +425,10 @@ pnpm add @sentry/nextjs
 
 ```
 Prioridade 1:
-✅ Aplicar validações Zod em todas as rotas (6h)
-✅ Implementar Soft Delete (5h)
-✅ Configurar Backup Automatizado (4h)
-✅ Forçar mudança senha admin (2h)
+⬜ Aplicar validações Zod nas rotas restantes (6h)
+⬜ Implementar Soft Delete (5h)
+⬜ Configurar Backup Automatizado (4h)
+✅ Forçar mudança senha admin (2h) — concluído
 ```
 
 **Entregável:** Sistema production-ready seguro
@@ -441,13 +441,13 @@ Prioridade 1:
 
 ```
 Prioridade 2:
-✅ Reorganizar Hooks (2h)
-✅ Criar Utilitários (3h)
-✅ Otimizar Queries (4h)
-✅ Lazy Loading (3h)
-✅ Caching (4h)
-✅ CORS (1h)
-✅ Testes críticos (3h)
+⬜ Reorganizar Hooks (2h)
+⬜ Criar Utilitários (3h)
+⬜ Otimizar Queries (4h)
+⬜ Lazy Loading (3h)
+⬜ Caching (4h)
+⬜ CORS (1h)
+⬜ Testes críticos (3h)
 ```
 
 **Entregável:** Sistema enterprise-grade
@@ -460,9 +460,9 @@ Prioridade 2:
 
 ```
 Prioridade 3:
-✅ JSDoc (4h)
-✅ Testes completos (5h)
-✅ Monitoramento Sentry (3h)
+⬜ JSDoc (4h)
+⬜ Testes completos (5h)
+⬜ Monitoramento Sentry (3h)
 ```
 
 **Entregável:** Sistema com observabilidade completa
@@ -471,7 +471,7 @@ Prioridade 3:
 
 ## 📋 Checklist por Tarefa
 
-### ✅ Soft Delete
+### ⬜ Soft Delete
 - [ ] Adicionar campos `deletedAt`, `deletedBy` no schema
 - [ ] Criar migration
 - [ ] Criar helper `lib/soft-delete.ts`
@@ -479,7 +479,7 @@ Prioridade 3:
 - [ ] Adicionar filtro `deletedAt: null` em queries
 - [ ] Testar em staging
 
-### ✅ Backup Automatizado
+### ⬜ Backup Automatizado
 - [ ] Criar `scripts/backup-database.ts`
 - [ ] Adicionar ao package.json
 - [ ] Configurar cron job OU Vercel Cron
@@ -488,21 +488,27 @@ Prioridade 3:
 - [ ] Testar restore
 - [ ] Documentar processo
 
-### ✅ Aplicar Validações
-- [ ] `app/api/inventory/**/*.ts`
-- [ ] `app/api/cash-sessions/**/*.ts`
-- [ ] `app/api/users/**/*.ts`
-- [ ] `app/api/customers/**/*.ts`
-- [ ] `app/api/orders/**/*.ts`
-- [ ] Testar com dados inválidos
+### 🟡 Aplicar Validações
+- [x] `app/api/products/route.ts`
+- [x] `app/api/customers/route.ts`
+- [x] `app/api/inventory/route.ts`
+- [x] `app/api/points/route.ts`
+- [x] `app/api/cash-sessions/route.ts`
+- [ ] `app/api/users/[id]/route.ts`
+- [ ] `app/api/inventory/**` (transfer, history, import)
+- [ ] `app/api/orders/**`
+- [ ] `app/api/delivery/**`
+- [ ] `app/api/hardware/**`
+- [ ] `app/api/pending-carts/**`
+- [ ] Testar fluxos com dados inválidos
 
-### ✅ Reorganizar Hooks
+### ⬜ Reorganizar Hooks
 - [ ] Criar estrutura `/hooks`
 - [ ] Mover hooks de `/lib` para `/hooks`
 - [ ] Atualizar imports em componentes
 - [ ] Testar build
 
-### ✅ Otimizar Queries
+### ⬜ Otimizar Queries
 - [ ] Adicionar índices no schema
 - [ ] Criar migration
 - [ ] Criar `/lib/queries/` com queries otimizadas

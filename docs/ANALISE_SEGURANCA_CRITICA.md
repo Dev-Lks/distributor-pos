@@ -5,91 +5,72 @@
 
 ## 🚨 CRÍTICO - Corrigir IMEDIATAMENTE
 
-### 1. **Ausência de Rate Limiting nas APIs**
-**Severidade:** 🔴 CRÍTICA  
-**Risco:** DDoS, Brute Force, Abuso de recursos
+### 1. **Rate Limiting nas APIs (✅ Implementado em 15/10/2025)**
+**Severidade Atual:** � Mitigado — continuar monitoramento  
+**Risco Residual:** Uso abusivo ainda possível se limites forem muito permissivos
 
-**Problema:**
-- Nenhuma rota de API implementa rate limiting
-- APIs de autenticação vulneráveis a ataques de força bruta
-- APIs de cadastro podem ser abusadas para spam
+**Implementação:**
+- `lib/rate-limit.ts` adiciona `limiter`, `authLimiter` e `strictLimiter` usando `lru-cache`
+- `middleware.ts` aplica limites diferenciados para APIs gerais (100 req/min) e autenticação (5 tentativas/15min)
+- Respostas com HTTP 429 incluem header `Retry-After`
 
-**Impacto:**
-- Sistema pode ser derrubado por requisições massivas
-- Contas podem ser comprometidas por tentativas ilimitadas de login
-- Custos de infraestrutura podem disparar
-
-**Arquivos Afetados:**
-- `app/api/**/*.ts` (todas as rotas)
-- `middleware.ts`
+**Próximos Passos:**
+- Monitorar métricas em produção e ajustar limites conforme necessário
+- Adicionar logging/alertas quando limites forem atingidos com frequência
+- Considerar limites específicos por rota sensível (`strictLimiter`)
 
 ---
 
-### 2. **Logs Excessivos em Produção**
+### 2. **Logs em Produção (🟡 Em andamento)**
 **Severidade:** 🟡 MÉDIA  
 **Risco:** Vazamento de informações sensíveis, Performance
 
-**Problema:**
-- Múltiplos `console.log`, `console.error` espalhados pelo código
-- Alguns logs podem expor dados sensíveis em produção
-- 100+ ocorrências encontradas
-
-**Exemplos:**
-```typescript
-// app/api/sales/route.ts
-console.error('Failed to fetch sales:', error) // Pode expor stack traces
-
-// lib/logger.ts existe mas não é usado consistentemente
-```
+**Situação Atual:**
+- `lib/logger.ts` foi expandido com sanitização automática e níveis de log
+- Principais rotas (`products`, `customers`, `inventory`, `sales`, `cash-sessions`) usam `logger`
+- Ainda existem `console.log`/`console.error` residuais em alguns pontos (ex.: fluxos de senha, debugging)
 
 **Impacto:**
-- Stack traces podem expor estrutura interna do sistema
-- Performance degradada em produção
-- Logs podem crescer descontroladamente
+- Redução significativa de risco de vazamento (dados sensíveis são redigidos)
+- Ainda é necessário padronizar logs restantes e integrar com Sentry/DataDog
+
+**Próximos Passos:**
+- Varredura final substituindo `console.*` por `logger`
+- Configurar pipeline externa de logs/alertas (Sentry, Logflare, etc.)
+- Definir política de retenção e monitoramento
 
 ---
 
-### 3. **Falta de Validação de Input em Algumas Rotas**
-**Severidade:** 🔴 ALTA  
-**Risco:** SQL Injection (mitigado pelo Prisma), XSS, Data corruption
+### 3. **Validação de Input em Rotas (🟡 Parcial)**
+**Severidade:** � MÉDIA  
+**Risco:** XSS, Data corruption
 
-**Problema:**
-- Algumas rotas não validam completamente os inputs
-- Falta sanitização de strings em alguns endpoints
-- Campos numéricos não têm validação de range
+**Situação Atual:**
+- Schemas centralizados criados em `lib/validations/*`
+- Rotas `products`, `customers`, `inventory`, `points`, `cash-sessions` e `sales` agora utilizam Zod
+- Sanitização de buscas/documentos aplicada (`sanitizeDocument`, `sanitizeString`)
+- Rotas secundárias (`users/[id]`, `delivery`, `hardware`, `pending-carts`, rotas de inventário adicionais) ainda dependem de validação manual ou inexistente
 
-**Exemplos:**
-```typescript
-// app/api/inventory/route.ts - linha 32
-const { productId, location, quantity } = body
-// Validação básica, mas sem limits de quantidade
-
-// Sem validação de tipos de dados negativos
-if (typeof quantity !== 'number') // ✅ Bom
-// Mas falta: if (quantity < 0 || quantity > MAX_SAFE_QUANTITY)
-```
-
-**Arquivos Críticos:**
-- `app/api/inventory/route.ts`
-- `app/api/inventory/bulk/route.ts`
-- `app/api/cash-sessions/route.ts`
+**Próximos Passos:**
+- Cobrir rotas restantes com Zod / schemas reutilizáveis
+- Remover `console` de debug em rotas sensíveis
+- Criar testes de regressão para inputs inválidos
 
 ---
 
-### 4. **Credenciais Padrão no Seed**
-**Severidade:** 🔴 CRÍTICA  
-**Risco:** Acesso não autorizado em produção
+### 4. **Credenciais Padrão no Seed (✅ Mitigado)**
+**Severidade Atual:** � BAIXA — continuar boas práticas  
+**Risco Residual:** Cadastro inicial ainda usa senha padrão, mas fluxo obriga troca imediata
 
-**Problema:**
-```typescript
-// prisma/seed.ts - linha 242
-const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'admin123'
-```
+**Mitigação Implementada:**
+- Campo `passwordChangedAt` adicionado ao modelo `User`
+- Middleware força redirecionamento para `/change-password` até atualização
+- Página dedicada valida força da senha (mín. 8 caracteres, maiúscula, minúscula, número)
+- `signOut` automático após troca para garantir novo token
 
-**Recomendação:**
-- ⚠️ NUNCA usar senha padrão em produção
-- Forçar mudança de senha no primeiro login
-- Implementar política de senha forte
+**Recomendação adicional:**
+- Definir `SEED_ADMIN_PASSWORD` segura via variável de ambiente
+- Documentar processo de redefinição imediatamente após seed em ambientes novos
 
 ---
 
@@ -183,11 +164,11 @@ origin: process.env.ALLOWED_ORIGINS?.split(',') || '*'
 ## 📊 Estatísticas de Segurança
 
 ```
-Console.logs encontrados:     100+
-Rotas sem rate limiting:      140
+Console.logs remanescentes:   ~60 (precisa padronizar com logger)
+Rotas sem rate limiting:      0
 Rotas de DELETE:              13
-Validações Zod:               ~30% das rotas
-Rate Limiting:                0%
+Validações Zod:               ~60% das rotas
+Rate Limiting:                100% (middleware global)
 ```
 
 ---
@@ -209,10 +190,10 @@ Rate Limiting:                0%
 ## 🎯 Priorização de Correções
 
 ### Semana 1 (Crítico)
-1. Implementar Rate Limiting
-2. Substituir console.log por sistema de logging
-3. Adicionar validação de ranges numéricos
-4. Forçar mudança de senha admin no primeiro login
+1. ✅ Implementar Rate Limiting — concluído via `middleware.ts`
+2. 🟡 Substituir console.log por sistema de logging — em andamento (restam poucos pontos)
+3. ✅ Adicionar validação de ranges numéricos — concluído (`lib/constants/limits.ts`)
+4. ✅ Forçar mudança de senha admin no primeiro login — concluído (fluxo `/change-password`)
 
 ### Semana 2 (Alta)
 1. Implementar soft delete
@@ -230,10 +211,10 @@ Rate Limiting:                0%
 
 ## 📋 Checklist de Segurança para Produção
 
-- [ ] Rate limiting implementado
+- [x] Rate limiting implementado
 - [ ] Logs sanitizados e centralizados
 - [ ] Todas as rotas validam inputs
-- [ ] Senha admin alterada
+- [x] Senha admin alterada (fluxo obrigatório)
 - [ ] Soft delete implementado
 - [ ] Backup automatizado configurado
 - [ ] CORS configurado adequadamente

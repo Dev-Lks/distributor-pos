@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { softDelete, withoutDeleted } from '@/lib/soft-delete';
 
 // POST /api/inventory/bulk - Operações em massa
 export async function POST(request: NextRequest) {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
           const multiplier = priceOp === 'increase' ? 1 + percentage / 100 : 1 - percentage / 100;
 
           const products = await prisma.product.findMany({
-            where: { id: { in: productIds } },
+            where: withoutDeleted({ id: { in: productIds } }),
           });
 
           const updatePromises = products.map((product) =>
@@ -149,7 +150,7 @@ export async function POST(request: NextRequest) {
       case 'activate':
         {
           await prisma.product.updateMany({
-            where: { id: { in: productIds } },
+            where: withoutDeleted({ id: { in: productIds } }),
             data: { isActive: true },
           });
 
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
       case 'deactivate':
         {
           await prisma.product.updateMany({
-            where: { id: { in: productIds } },
+            where: withoutDeleted({ id: { in: productIds } }),
             data: { isActive: false },
           });
 
@@ -179,8 +180,8 @@ export async function POST(request: NextRequest) {
           }
 
           const updatePromises = productIds.map(async (productId) => {
-            const product = await prisma.product.findUnique({
-              where: { id: productId },
+            const product = await prisma.product.findFirst({
+              where: withoutDeleted({ id: productId }),
             });
 
             if (!product) return;
@@ -213,8 +214,14 @@ export async function POST(request: NextRequest) {
             );
           }
 
-          await prisma.product.deleteMany({
-            where: { id: { in: productIds } },
+          await prisma.$transaction(async (tx) => {
+            for (const productId of productIds) {
+              await softDelete('product', productId, {
+                transaction: tx,
+                data: { isActive: false },
+                sessionUserId: session.user?.id,
+              });
+            }
           });
 
           result = { deleted: productIds.length };

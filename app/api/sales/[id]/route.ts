@@ -3,6 +3,7 @@ import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import type { Prisma } from '@prisma/client'
 import { z } from 'zod'
+import { softDelete } from '@/lib/soft-delete'
 
 const updateSaleSchema = z.object({
   status: z.enum(['completed', 'pending', 'processing', 'flagged']).optional(),
@@ -24,10 +25,15 @@ export async function DELETE(
   const { id } = await params
   try {
     const saleId = id
+    const body = await request.json().catch(() => ({})) as { reason?: string }
+    const { reason } = body
 
     // Get the sale to restore inventory
-    const sale = await prisma.sale.findUnique({
-      where: { id: saleId },
+    const sale = await prisma.sale.findFirst({
+      where: {
+        id: saleId,
+        deletedAt: null,
+      },
       include: {
         items: true,
       },
@@ -119,9 +125,12 @@ export async function DELETE(
         })
       }
 
-      // Delete the sale
-      await tx.sale.delete({
-        where: { id: saleId }
+      await softDelete('sale', saleId, {
+        transaction: tx,
+        reason: reason ?? 'Venda cancelada',
+        data: {
+          status: 'cancelled',
+        },
       })
     })
 

@@ -179,6 +179,8 @@ model User {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   createdById String?
+  deletedAt   DateTime?
+  deletedBy   String?
 
   // Relações
   cashSessions       CashSession[]
@@ -196,6 +198,7 @@ model User {
   @@index([status])
   @@index([isAdmin])
   @@index([tenantId])
+  @@index([deletedAt])
 }
 
 model UserPermission {
@@ -281,6 +284,8 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedBy String?
 
   inventory           Inventory?
   productPointsOfSale ProductPointOfSale[]
@@ -297,6 +302,7 @@ model Product {
   @@index([updatedAt]) // Para queries de produtos atualizados recentemente
   @@index([lastPurchaseAt]) // Para análises de compras
   @@index([barcode]) // Para busca rápida por código de barras
+  @@index([deletedAt])
 }
 
 model Inventory {
@@ -374,9 +380,12 @@ model Sale {
   pointOfSaleId    String?
   cashSessionId    String?
   notes            String?
+  voidReason       String?
   pendingCartId    String?  @unique
   metadata         Json?
   createdById      String?
+  deletedAt        DateTime?
+  deletedBy        String?
 
   // Campos para impressão térmica
   printedAt   DateTime?
@@ -401,6 +410,7 @@ model Sale {
   @@index([date]) // Para queries ordenadas por data
   @@index([status]) // Para filtros por status
   @@index([printStatus]) // Para filtrar por status de impressão
+  @@index([deletedAt])
 }
 
 model Customer {
@@ -438,6 +448,8 @@ model Customer {
   metadata               Json?
   createdAt              DateTime   @default(now())
   updatedAt              DateTime   @updatedAt
+  deletedAt              DateTime?
+  deletedBy              String?
 
   sales         Sale[]
   pendingCarts  PendingCart[]
@@ -445,6 +457,8 @@ model Customer {
   bonifications CustomerBonification[]
   orders        Order[]
   deliveries    Delivery[]
+
+  @@index([deletedAt])
 }
 
 model CustomerBonification {
@@ -492,6 +506,8 @@ model PointOfSale {
   timezone    String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+  deletedBy   String?
 
   productPointsOfSale ProductPointOfSale[]
   sales               Sale[]
@@ -503,6 +519,8 @@ model PointOfSale {
   userPointsOfSale    UserPointOfSale[]
   hardwareConfig      HardwareConfig?
   deliveries          Delivery[]
+
+  @@index([deletedAt])
 }
 
 model SalePayment {
@@ -678,6 +696,8 @@ model Batch {
   status             BatchStatus          @default(ACTIVE)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
+  deletedAt          DateTime?
+  deletedBy          String?
   product            Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
   inventoryMovements InventoryMovement[]
   auditItems         InventoryAuditItem[]
@@ -685,6 +705,7 @@ model Batch {
   @@index([productId])
   @@index([expirationDate])
   @@index([status])
+  @@index([deletedAt])
 }
 
 enum BatchStatus {
@@ -871,6 +892,8 @@ model Order {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedBy String?
 
   @@index([customerId])
   @@index([status])
@@ -878,6 +901,7 @@ model Order {
   @@index([orderNumber])
   @@index([createdBy])
   @@index([assignedTo])
+  @@index([deletedAt])
 }
 
 model OrderItem {
@@ -1135,6 +1159,8 @@ model Delivery {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  deletedBy String?
 
   @@index([customerId])
   @@index([status])
@@ -1143,6 +1169,7 @@ model Delivery {
   @@index([zoneId])
   @@index([deliveryNumber])
   @@index([createdAt])
+  @@index([deletedAt])
 }
 
 // ========================================

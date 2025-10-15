@@ -7,6 +7,7 @@ import { hash } from "bcryptjs";
 import type { UserWhereInput } from "@/types";
 import { z } from 'zod'
 import { createUserSchema, searchUsersSchema } from '@/lib/validations'
+import { withoutDeleted } from '@/lib/soft-delete'
 
 // GET /api/users - Listar usuários com filtros
 export async function GET(req: NextRequest) {
@@ -17,27 +18,43 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search");
-  const status = searchParams.get("status");
-  const isAdmin = searchParams.get("isAdmin");
+  const parsedFilters = searchUsersSchema.safeParse({
+    search: searchParams.get("search") ?? undefined,
+    status: searchParams.get("status") ?? undefined,
+    isAdmin: searchParams.get("isAdmin") ?? undefined,
+    page: searchParams.get("page") ?? undefined,
+    limit: searchParams.get("limit") ?? undefined,
+  })
 
-  const where: UserWhereInput = {};
-
-  if (search) {
-    where.OR = [
-      { fullName: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
-      { cpf: { contains: search, mode: "insensitive" } },
-    ];
+  if (!parsedFilters.success) {
+    return NextResponse.json(
+      { error: "Parâmetros de busca inválidos", details: parsedFilters.error.errors },
+      { status: 400 },
+    )
   }
 
-  if (status) where.status = status as "ACTIVE" | "INACTIVE" | "SUSPENDED";
-  if (isAdmin !== null && isAdmin !== undefined) {
-    where.isAdmin = isAdmin === "true";
+  const filters = parsedFilters.data
+
+  const where: UserWhereInput = {}
+
+  if (filters.search) {
+    where.OR = [
+      { fullName: { contains: filters.search, mode: "insensitive" } },
+      { email: { contains: filters.search, mode: "insensitive" } },
+      { cpf: { contains: filters.search, mode: "insensitive" } },
+    ]
+  }
+
+  if (filters.status) {
+    where.status = filters.status
+  }
+
+  if (filters.isAdmin !== undefined) {
+    where.isAdmin = filters.isAdmin
   }
 
   const users = await prisma.user.findMany({
-    where,
+    where: withoutDeleted(where),
     include: {
       permissions: true,
       userPointsOfSale: {
@@ -82,11 +99,18 @@ export async function POST(req: NextRequest) {
       where: { email: validated.email },
     });
 
-    if (existingUser) {
+    if (existingUser && !existingUser.deletedAt) {
       return NextResponse.json(
         { error: "Email já cadastrado" },
         { status: 400 }
       );
+    }
+
+    if (existingUser?.deletedAt) {
+      return NextResponse.json(
+        { error: "Conta com este e-mail foi desativada. Restaure o usuário antes de reutilizar." },
+        { status: 409 }
+      )
     }
 
     // Hash da senha

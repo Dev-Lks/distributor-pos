@@ -9,10 +9,12 @@ import {
   updatePointOfSaleSchema, 
   deletePointOfSaleSchema 
 } from '@/lib/validations'
+import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 
 export async function GET() {
   try {
     const points = await prisma.pointOfSale.findMany({
+      where: withoutDeleted({}),
       orderBy: { createdAt: 'asc' }
     })
     return NextResponse.json(points)
@@ -77,6 +79,14 @@ export async function PATCH(request: NextRequest) {
     if (validated.city !== undefined) updateData.city = validated.city
     if (validated.state !== undefined) updateData.state = validated.state
 
+    const existingPoint = await prisma.pointOfSale.findFirst({
+      where: withoutDeleted({ id: validated.id }),
+    })
+
+    if (!existingPoint) {
+      return NextResponse.json({ error: 'Ponto de venda não encontrado' }, { status: 404 })
+    }
+
     const point = await prisma.pointOfSale.update({
       where: { id: validated.id },
       data: updateData
@@ -112,8 +122,8 @@ export async function DELETE(request: NextRequest) {
     
     const validated = deletePointOfSaleSchema.parse({ id })
 
-    const existing = await prisma.pointOfSale.findUnique({
-      where: { id: validated.id },
+    const existing = await prisma.pointOfSale.findFirst({
+      where: withoutDeleted({ id: validated.id }),
       select: { id: true, name: true },
     })
 
@@ -121,8 +131,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Ponto de venda não encontrado' }, { status: 404 })
     }
 
-    await prisma.pointOfSale.delete({
-      where: { id: validated.id }
+    await softDelete('pointOfSale', validated.id, {
+      data: { isActive: false },
+      sessionUserId: session.user?.id,
     })
 
     logger.audit('point_of_sale_deleted', session.user.email || 'unknown', {

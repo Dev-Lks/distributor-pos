@@ -6,6 +6,7 @@ import { handleError } from "@/lib/errors"
 import { logger } from "@/lib/logger"
 import type { OrderWhereInput } from "@/types"
 import { z } from "zod"
+import { withoutDeleted } from '@/lib/soft-delete'
 
 // Schema de validação para criar ordem
 const createOrderSchema = z.object({
@@ -88,7 +89,7 @@ export async function GET(request: NextRequest) {
     }
 
     const orders = await prisma.order.findMany({
-      where,
+      where: withoutDeleted(where),
       include: {
         customer: {
           select: {
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
     // Validar se todos os produtos existem
     const productIds = data.items.map(item => item.productId)
     const products = await prisma.product.findMany({
-      where: { id: { in: productIds } },
+      where: withoutDeleted({ id: { in: productIds } }),
       select: { id: true }
     })
 
@@ -166,11 +167,11 @@ export async function POST(request: NextRequest) {
     // Gerar número da encomenda único
     const year = new Date().getFullYear()
     const lastOrder = await prisma.order.findFirst({
-      where: {
+      where: withoutDeleted({
         orderNumber: {
           startsWith: `ENC-${year}-`,
         },
-      },
+      }),
       orderBy: { orderNumber: "desc" },
     })
 
