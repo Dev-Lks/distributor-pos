@@ -4,12 +4,13 @@ import { logger } from '@/lib/logger'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { z } from 'zod'
-import { 
-  createPointOfSaleSchema, 
-  updatePointOfSaleSchema, 
-  deletePointOfSaleSchema 
+import {
+  createPointOfSaleSchema,
+  updatePointOfSaleSchema,
+  deletePointOfSaleSchema,
 } from '@/lib/validations'
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
+import type { Prisma } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -72,7 +73,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const validated = updatePointOfSaleSchema.parse(body)
 
-    const updateData: any = {}
+  const updateData: Prisma.PointOfSaleUpdateInput = {}
     if (validated.name !== undefined) updateData.name = validated.name
     if (validated.isActive !== undefined) updateData.isActive = validated.isActive
     if (validated.address !== undefined) updateData.address = validated.address

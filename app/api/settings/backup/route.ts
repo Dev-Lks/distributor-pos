@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
 // POST /api/settings/backup - Criar backup do sistema
-export async function POST(req: NextRequest) {
+export async function POST() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user.isAdmin) {

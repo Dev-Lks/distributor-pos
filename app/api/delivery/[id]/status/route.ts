@@ -3,19 +3,32 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
+import type { Prisma } from "@prisma/client"
+import { logger } from "@/lib/logger"
+
+const statusEnum = [
+  "PENDING",
+  "PREPARING",
+  "READY_FOR_PICKUP",
+  "IN_TRANSIT",
+  "DELIVERED",
+  "CANCELLED",
+  "FAILED",
+] as const
 
 const updateStatusSchema = z.object({
-  status: z.enum([
-    "PENDING",
-    "PREPARING",
-    "READY_FOR_PICKUP",
-    "IN_TRANSIT",
-    "DELIVERED",
-    "CANCELLED",
-    "FAILED",
-  ]),
+  status: z.enum(statusEnum),
   notes: z.string().optional(),
 })
+
+type DeliveryStatus = (typeof statusEnum)[number]
+
+interface StatusHistoryEntry {
+  status: DeliveryStatus
+  timestamp: string
+  userId: string
+  notes?: string | null
+}
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
@@ -28,14 +41,11 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const body = await request.json()
     const validated = updateStatusSchema.parse(body)
 
-    // Preparar dados de atualização baseado no status
-    const updateData: any = {
-      status: validated.status,
-      updatedAt: new Date(),
-    }
-
-    // Adicionar timestamps baseado no status
     const now = new Date()
+    const updateData: Prisma.DeliveryUpdateInput = {
+      status: validated.status,
+      updatedAt: now,
+    }
     switch (validated.status) {
       case "PREPARING":
         updateData.preparedAt = now
@@ -63,15 +73,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       select: { statusHistory: true },
     })
 
-    const statusHistory = (delivery?.statusHistory as any) || []
-    statusHistory.push({
-      status: validated.status,
-      timestamp: now.toISOString(),
-      userId: session.user.id,
-      notes: validated.notes,
-    })
+    const rawHistory = delivery?.statusHistory as unknown
+    const previousHistory: StatusHistoryEntry[] = Array.isArray(rawHistory)
+      ? (rawHistory as StatusHistoryEntry[])
+      : []
 
-    updateData.statusHistory = statusHistory
+    const statusHistory: StatusHistoryEntry[] = [
+      ...previousHistory,
+      {
+        status: validated.status,
+        timestamp: now.toISOString(),
+        userId: session.user.id ?? "unknown",
+        notes: validated.notes ?? null,
+      },
+    ]
+
+    updateData.statusHistory = statusHistory as unknown as Prisma.InputJsonValue
 
     // Atualizar delivery
     const updatedDelivery = await prisma.delivery.update({
@@ -81,7 +98,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     return NextResponse.json(updatedDelivery)
   } catch (error) {
-    console.error("Failed to update delivery status:", error)
+    logger.error("Failed to update delivery status", { error })
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Dados inválidos", details: error.errors }, { status: 400 })
     }

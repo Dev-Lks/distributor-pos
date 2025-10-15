@@ -2,21 +2,8 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { z } from "zod"
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
-
-const updateStatusSchema = z.object({
-  status: z.enum([
-    "PENDING",
-    "PREPARING",
-    "READY_FOR_PICKUP",
-    "IN_TRANSIT",
-    "DELIVERED",
-    "CANCELLED",
-    "FAILED",
-  ]),
-  notes: z.string().optional(),
-})
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
@@ -82,7 +69,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     return NextResponse.json(delivery)
   } catch (error) {
-    console.error("Failed to fetch delivery:", error)
+  logger.error("Failed to fetch delivery", { error })
     return NextResponse.json({ error: "Erro ao buscar delivery" }, { status: 500 })
   }
 }
@@ -116,7 +103,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     return NextResponse.json(delivery)
   } catch (error) {
-    console.error("Failed to update delivery:", error)
+    logger.error("Failed to update delivery", { error })
     return NextResponse.json({ error: "Erro ao atualizar delivery" }, { status: 500 })
   }
 }
@@ -147,7 +134,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
 
     return NextResponse.json({ success: true })
   } catch (error) {
-    console.error("Failed to delete delivery:", error)
+    logger.error("Failed to delete delivery", { error })
     return NextResponse.json({ error: "Erro ao deletar delivery" }, { status: 500 })
   }
 }

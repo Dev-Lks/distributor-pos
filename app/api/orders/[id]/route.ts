@@ -122,7 +122,7 @@ export async function PATCH(
     }
 
     // Recalcular totais se necessário
-    let updateData: any = { ...data }
+    const updateData: any = { ...data }
 
     if (data.deliveryFee !== undefined || data.discountValue !== undefined || data.depositPaid !== undefined) {
       const deliveryFee = data.deliveryFee ?? existingOrder.deliveryFee

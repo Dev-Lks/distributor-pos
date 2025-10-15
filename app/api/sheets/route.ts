@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const pointOfSale = searchParams.get('pointOfSale') || 'all';
 
-    let allSales: any[] = [];
+    const allSales: any[] = [];
     let sheetNames: string[] = [];
 
     if (pointOfSale === 'all') {

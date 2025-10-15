@@ -3,9 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import type { Prisma } from "@prisma/client";
 
 // GET /api/settings - Buscar configurações do sistema
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession(authOptions);
 
   if (!session) {
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
       syncInterval: settings.syncInterval,
     });
   } catch (error) {
-    console.error("Erro ao buscar configurações:", error);
+    logger.error("Erro ao buscar configurações", { error });
     return NextResponse.json(
       { error: "Erro ao buscar configurações" },
       { status: 500 }
@@ -92,7 +93,7 @@ export async function PATCH(req: NextRequest) {
     // Buscar configurações existentes ou criar nova
     let settings = await prisma.systemSettings.findFirst();
     
-    const updateData: any = {};
+  const updateData: Record<string, unknown> = {};
     
     // Dados da empresa
     if (body.businessName !== undefined) updateData.businessName = body.businessName;
@@ -139,11 +140,11 @@ export async function PATCH(req: NextRequest) {
     if (settings) {
       settings = await prisma.systemSettings.update({
         where: { id: settings.id },
-        data: updateData,
+        data: updateData as Prisma.SystemSettingsUpdateInput,
       });
     } else {
       settings = await prisma.systemSettings.create({
-        data: updateData,
+        data: updateData as Prisma.SystemSettingsUncheckedCreateInput,
       });
     }
     
