@@ -261,7 +261,6 @@ model Product {
   batchNumber         String? // Número do lote
   supplierProductCode String? // Código do fornecedor
   barcode             String?   @unique // Código de barras (agora único e indexado)
-  barcodeType         String? // EAN13, EAN8, CODE128, etc
   weight              Float? // Peso em kg
   volume              Float? // Volume em litros
   image               String? // URL da imagem
