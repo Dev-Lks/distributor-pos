@@ -18,7 +18,7 @@ import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 import { CartSection } from "./components/CartSection"
 import { ProductGrid } from "./components/ProductGrid"
 import { PaymentPanel } from "./components/PaymentPanel"
-import { CustomerDialog } from "./components/CustomerDialog"
+import { CustomerCheckoutDialog } from "./components/CustomerCheckoutDialog"
 import { CashSessionPanel } from "./components/CashSessionPanel"
 import {
   OpenSessionDialog,
@@ -88,8 +88,7 @@ export default function SalesPage() {
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "card" | "pix">("cash")
   const [quickSaleMode, setQuickSaleMode] = useState(false)
 
-  // Customer state
-  const [customerPromptEnabled, setCustomerPromptEnabled] = useState(true)
+  // Customer checkout dialog
   const [customerDialogOpen, setCustomerDialogOpen] = useState(false)
 
   // Cash session dialogs
@@ -135,20 +134,6 @@ export default function SalesPage() {
       return pointOptions[0]?.id ?? null
     })
   }, [pointOptions])
-
-  // Persist customer prompt preference
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    const stored = window.localStorage.getItem("nitro-customer-prompt-enabled")
-    if (stored !== null) {
-      setCustomerPromptEnabled(stored === "true")
-    }
-  }, [])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-    window.localStorage.setItem("nitro-customer-prompt-enabled", String(customerPromptEnabled))
-  }, [customerPromptEnabled])
 
   // Sound alert for low stock
   useEffect(() => {
@@ -229,79 +214,20 @@ export default function SalesPage() {
       return
     }
 
-    if (customerPromptEnabled) {
-      setCustomerDialogOpen(true)
-    } else {
-      await finalizeSale({
-        cart,
-        paymentMethod,
-        pointOfSaleId: selectedPointOfSaleId!,
-        onSuccess: async (sale) => {
-          clearCart()
-          const audio = new Audio("/alert.mp3")
-          audio.play().catch(() => {})
-          
-          // Imprimir recibo automaticamente
-          if (printerStatus.connected) {
-            try {
-              await printReceipt(sale, 'sale')
-              toast.success("Recibo impresso!")
-            } catch (error) {
-              toast.error("Erro ao imprimir recibo")
-            }
-          }
-        },
-        createSale,
-      })
-    }
-  }, [
-    isSessionOpen,
-    customerPromptEnabled,
-    finalizeSale,
-    cart,
-    paymentMethod,
-    selectedPointOfSaleId,
-    clearCart,
-    createSale,
-    printerStatus,
-    printReceipt,
-  ])
+    // Sempre abrir o modal de cliente
+    setCustomerDialogOpen(true)
+  }, [isSessionOpen])
 
-  // Customer dialog handlers
-  const handleCustomerSave = useCallback(
-    async (data: { name: string; phone: string; address: string }) => {
-      await finalizeSale({
-        cart,
-        paymentMethod,
-        pointOfSaleId: selectedPointOfSaleId!,
-        customerData: data,
-        onSuccess: async (sale) => {
-          clearCart()
-          setCustomerDialogOpen(false)
-          const audio = new Audio("/alert.mp3")
-          audio.play().catch(() => {})
-          
-          // Imprimir recibo automaticamente
-          if (printerStatus.connected && sale) {
-            try {
-              await printReceipt(sale, 'sale')
-              toast.success("Recibo impresso!")
-            } catch (error) {
-              toast.error("Erro ao imprimir recibo")
-            }
-          }
-        },
-        createSale,
-      })
-    },
-    [finalizeSale, cart, paymentMethod, selectedPointOfSaleId, clearCart, createSale, printerStatus, printReceipt]
-  )
-
-  const handleCustomerSkip = useCallback(async () => {
+  // Função auxiliar para finalizar venda com sucesso
+  const completeSale = useCallback(async (customerData?: any, customerId?: string) => {
     await finalizeSale({
       cart,
       paymentMethod,
       pointOfSaleId: selectedPointOfSaleId!,
+      customerData: customerData ? {
+        ...customerData,
+        customerId: customerId || undefined,
+      } : undefined,
       onSuccess: async (sale) => {
         clearCart()
         setCustomerDialogOpen(false)
@@ -321,6 +247,52 @@ export default function SalesPage() {
       createSale,
     })
   }, [finalizeSale, cart, paymentMethod, selectedPointOfSaleId, clearCart, createSale, printerStatus, printReceipt])
+
+  // Handler para quando seleciona um cliente existente
+  const handleSaveWithCustomer = useCallback(async (customer: any) => {
+    await completeSale({
+      name: customer.name,
+      phone: customer.phone || undefined,
+      address: customer.address || undefined,
+    }, customer.id)
+  }, [completeSale])
+
+  // Handler para cadastrar novo cliente
+  const handleSaveWithNewCustomer = useCallback(async (data: { name: string; phone: string; address: string; document?: string }) => {
+    // Criar o cliente primeiro
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        toast.error(error.error || "Erro ao criar cliente")
+        return
+      }
+
+      const newCustomer = await response.json()
+      
+      // Finalizar venda com o novo cliente
+      await completeSale({
+        name: newCustomer.name,
+        phone: newCustomer.phone || undefined,
+        address: newCustomer.address || undefined,
+      }, newCustomer.id)
+
+      toast.success("Cliente cadastrado com sucesso!")
+    } catch (error) {
+      console.error("Erro ao criar cliente:", error)
+      toast.error("Erro ao cadastrar cliente")
+    }
+  }, [completeSale])
+
+  // Handler para finalizar sem cliente
+  const handleSaveWithoutCustomer = useCallback(async () => {
+    await completeSale()
+  }, [completeSale])
 
   // Cash session handlers
   const handleOpenSession = useCallback(
@@ -497,13 +469,12 @@ export default function SalesPage() {
       </div>
 
       {/* Dialogs */}
-      <CustomerDialog
+      <CustomerCheckoutDialog
         open={customerDialogOpen}
         onOpenChange={setCustomerDialogOpen}
-        onSave={handleCustomerSave}
-        onSkip={handleCustomerSkip}
-        promptEnabled={customerPromptEnabled}
-        onPromptEnabledChange={setCustomerPromptEnabled}
+        onSaveWithCustomer={handleSaveWithCustomer}
+        onSaveWithNewCustomer={handleSaveWithNewCustomer}
+        onSaveWithoutCustomer={handleSaveWithoutCustomer}
       />
 
       <OpenSessionDialog
