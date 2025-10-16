@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { StockLevel, StockMovement, InventoryAlert, Location } from './inventory';
+import { StockLevel, StockMovement, InventoryAlert, Location } from '@/lib/inventory';
 
 interface ApiStockLevel {
   id: string;
