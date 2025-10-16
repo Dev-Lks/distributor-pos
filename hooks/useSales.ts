@@ -1,6 +1,6 @@
 import { useQueryClient, useQuery } from '@tanstack/react-query'
 import { fetchProducts, PRODUCTS_QUERY_KEY } from './useProducts'
-import { sheetsBackup, type SaleData } from './googleSheets'
+import { sheetsBackup, type SaleData } from '@/lib/googleSheets'
 
 const SALES_QUERY_KEY = ['sales'] as const
 
