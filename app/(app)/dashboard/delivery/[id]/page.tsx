@@ -16,7 +16,7 @@ import {
   MessageSquare,
   XCircle
 } from "lucide-react"
-import { useDelivery, useUpdateDeliveryStatus } from "@/lib/useDeliveries"
+import { useDelivery, useUpdateDeliveryStatus } from "@/hooks/useDeliveries"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Loader } from "@/components/Loader"

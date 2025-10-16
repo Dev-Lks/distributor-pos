@@ -1,7 +1,7 @@
 "use client"
 
 import { createContext, useContext, ReactNode, useCallback } from 'react'
-import { useCustomers, type CustomerSummary } from '@/lib/useCustomers'
+import { useCustomers, type CustomerSummary } from '@/hooks/useCustomers'
 import { useQueryClient } from '@tanstack/react-query'
 
 interface CustomerContextValue {

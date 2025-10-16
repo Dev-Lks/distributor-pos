@@ -4,7 +4,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Edit, Trash2, Store } from "lucide-react"
-import type { Product } from "@/lib/useProducts"
+import { formatCurrency } from "@/lib/utils/formatters"
+import type { Product } from "@/hooks/useProducts"
 
 interface ProductTableProps {
   products: Product[]
@@ -12,9 +13,6 @@ interface ProductTableProps {
   onDelete: (product: Product) => void
   onAllocateStock: (product: Product) => void
 }
-
-const formatCurrency = (value?: number) =>
-  value !== undefined ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "--"
 
 export function ProductTable({ products, onEdit, onDelete, onAllocateStock }: ProductTableProps) {
   return (

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Plus, ShoppingCart, Package, Receipt, X, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { usePermissions } from "@/lib/usePermissions"
+import { usePermissions } from "@/hooks/usePermissions"
 
 interface QuickAction {
   icon: React.ComponentType<{ className?: string }>

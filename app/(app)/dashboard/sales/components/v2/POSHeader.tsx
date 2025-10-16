@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { MapPin, Printer, Scan, Circle, CheckCircle2, XCircle } from "lucide-react"
-import type { PointOfSale } from "@/lib/usePointsOfSale"
+import type { PointOfSale } from "@/hooks/usePointsOfSale"
 
 interface POSHeaderProps {
   points: any[]

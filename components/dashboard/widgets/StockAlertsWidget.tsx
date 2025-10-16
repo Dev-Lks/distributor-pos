@@ -3,7 +3,7 @@
 import { AlertTriangle, ArrowRight, Package } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useStockAlerts } from "@/lib/useStockAlerts"
+import { useStockAlerts } from "@/hooks/useStockAlerts"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { WidgetWrapper } from "@/components/dashboard/WidgetWrapper"

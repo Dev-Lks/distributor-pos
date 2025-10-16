@@ -2,8 +2,8 @@
 
 import React, { useMemo, useRef, useState } from "react"
 import { useQueryClient } from "@tanstack/react-query"
-import { useProducts, type Product } from "@/lib/useProducts"
-import { usePointsOfSale, type PointOfSale } from "@/lib/usePointsOfSale"
+import { useProducts, type Product } from "@/hooks/useProducts"
+import { usePointsOfSale, type PointOfSale } from "@/hooks/usePointsOfSale"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils/formatters"
 import { toast } from "sonner"
 import { handleError } from "@/lib/errors"
 import { logger } from "@/lib/logger"
@@ -64,7 +65,7 @@ import { DistributeStockDialog } from "@/components/inventory/DistributeStockDia
 import { AddStockDialog } from "@/components/inventory/AddStockDialog"
 
 // Sprint 2: Pull-to-Refresh e Gestos
-import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { usePullToRefresh } from "@/hooks/usePullToRefresh"
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 
 // Hardware
@@ -80,11 +81,6 @@ type LocationConfig = {
   accent: string
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>
 }
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL"
-})
 
 const locationConfig: Record<Location, LocationConfig> = {
   coldRoom: {
@@ -706,7 +702,7 @@ export default function InventoryPage() {
                             <div className="space-y-1">
                               <div className="font-medium">{product.name}</div>
                               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <span>{currencyFormatter.format(product.salePrice)}</span>
+                                <span>{formatCurrency(product.salePrice)}</span>
                                 {product.size && (
                                   <>
                                     <span>•</span>

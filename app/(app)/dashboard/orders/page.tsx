@@ -1,8 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { useOrders, useOrderStats, OrderStatus, OrderPriority } from "@/lib/useOrders"
-import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { useOrders, useOrderStats, OrderStatus, OrderPriority } from "@/hooks/useOrders"
+import { usePullToRefresh } from "@/hooks/usePullToRefresh"
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 import { useQueryClient } from "@tanstack/react-query"
 import { OrderCard } from "@/components/orders/OrderCard"

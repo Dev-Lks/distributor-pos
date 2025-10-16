@@ -20,7 +20,7 @@ import {
   TrendingUp,
   Printer,
 } from "lucide-react"
-import { useDeliveries } from "@/lib/useDeliveries"
+import { useDeliveries } from "@/hooks/useDeliveries"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"

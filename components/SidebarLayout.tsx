@@ -37,8 +37,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ThemeTogglePopover } from "./ThemeTogglePopover"
 import { signOut, useSession } from "next-auth/react"
-import { useCashSession } from "@/lib/useCashSession"
-import { usePermissions } from "@/lib/usePermissions"
+import { useCashSession } from "@/hooks/useCashSession"
+import { usePermissions } from "@/hooks/usePermissions"
 import {
   DropdownMenu,
   DropdownMenuContent,

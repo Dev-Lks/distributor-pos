@@ -5,11 +5,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { ShoppingCart, Plus, Minus, X } from "lucide-react"
 import type { CartItem } from "../hooks/useCart"
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL"
-})
+import { formatCurrency } from "@/lib/utils/formatters"
 
 interface CartSectionProps {
   cart: CartItem[]
@@ -77,7 +73,7 @@ export function CartSection({
                   <h4 className="font-medium text-sm truncate">{item.name}</h4>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-sm text-muted-foreground">
-                      {currencyFormatter.format(item.price)}
+                      {formatCurrency(item.price)}
                     </span>
                     {item.quantity > 1 && (
                       <>
@@ -130,7 +126,7 @@ export function CartSection({
 
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold">
-                      {currencyFormatter.format(item.price * item.quantity)}
+                      {formatCurrency(item.price * item.quantity)}
                     </span>
                     <Button
                       variant="ghost"
@@ -154,12 +150,12 @@ export function CartSection({
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-sm text-muted-foreground">Subtotal</span>
-                <span className="text-sm">{currencyFormatter.format(total)}</span>
+                <span className="text-sm">{formatCurrency(total)}</span>
               </div>
               <div className="flex justify-between items-center pt-2 border-t">
                 <span className="font-bold">Total</span>
-                <span className="text-2xl font-bold text-primary">
-                  {currencyFormatter.format(total)}
+                <span className="text-3xl font-bold text-primary">
+                  {formatCurrency(total)}
                 </span>
               </div>
             </div>

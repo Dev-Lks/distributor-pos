@@ -20,9 +20,9 @@
 
 ---
 
-### 3. 🟡 Aplicar Validações nas Rotas (6h)
-**Status:** Schemas aplicados nos módulos de usuários, pedidos e entregas  
-**Progresso:** 80%
+### 3. ✅ Aplicar Validações nas Rotas (6h)
+**Status:** Schemas consolidados nos módulos críticos (usuários, pedidos, entregas, hardware e carrinhos pendentes)  
+**Progresso:** 100%
 
 **Status por rota:**
 ```
@@ -35,9 +35,11 @@
 ✅ /api/users/[id] (PATCH/DELETE validados + atomicidade)
 ✅ /api/orders (GET sanitizado + soft delete em DELETE)
 ✅ /api/delivery/** (CRUD validado com soft delete)
-❌ /api/hardware/**
-❌ /api/pending-carts/**
+✅ /api/hardware/** (schemas de hardware + saneamento de payload)
+✅ /api/pending-carts/** (params validados + payload coerente)
 ```
+
+**Implementação nova:** `lib/validations/hardware.ts`, `app/api/hardware/config/route.ts`, `app/api/hardware/printer/print/route.ts`, `app/api/pending-carts/[id]/route.ts`
 
 **Impacto:** Previne dados inválidos e garante rastreabilidade.
 
@@ -45,8 +47,9 @@
 
 ## 🟡 PRIORIDADE MÉDIA (Próximas 2 semanas)
 
-### 5. ❌ Reorganizar Hooks (2h)
-Mover hooks de `/lib` para `/hooks` estruturado
+### 5. ✅ Reorganizar Hooks (2h)
+Mover hooks de `/lib` para `/hooks` estruturado e criar barrel `hooks/index.ts`
+**Implementação nova:** diretório `hooks/`, migração dos `use*.ts` e ajuste do legado em `lib/hooks/index.ts`
 
 ### 6. ❌ Utilitários Compartilhados (3h)
 Criar `lib/utils/` com formatters, calculators, validators
@@ -91,14 +94,14 @@ Rastreamento de erros em produção
 
 ## 📊 Métricas
 
-- �� **Crítico:** 6 horas (backup + soft delete concluídos)
-- 🟡 **Médio:** 17 horas
+- 🔴 **Crítico:** 6 horas (backup + soft delete concluídos)
+- 🟡 **Médio:** 15 horas
 - 🔵 **Baixo:** 16 horas
-- **TOTAL:** ~39 horas (1-2 semanas de trabalho)
+- **TOTAL:** ~37 horas (1-2 semanas de trabalho)
 
 ### Progresso Geral
 ```
-███████████░░░░░░░ 60% completo
+████████████████░░░ 70% completo
 ```
 
 **Implementado:**
@@ -107,10 +110,10 @@ Rastreamento de erros em produção
 - Logger ✅
 - Soft delete ✅
 - Backup ✅
+- Reorganização de hooks ✅
 
 **Faltando:**
-- Finalizar validações restantes 🟡
-- Reorganizar hooks e utilitários
+- Utilitários compartilhados
 - Otimizar queries / caching / lazy loading
 - Testes e monitoramento
 
@@ -120,13 +123,14 @@ Rastreamento de erros em produção
 
 ### Semana 1 (restante)
 ```
-- Concluir validações pendentes (/api/hardware, /api/pending-carts)
 - Documentar restauração de backups (README)
+- Mapear utilitários existentes para migração
 ```
+> ✅ Validações finalizadas nesta entrega, manter foco na documentação de backup e utilitários
 
 ### Semana 2 (Qualidade)
 ```
-- Reorganizar hooks + utilitários compartilhados
+- Consolidar utilitários compartilhados
 - Otimização Prisma + lazy loading
 - Definir estratégia de cache e CORS
 ```
@@ -143,10 +147,10 @@ Rastreamento de erros em produção
 ## 🎯 Quick Wins (Pode fazer hoje)
 
 1. **CORS** (1h) - Habilitar origens confiáveis
-2. **Validações restantes** (2h) - hardware + pending carts
-3. **Checklist de restauração** (1h) - Documentar uso do backup script
+2. **Checklist de restauração** (1h) - Documentar uso do backup script
+3. **Inventário de utilidades** (1h) - Levantar duplicidades para `lib/utils`
 
-**Total:** 4 horas para consolidar o trabalho crítico já entregue
+**Total:** 3 horas para consolidar o trabalho crítico já entregue
 
 ---
 
@@ -179,8 +183,8 @@ Rastreamento de erros em produção
 ### Fazer Esta Semana
 - [x] Soft delete no schema
 - [x] Script de backup
-- [ ] Aplicar validações em 10+ rotas (restando hardware e pending carts)
-- [ ] Reorganizar hooks
+- [x] Aplicar validações em 10+ rotas (hardware e pending carts concluídos)
+- [x] Reorganizar hooks
 - [ ] Criar utilitários compartilhados
 
 ### Fazer Próxima Semana

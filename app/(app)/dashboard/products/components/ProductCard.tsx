@@ -5,7 +5,8 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Edit, Trash2, Store } from "lucide-react"
-import type { Product } from "@/lib/useProducts"
+import { formatCurrency } from "@/lib/utils/formatters"
+import type { Product } from "@/hooks/useProducts"
 
 interface ProductCardProps {
   product: Product
@@ -15,9 +16,6 @@ interface ProductCardProps {
   showStock?: boolean
   showMargin?: boolean
 }
-
-const formatCurrency = (value?: number) =>
-  value !== undefined ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "--"
 
 // Memo evita re-render se props não mudaram
 export const ProductCard = memo(function ProductCard({

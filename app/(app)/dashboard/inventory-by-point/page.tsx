@@ -10,14 +10,14 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { useProducts } from "@/lib/useProducts"
-import { usePointsOfSale, type PointOfSale } from "@/lib/usePointsOfSale"
+import { useProducts } from "@/hooks/useProducts"
+import { usePointsOfSale, type PointOfSale } from "@/hooks/usePointsOfSale"
 import {
   useProductPointsOfSale,
   useCreateProductPointOfSale,
   useUpdateProductPointOfSale,
   useDeleteProductPointOfSale
-} from "@/lib/useProductPointsOfSale"
+} from "@/hooks/useProductPointsOfSale"
 
 export default function InventoryByPointPage() {
   const { data: products = [], isLoading: productsLoading } = useProducts()

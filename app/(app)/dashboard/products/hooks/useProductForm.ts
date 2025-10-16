@@ -1,6 +1,6 @@
 import { useState, useMemo, useCallback } from "react"
 import { toast } from "sonner"
-import type { Product } from "@/lib/useProducts"
+import type { Product } from "@/hooks/useProducts"
 import { type ProductFormState, type TabKey, initialFormState, fieldTabMap } from "../types"
 
 const parseNumber = (value: string): number | undefined => {

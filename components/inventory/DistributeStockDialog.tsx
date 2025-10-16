@@ -28,8 +28,8 @@ import {
   TrendingUp,
   Zap,
 } from "lucide-react"
-import type { Product } from "@/lib/useProducts"
-import type { PointOfSale } from "@/lib/usePointsOfSale"
+import type { Product } from "@/hooks/useProducts"
+import type { PointOfSale } from "@/hooks/usePointsOfSale"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",

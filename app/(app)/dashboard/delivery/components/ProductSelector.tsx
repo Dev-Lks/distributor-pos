@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { useProducts } from "@/lib/useProducts"
+import { useProducts } from "@/hooks/useProducts"
 import { Loader } from "@/components/Loader"
+import { formatCurrency } from "@/lib/utils/formatters"
 
 interface ProductSelectorProps {
   onSelectProduct: (product: {
@@ -56,12 +57,6 @@ export function ProductSelector({ onSelectProduct }: ProductSelectorProps) {
       return matchesSearch && product.isActive
     })
   }, [enrichedProducts, searchTerm])
-
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value)
 
   if (isLoading) {
     return (

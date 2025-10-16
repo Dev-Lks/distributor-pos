@@ -22,9 +22,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { CustomerSelector } from "@/components/customers/CustomerSelector"
-import { useDeliveryDrivers } from "@/lib/useDeliveryDrivers"
-import { useCreateDelivery, useCalculateDeliveryFee } from "@/lib/useDeliveries"
-import type { CustomerSummary } from "@/lib/useCustomers"
+import { useDeliveryDrivers } from "@/hooks/useDeliveryDrivers"
+import { useCreateDelivery, useCalculateDeliveryFee } from "@/hooks/useDeliveries"
+import type { CustomerSummary } from "@/hooks/useCustomers"
 import type { CreateDeliveryInput } from "@/types/delivery"
 import { toast } from "sonner"
 import { Loader2, MapPin, DollarSign, Truck } from "lucide-react"

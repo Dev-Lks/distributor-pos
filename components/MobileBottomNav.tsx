@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation"
 import { LayoutDashboard, ShoppingCart, Package, Receipt, Menu } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
-import { useProducts } from "@/lib/useProducts"
-import { useCashSession } from "@/lib/useCashSession"
+import { useProducts } from "@/hooks/useProducts"
+import { useCashSession } from "@/hooks/useCashSession"
 
 interface BottomNavItem {
   href: string

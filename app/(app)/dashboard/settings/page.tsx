@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { usePermissions } from "@/lib/usePermissions";
-import { usePWAInstall } from "@/lib/usePWAInstall";
+import { usePermissions } from "@/hooks/usePermissions";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 import {
   BellRing,
   KeyRound,

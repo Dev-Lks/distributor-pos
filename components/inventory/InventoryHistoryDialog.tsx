@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useInventoryHistory } from "@/lib/useInventoryAdvanced";
+import { useInventoryHistory } from "@/hooks/useInventoryAdvanced";
 import {
   Dialog,
   DialogContent,

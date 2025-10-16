@@ -7,10 +7,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
-import { useProducts, type Product } from "@/lib/useProducts"
-import { usePointsOfSale } from "@/lib/usePointsOfSale"
-import { usePullToRefresh } from "@/lib/usePullToRefresh"
-import { useDebounce } from "@/lib/useDebounce"
+import { useProducts, type Product } from "@/hooks/useProducts"
+import { usePointsOfSale } from "@/hooks/usePointsOfSale"
+import { usePullToRefresh } from "@/hooks/usePullToRefresh"
+import { useDebounce } from "@/hooks/useDebounce"
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 import { StockAllocationDialog } from "@/components/inventory/StockAllocationDialog"
 import { 
@@ -36,6 +36,7 @@ import { PricingTab } from "./components/ProductForm/PricingTab"
 import { IdentityTab } from "./components/ProductForm/IdentityTab"
 import { ImportDialog } from "./components/ImportDialog"
 import { QuickBarcodeCreate } from "@/components/products/QuickBarcodeCreate"
+import { formatCurrency } from "@/lib/utils/formatters"
 
 // Hook e tipos
 import { useProductForm, mapProductToForm } from "./hooks/useProductForm"
@@ -44,9 +45,6 @@ import { type ProductFormState, initialFormState } from "./types"
 // Hardware
 import { useBarcodeScanner } from "@/lib/hardware/useBarcodeScanner"
 import { BarcodeInput } from "@/components/hardware/BarcodeInput"
-
-const formatCurrency = (value?: number) =>
-  value !== undefined ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "--"
 
 type ViewMode = "card" | "table"
 

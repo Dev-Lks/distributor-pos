@@ -11,7 +11,7 @@ import {
   DrawerBody,
   DrawerFooter,
 } from '@/components/ui/drawer'
-import { useIsMobile } from '@/lib/useMediaQuery'
+import { useIsMobile } from '@/hooks/useMediaQuery'
 import { cn } from "@/lib/utils"
 
 interface ResponsiveDialogProps {

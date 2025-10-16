@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { useUpcomingEvents } from "@/lib/useUpcomingEvents"
+import { useUpcomingEvents } from "@/hooks/useUpcomingEvents"
 import { format, isToday, isTomorrow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 

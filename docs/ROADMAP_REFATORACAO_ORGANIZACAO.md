@@ -108,7 +108,7 @@ EOF
 **Atualizar imports:**
 ```bash
 # Buscar e substituir em todos os arquivos
-# De: import { useProducts } from '@/lib/useProducts'
+# De: import { useProducts } from '@/hooks/useProducts'
 # Para: import { useProducts } from '@/hooks'
 ```
 

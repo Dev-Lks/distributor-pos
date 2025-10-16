@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useAudits, useCreateAudit, useUpdateAudit } from "@/lib/useInventoryAdvanced";
-import { useProducts } from "@/lib/useProducts";
+import { useAudits, useCreateAudit, useUpdateAudit } from "@/hooks/useInventoryAdvanced";
+import { useProducts } from "@/hooks/useProducts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

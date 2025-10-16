@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { OrderPriority } from "@/lib/useOrders"
+import { OrderPriority } from "@/hooks/useOrders"
 import { AlertCircle, ArrowDown, ArrowUp, Minus } from "lucide-react"
 
 interface OrderPriorityBadgeProps {

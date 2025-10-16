@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DollarSign, Lock, Unlock, AlertCircle } from "lucide-react"
 import { useState } from "react"
-import { useCashSession } from "@/lib/useCashSession"
+import { useCashSession } from "@/hooks/useCashSession"
 import {
   OpenSessionDialog,
   TransactionDialog,

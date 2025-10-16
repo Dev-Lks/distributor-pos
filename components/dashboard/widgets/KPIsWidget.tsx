@@ -4,7 +4,7 @@ import { DollarSign, Receipt, AlertTriangle, Package, TrendingUp, TrendingDown }
 import { Card, CardContent } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { useKPIs } from "@/lib/useKPIs"
+import { useKPIs } from "@/hooks/useKPIs"
 
 interface KPIItem {
   label: string

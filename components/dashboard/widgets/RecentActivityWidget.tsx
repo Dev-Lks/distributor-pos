@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { useRecentActivity } from "@/lib/useRecentActivity"
+import { useRecentActivity } from "@/hooks/useRecentActivity"
 
 export function RecentActivityWidget() {
   const { data: activities, isLoading, error, refetch } = useRecentActivity(10)

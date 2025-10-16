@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { OrderStatus } from "@/lib/useOrders"
+import { OrderStatus } from "@/hooks/useOrders"
 
 interface OrderStatusBadgeProps {
   status: OrderStatus

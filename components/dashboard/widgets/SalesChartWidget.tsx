@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertTriangle, TrendingUp } from "lucide-react"
-import { useSalesMetrics } from "@/lib/useSales"
+import { useSalesMetrics } from "@/hooks/useSales"
 import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
 

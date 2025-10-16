@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { AlertTriangle, Phone, FileText, MapPin } from "lucide-react"
-import type { DuplicateMatch } from "@/lib/useCheckDuplicates"
-import type { CustomerSummary } from "@/lib/useCustomers"
+import type { DuplicateMatch } from "@/hooks/useCheckDuplicates"
+import type { CustomerSummary } from "@/hooks/useCustomers"
 
 interface DuplicateWarningDialogProps {
   open: boolean

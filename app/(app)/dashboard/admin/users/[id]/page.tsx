@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
-import { usePermissions } from "@/lib/usePermissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PermissionsManager } from "@/components/PermissionsManager";

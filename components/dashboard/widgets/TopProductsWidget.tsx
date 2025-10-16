@@ -1,7 +1,7 @@
 "use client"
 
 import { TrendingUp, TrendingDown, Minus, Package } from "lucide-react"
-import { useTopProducts } from "@/lib/useTopProducts"
+import { useTopProducts } from "@/hooks/useTopProducts"
 import { WidgetWrapper } from "@/components/dashboard/WidgetWrapper"
 
 interface TopProductsWidgetProps {

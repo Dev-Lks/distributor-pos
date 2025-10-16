@@ -8,6 +8,7 @@ export * from './inventory'
 export * from './customers'
 export * from './users'
 export * from './points'
+export * from './hardware'
 
 // Re-exportar tipos úteis
 export type { z } from 'zod'

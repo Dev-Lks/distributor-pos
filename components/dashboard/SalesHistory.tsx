@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { SaleRecord } from "@/lib/useSales"
+import type { SaleRecord } from "@/hooks/useSales"
 
 interface SalesHistoryProps {
   sales: SaleRecord[]

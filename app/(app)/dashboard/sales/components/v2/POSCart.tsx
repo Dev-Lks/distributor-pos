@@ -14,6 +14,7 @@ import {
   Package,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils/formatters"
 
 interface CartItem {
   id: string
@@ -42,12 +43,6 @@ export function POSCart({
   customer,
   onCustomerClick,
 }: POSCartProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value)
-
   if (cart.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8 text-center">

@@ -1,7 +1,7 @@
 "use client"
 
 import { ReactNode } from "react"
-import { useSwipeGesture } from "@/lib/useSwipeGesture"
+import { useSwipeGesture } from "@/hooks/useSwipeGesture"
 import { Trash2, Edit, Archive, MoreHorizontal } from "lucide-react"
 import { cn } from "@/lib/utils"
 

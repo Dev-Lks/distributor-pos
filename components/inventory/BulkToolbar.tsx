@@ -40,7 +40,7 @@ import {
   Tags,
   X,
 } from "lucide-react";
-import { useBulkOperation } from "@/lib/useInventoryAdvanced";
+import { useBulkOperation } from "@/hooks/useInventoryAdvanced";
 import { cn } from "@/lib/utils";
 
 interface BulkToolbarProps {

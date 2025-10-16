@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ZodError } from 'zod'
 import { logger } from '@/lib/logger'
 import { 
   generateSaleReceipt, 
@@ -7,18 +8,12 @@ import {
   generateDeliveryReceipt 
 } from '@/lib/hardware/printerTemplates'
 import { prisma } from '@/lib/prisma'
-import type { ReceiptType } from '@/lib/hardware/types'
+import { printerPrintSchema } from '@/lib/validations'
 
 export async function POST(request: NextRequest) {
   try {
-    const { data, type } = await request.json() as { data: any; type: ReceiptType }
-    
-    if (!data || !type) {
-      return NextResponse.json(
-        { success: false, message: 'Dados ou tipo de recibo não fornecidos' },
-        { status: 400 }
-      )
-    }
+    const { data, type } = printerPrintSchema.parse(await request.json())
+    const payload = data as Record<string, any>
 
     // Busca configurações globais do sistema
     let systemSettings = await prisma.systemSettings.findFirst();
@@ -33,7 +28,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Busca configurações de hardware do ponto de venda (se houver)
-    const pointOfSaleId = data.pointOfSaleId
+    const pointOfSaleId = typeof payload.pointOfSaleId === 'string' ? payload.pointOfSaleId : undefined
     let hardwareConfig = null
     
     if (pointOfSaleId) {
@@ -58,8 +53,17 @@ export async function POST(request: NextRequest) {
     switch (type) {
       case 'sale':
         // Busca venda completa
+        const saleId = typeof payload.id === 'string' ? payload.id : typeof payload.saleId === 'string' ? payload.saleId : null
+
+        if (!saleId) {
+          return NextResponse.json(
+            { success: false, message: 'Identificador da venda é obrigatório' },
+            { status: 400 }
+          )
+        }
+
         const sale = await prisma.sale.findUnique({
-          where: { id: data.id || data.saleId },
+          where: { id: saleId },
           include: {
             items: {
               include: {
@@ -93,11 +97,20 @@ export async function POST(request: NextRequest) {
         break
 
       case 'cash-transaction':
-        template = generateCashTransactionReceipt(data, config)
+        // Build a transaction object with required fields so the receipt generator receives a proper CashTransaction
+        const cashTransaction = {
+          type: (payload.type as any) ?? 'SUPPLY',
+          amount: Number((payload.amount ?? payload.value) ?? 0),
+          createdAt: payload.createdAt ?? new Date().toISOString(),
+          description: payload.description,
+          performedBy: payload.performedBy,
+        } as any
+
+        template = generateCashTransactionReceipt(cashTransaction, config)
         break
 
       case 'cash-closing':
-        template = generateCashClosingReceipt(data, config)
+        template = generateCashClosingReceipt(payload, config)
         break
 
       case 'delivery':
@@ -105,10 +118,12 @@ export async function POST(request: NextRequest) {
       case 'delivery-customer':
       case 'delivery-organizer':
         // Busca entrega completa se for um ID
-        let deliveryData = data
-        if (data.id || data.deliveryId) {
+  let deliveryData: Record<string, any> = payload
+        const deliveryId = typeof payload.id === 'string' ? payload.id : typeof payload.deliveryId === 'string' ? payload.deliveryId : null
+
+        if (deliveryId) {
           const delivery = await prisma.delivery.findUnique({
-            where: { id: data.id || data.deliveryId },
+            where: { id: deliveryId },
             include: {
               customer: true,
               driver: true,
@@ -124,7 +139,7 @@ export async function POST(request: NextRequest) {
           
           deliveryData = {
             ...delivery,
-            items: data.items || [],
+            items: Array.isArray(payload.items) ? payload.items : [],
           }
         }
         
@@ -132,8 +147,8 @@ export async function POST(request: NextRequest) {
         let receiptType: 'driver' | 'customer' | 'organizer' = 'customer'
         if (type === 'delivery-driver') receiptType = 'driver'
         else if (type === 'delivery-organizer') receiptType = 'organizer'
-        else if (data.receiptType) receiptType = data.receiptType
-        
+        else if (typeof payload.receiptType === 'string') receiptType = payload.receiptType as 'driver' | 'customer' | 'organizer'
+
         template = generateDeliveryReceipt(deliveryData, config, receiptType)
         break
 
@@ -186,6 +201,14 @@ export async function POST(request: NextRequest) {
       message: 'Recibo impresso com sucesso' 
     })
   } catch (error) {
+    if (error instanceof ZodError) {
+      const issue = error.issues.at(0)
+      return NextResponse.json(
+        { success: false, message: issue?.message ?? 'Dados inválidos' },
+        { status: 400 }
+      )
+    }
+
     logger.error('Erro ao imprimir:', { error })
     
     // TODO: Registra falha no job quando PrintJob estiver disponível

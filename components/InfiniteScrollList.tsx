@@ -1,6 +1,6 @@
 "use client"
 
-import { useInfiniteScroll } from '@/lib/useInfiniteScroll'
+import { useInfiniteScroll } from '@/hooks/useInfiniteScroll'
 import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 

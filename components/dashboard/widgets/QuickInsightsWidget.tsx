@@ -5,9 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { cn } from "@/lib/utils"
-import { useStockAlerts } from "@/lib/useStockAlerts"
-import { useTopProducts } from "@/lib/useTopProducts"
-import { useOrders } from "@/lib/useOrders"
+import { useStockAlerts } from "@/hooks/useStockAlerts"
+import { useTopProducts } from "@/hooks/useTopProducts"
+import { useOrders } from "@/hooks/useOrders"
 
 interface Insight {
   icon: any

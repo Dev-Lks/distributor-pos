@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { LineChart, Line, ResponsiveContainer } from "recharts"
-import { useCashSession } from "@/lib/useCashSession"
+import { useCashSession } from "@/hooks/useCashSession"
 
 export function CashFlowWidget() {
   const { session, isLoading, refetch } = useCashSession()

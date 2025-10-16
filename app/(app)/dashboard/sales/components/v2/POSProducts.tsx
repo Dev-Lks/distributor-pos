@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Search, Package, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils/formatters"
 
 interface Product {
   id: string
@@ -33,12 +34,6 @@ export function POSProducts({
   onProductClick,
   isSessionOpen,
 }: POSProductsProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value)
-
   return (
     <div className="flex h-full flex-col">
       {/* Search */}

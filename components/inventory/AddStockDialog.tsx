@@ -20,7 +20,7 @@ import {
   CheckCircle2,
   TrendingUp,
 } from "lucide-react"
-import type { Product } from "@/lib/useProducts"
+import type { Product } from "@/hooks/useProducts"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",

@@ -7,11 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { CreditCard, DollarSign, Receipt, Banknote } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL"
-})
+import { formatCurrency } from "@/lib/utils/formatters"
 
 interface PaymentPanelProps {
   total: number
@@ -183,7 +179,7 @@ export function PaymentPanel({
                     Troco
                   </span>
                   <span className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {currencyFormatter.format(change)}
+                    {formatCurrency(change)}
                   </span>
                 </div>
               </div>
@@ -198,7 +194,7 @@ export function PaymentPanel({
           <div className="flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Total a Pagar</span>
             <span className="text-3xl font-bold text-primary">
-              {currencyFormatter.format(total)}
+              {formatCurrency(total)}
             </span>
           </div>
 

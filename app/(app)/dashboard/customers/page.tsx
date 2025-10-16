@@ -4,7 +4,7 @@ import { useMemo, useState } from "react"
 import { toast } from "sonner"
 import { Plus, Edit, Trash2, Loader2, Gift, Users } from "lucide-react"
 import { useQueryClient } from "@tanstack/react-query"
-import { usePullToRefresh } from "@/lib/usePullToRefresh"
+import { usePullToRefresh } from "@/hooks/usePullToRefresh"
 import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 
 import { Button } from "@/components/ui/button"
@@ -41,14 +41,16 @@ import {
   useDeleteCustomer,
   useUpdateCustomer,
   type CustomerSummary,
-} from "@/lib/useCustomers"
+} from "@/hooks/useCustomers"
 import {
   useCreateCustomerBonification,
   useCustomerBonifications,
   useDeleteCustomerBonification,
   useUpdateCustomerBonification,
   type CustomerBonificationEntry,
-} from "@/lib/useCustomerBonifications"
+} from "@/hooks/useCustomerBonifications"
+import { formatPhone, formatDate, formatDocumentDisplay } from "@/lib/utils/formatters"
+import { sanitizeDocument, formatDocument as baseFormatDocument } from "@/lib/documents"
 
 const CATEGORY_OPTIONS = [
   { value: "BONIFICATION", label: "Bonificação" },
@@ -89,42 +91,9 @@ const buildEmptyBonificationForm = (): BonificationFormState => ({
   bonifiedAt: new Date().toISOString().slice(0, 10),
 })
 
-const formatPhone = (phone: string | null) => {
-  if (!phone) return "—"
-  const digits = phone.replace(/\D/g, "")
-  if (digits.length === 11) {
-    return digits.replace(/(\d{2})(\d{5})(\d{4})/, "($1) $2-$3")
-  }
-  if (digits.length === 10) {
-    return digits.replace(/(\d{2})(\d{4})(\d{4})/, "($1) $2-$3")
-  }
-  return phone
-}
-
 const formatAddress = (customer: CustomerSummary) => {
   if (!customer.address) return "—"
   return customer.address
-}
-
-const formatDocument = (document: string | null) => {
-  if (!document) return "—"
-  const digits = document.replace(/\D/g, "")
-  if (digits.length === 11) {
-    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4")
-  }
-  if (digits.length === 14) {
-    return digits.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, "$1.$2.$3/$4-$5")
-  }
-  return document
-}
-
-const formatDate = (isoDate: string) => {
-  try {
-    const date = new Date(isoDate)
-    return date.toLocaleDateString("pt-BR", { timeZone: "UTC" })
-  } catch {
-    return "—"
-  }
 }
 
 const mapProductsToString = (products: string[]) => (products.length ? products.join(", ") : "—")
@@ -174,12 +143,31 @@ export default function CustomersPage() {
   const deleteBonification = useDeleteCustomerBonification()
 
   const filteredCustomers = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase()
-    if (!term) return customers
+    const normalizedTerm = searchTerm.trim().toLowerCase()
+    const digitTerm = sanitizeDocument(searchTerm)
+    if (!normalizedTerm) return customers
+
     return customers.filter((customer) => {
-      const haystack = `${customer.name} ${customer.phone ?? ""} ${customer.address ?? ""} ${customer.document ?? ""} ${formatDocument(customer.document).replace(/\D/g, "")}`.toLowerCase()
-      const normalizedTerm = term.replace(/\D/g, "")
-      return haystack.includes(term) || (!!normalizedTerm && (customer.document ?? "").includes(normalizedTerm))
+      const name = customer.name.toLowerCase()
+      const phone = (customer.phone ?? "").toLowerCase()
+      const address = (customer.address ?? "").toLowerCase()
+      const document = customer.document ?? ""
+      const formattedDocument = formatDocumentDisplay(document).toLowerCase()
+
+      if (
+        name.includes(normalizedTerm) ||
+        phone.includes(normalizedTerm) ||
+        address.includes(normalizedTerm) ||
+        formattedDocument.includes(normalizedTerm)
+      ) {
+        return true
+      }
+
+      if (!digitTerm) return false
+
+      const documentDigits = sanitizeDocument(document) ?? ""
+      const phoneDigits = sanitizeDocument(customer.phone) ?? ""
+      return documentDigits.includes(digitTerm) || phoneDigits.includes(digitTerm)
     })
   }, [customers, searchTerm])
 
@@ -207,7 +195,7 @@ export default function CustomersPage() {
     setCustomerBeingEdited(customer)
     setCustomerForm({
       name: customer.name,
-      document: customer.document ? formatDocument(customer.document) : "",
+      document: baseFormatDocument(customer.document) ?? "",
       phone: customer.phone ?? "",
       address: customer.address ?? "",
     })
@@ -424,7 +412,7 @@ export default function CustomersPage() {
                     filteredCustomers.map((customer) => (
                       <TableRow key={customer.id}>
                         <TableCell className="font-medium">{customer.name}</TableCell>
-                        <TableCell>{formatDocument(customer.document)}</TableCell>
+                        <TableCell>{formatDocumentDisplay(customer.document)}</TableCell>
                         <TableCell>{formatPhone(customer.phone)}</TableCell>
                         <TableCell>{formatAddress(customer)}</TableCell>
                         <TableCell className="text-center">

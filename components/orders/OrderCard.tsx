@@ -1,6 +1,6 @@
 "use client"
 
-import { Order } from "@/lib/useOrders"
+import { Order } from "@/hooks/useOrders"
 import { OrderStatusBadge } from "./OrderStatusBadge"
 import { OrderPriorityBadge } from "./OrderPriorityBadge"
 import { formatDistanceToNow } from "date-fns"

@@ -2,7 +2,7 @@ import { useCallback } from "react"
 import { toast } from "sonner"
 import { handleError } from "@/lib/errors"
 import { logger } from "@/lib/logger"
-import { useCashSession } from "@/lib/useCashSession"
+import { useCashSession } from "@/hooks/useCashSession"
 import type { CashTransactionTypeLiteral } from "@/types/cash"
 
 /**

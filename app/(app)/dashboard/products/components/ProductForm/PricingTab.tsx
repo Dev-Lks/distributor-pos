@@ -1,6 +1,7 @@
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Calculator } from "lucide-react"
+import { formatCurrency } from "@/lib/utils/formatters"
 import type { ProductFormState, FieldChangeHandler } from "../../../products/types"
 
 interface MarginPreview {
@@ -21,9 +22,6 @@ const FieldError = ({ message }: { message?: string }) => {
   if (!message) return null
   return <p className="text-xs text-destructive">{message}</p>
 }
-
-const formatCurrency = (value?: number) =>
-  value !== undefined ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "--"
 
 export function PricingTab({ formData, onFieldChange, errors, marginPreview }: PricingTabProps) {
   return (

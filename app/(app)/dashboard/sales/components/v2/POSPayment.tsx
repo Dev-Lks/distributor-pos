@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils/formatters"
 
 interface POSPaymentProps {
   total: number
@@ -46,12 +47,6 @@ export function POSPayment({
   onReprint,
   hasLastSale,
 }: POSPaymentProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value)
-
   const quickCashValues = [20, 50, 100, 200]
 
   return (

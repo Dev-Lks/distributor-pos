@@ -22,7 +22,7 @@ import {
   useCreateDeliveryZone,
   useUpdateDeliveryZone,
   useDeleteDeliveryZone,
-} from "@/lib/useDeliveryZones"
+} from "@/hooks/useDeliveryZones"
 import type { CreateDeliveryZoneInput } from "@/types/delivery"
 import { toast } from "sonner"
 import { Loader } from "@/components/Loader"

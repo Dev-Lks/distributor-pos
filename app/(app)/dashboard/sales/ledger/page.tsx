@@ -38,8 +38,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
-import { useSales, type SaleRecord, type UpdateSalePayload } from "@/lib/useSales"
-import { useCashSession } from "@/lib/useCashSession"
+import { useSales, type SaleRecord, type UpdateSalePayload } from "@/hooks/useSales"
+import { useCashSession } from "@/hooks/useCashSession"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",

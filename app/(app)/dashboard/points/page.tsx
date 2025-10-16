@@ -16,7 +16,7 @@ import {
   useUpdatePointOfSale,
   useDeletePointOfSale,
   type PointOfSale
-} from "@/lib/usePointsOfSale"
+} from "@/hooks/usePointsOfSale"
 
 export default function PointsOfSalePage() {
   const { data: points = [], isLoading, error } = usePointsOfSale()

@@ -26,6 +26,10 @@ const updateSchema = z.object({
   ).optional(),
 })
 
+const paramsSchema = z.object({
+  id: z.string().min(1, "Invalid cart id"),
+})
+
 async function requireUser() {
   const session = await getServerSession(authOptions)
 
@@ -37,8 +41,8 @@ async function requireUser() {
 }
 
 export async function GET(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
   try {
+    const { id } = paramsSchema.parse(await params)
     await requireUser()
 
     const cart = await prisma.pendingCart.findUnique({
@@ -66,6 +70,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json(cart)
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issue = error.issues.at(0)
+      return NextResponse.json({ error: issue?.message ?? "Invalid cart id" }, { status: 400 })
+    }
     if (error instanceof Error && error.message === "UNAUTHORIZED") {
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
     }
@@ -76,8 +84,8 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
   try {
+    const { id } = paramsSchema.parse(await params)
     await requireUser()
 
     const body = await request.json()
@@ -92,6 +100,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     return NextResponse.json(cart)
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issue = error.issues.at(0)
+      if (issue?.path?.[0] === "id") {
+        return NextResponse.json({ error: issue?.message ?? "Invalid cart id" }, { status: 400 })
+      }
+      const payloadIssue = error.issues.at(0)
+      return NextResponse.json({ error: payloadIssue?.message ?? "Invalid payload" }, { status: 400 })
+    }
     if (error instanceof Error) {
       if (error.message === "UNAUTHORIZED") {
         return NextResponse.json({ error: "Not authenticated" }, { status: 401 })
@@ -110,14 +126,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
   try {
+    const { id } = paramsSchema.parse(await params)
     await requireUser()
 
     await cancelPendingCart(id)
 
     return NextResponse.json({ success: true })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issue = error.issues.at(0)
+      return NextResponse.json({ error: issue?.message ?? "Invalid cart id" }, { status: 400 })
+    }
     if (error instanceof Error) {
       if (error.message === "UNAUTHORIZED") {
         return NextResponse.json({ error: "Not authenticated" }, { status: 401 })

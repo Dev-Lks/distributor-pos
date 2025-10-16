@@ -5,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
+import { formatCurrency } from "@/lib/utils/formatters"
 import {
   ShoppingCart,
   Plus,
@@ -41,12 +42,6 @@ export function DeliveryCart({
   deliveryFee = 0,
   total,
 }: DeliveryCartProps) {
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-    }).format(value)
-
   if (cart.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8 text-center border rounded-lg bg-muted/20">

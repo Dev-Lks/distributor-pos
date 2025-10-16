@@ -15,13 +15,13 @@ import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Package, Store, Plus, Minus, Trash2, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
-import type { Product } from "@/lib/useProducts"
-import type { PointOfSale } from "@/lib/usePointsOfSale"
+import type { Product } from "@/hooks/useProducts"
+import type { PointOfSale } from "@/hooks/usePointsOfSale"
 import {
   useCreateProductPointOfSale,
   useUpdateProductPointOfSale,
   useDeleteProductPointOfSale,
-} from "@/lib/useProductPointsOfSale"
+} from "@/hooks/useProductPointsOfSale"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",

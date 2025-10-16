@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { ZodError } from 'zod'
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
+import { hardwareConfigParamsSchema } from '@/lib/validations'
 
 // GET - Buscar configuração de hardware por ponto de venda
 export async function GET(
@@ -8,7 +10,8 @@ export async function GET(
   { params }: { params: Promise<{ pointOfSaleId: string }> }
 ) {
   try {
-    const { pointOfSaleId } = await params
+    const routeParams = await params
+    const { pointOfSaleId } = hardwareConfigParamsSchema.parse(routeParams)
 
     const config = await prisma.hardwareConfig.findUnique({
       where: { pointOfSaleId },
@@ -23,6 +26,14 @@ export async function GET(
 
     return NextResponse.json(config)
   } catch (error) {
+    if (error instanceof ZodError) {
+      const issue = error.issues.at(0)
+      return NextResponse.json(
+        { error: issue?.message ?? 'Parâmetros inválidos' },
+        { status: 400 }
+      )
+    }
+
     logger.error('Erro ao buscar configuração:', { error })
     return NextResponse.json(
       { error: 'Erro interno do servidor' },

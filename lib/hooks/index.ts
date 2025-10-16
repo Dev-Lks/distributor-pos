@@ -4,10 +4,10 @@
  */
 
 // Performance Hooks (Sprint 3)
-export { useDebounce } from '../useDebounce'
-export { useThrottle } from '../useThrottle'
-export { useLazyImage } from '../useLazyImage'
-export { useSlowConnection, useBatterySaver } from '../usePerformance'
+export { useDebounce } from '@/hooks/useDebounce'
+export { useThrottle } from '@/hooks/useThrottle'
+export { useLazyImage } from '@/hooks/useLazyImage'
+export { useSlowConnection, useBatterySaver } from '@/hooks/usePerformance'
 
 // UX Hooks (Sprint 4)
-export { useReducedMotion } from '../useReducedMotion'
+export { useReducedMotion } from '@/hooks/useReducedMotion'

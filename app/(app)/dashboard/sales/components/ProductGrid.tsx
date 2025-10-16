@@ -9,12 +9,8 @@ import { Label } from "@/components/ui/label"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Search, Zap, Package, AlertTriangle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { Product } from "@/lib/useProducts"
-
-const currencyFormatter = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL"
-})
+import { formatCurrency } from "@/lib/utils/formatters"
+import type { Product } from "@/hooks/useProducts"
 
 interface ProductGridProps {
   products: Product[]
@@ -233,7 +229,7 @@ export function ProductGrid({
                         "font-bold text-primary",
                         quickMode ? "text-lg md:text-xl" : "text-xl md:text-2xl"
                       )}>
-                        {currencyFormatter.format(product.salePrice)}
+                        {formatCurrency(product.salePrice)}
                       </div>
                       <div className={cn(
                         "text-muted-foreground font-medium",

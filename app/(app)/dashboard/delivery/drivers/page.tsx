@@ -28,7 +28,7 @@ import {
   useCreateDeliveryDriver,
   useUpdateDeliveryDriver,
   useDeleteDeliveryDriver,
-} from "@/lib/useDeliveryDrivers"
+} from "@/hooks/useDeliveryDrivers"
 import type { CreateDeliveryDriverInput, VehicleType } from "@/types/delivery"
 import { toast } from "sonner"
 import { Loader } from "@/components/Loader"

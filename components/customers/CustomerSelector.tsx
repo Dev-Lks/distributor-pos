@@ -1,8 +1,8 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { useSearchCustomers, useRecentCustomers, type CustomerSummary } from "@/lib/useCustomers"
-import { useDebounce } from "@/lib/useDebounce"
+import { useSearchCustomers, useRecentCustomers, type CustomerSummary } from "@/hooks/useCustomers"
+import { useDebounce } from "@/hooks/useDebounce"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"

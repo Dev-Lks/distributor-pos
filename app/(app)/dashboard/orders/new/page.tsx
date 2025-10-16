@@ -2,9 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useCreateOrder, CreateOrderInput } from "@/lib/useOrders"
-import { useCustomers } from "@/lib/useCustomers"
-import { useProducts } from "@/lib/useProducts"
+import { useCreateOrder, CreateOrderInput } from "@/hooks/useOrders"
+import { useCustomers } from "@/hooks/useCustomers"
+import { useProducts } from "@/hooks/useProducts"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"

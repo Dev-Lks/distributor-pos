@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import { useOrder, useUpdateOrderStatus, useDeleteOrder } from "@/lib/useOrders"
+import { useOrder, useUpdateOrderStatus, useDeleteOrder } from "@/hooks/useOrders"
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge"
 import { OrderPriorityBadge } from "@/components/orders/OrderPriorityBadge"
 import { Button } from "@/components/ui/button"
