@@ -7,7 +7,7 @@ export interface FormatNumberOptions extends Intl.NumberFormatOptions {
   locale?: string
 }
 
-export interface FormatCurrencyOptions extends FormatNumberOptions {}
+export type FormatCurrencyOptions = FormatNumberOptions
 
 export interface FormatPercentageOptions extends FormatNumberOptions {
   multiplyBy100?: boolean
