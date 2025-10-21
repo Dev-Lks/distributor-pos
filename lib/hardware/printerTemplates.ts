@@ -140,28 +140,30 @@ export function generateSaleReceipt(
     .blank()
     .separator('-')
     .columns([
-      { text: 'ITEM', width: Math.max(16, width - 18) },
+      { text: '#', width: Math.min(4, width > 32 ? 4 : 3), align: 'right' },
+      { text: 'ITEM', width: Math.max(14, width - 26) },
       { text: 'QTD', width: 6, align: 'right' },
+      { text: 'UNIT', width: 8, align: 'right' },
       { text: 'TOTAL', align: 'right' }
-    ], 2, { bold: true })
+    ], 1, { bold: true })
     .separator('-')
 
-  for (const item of sale.items) {
-    const itemName = truncateString(item.product.name, width)
-    const quantity = Number(item.quantity || 0)
-    const unitPrice = Number(item.price || 0)
-    const total = quantity * unitPrice
+  const aggregatedItems = aggregateSaleItems(sale.items)
 
-    builder
-      .text(itemName)
-      .columns([
-        { text: '', width: 2 },
-        { text: `${quantity}x`, width: 6 },
-        { text: formatCurrency(unitPrice), width: 12, align: 'right' },
-        { text: formatCurrency(total), align: 'right' }
-      ], 1)
-      .blank()
-  }
+  aggregatedItems.forEach((item, index) => {
+    const counter = `${index + 1}`
+    builder.columns([
+      { text: counter, width: Math.min(4, width > 32 ? 4 : 3), align: 'right' },
+      { text: truncateString(item.name, Math.max(14, width - 26)) },
+      { text: `${item.quantity}`, width: 6, align: 'right' },
+      { text: formatCurrency(item.unitPrice), width: 8, align: 'right' },
+      { text: formatCurrency(item.total), align: 'right' }
+    ])
+
+    if (item.notes) {
+      builder.text(`  ${truncateString(item.notes, width - 2)}`)
+    }
+  })
 
   builder.separator('-')
 
@@ -392,6 +394,20 @@ export function generateDeliveryReceipt(
       .blank()
       .text('INSTRUCOES:', { bold: true })
       .text(delivery.deliveryInstructions)
+  }
+
+  if (receiptType === 'driver') {
+    const mapsUrl = buildMapsNavigationUrl(delivery)
+    if (mapsUrl) {
+      builder
+        .blank()
+        .align('center')
+        .text('Mapa do destino')
+        .blank()
+        .qrcode(mapsUrl)
+        .blank()
+        .align('left')
+    }
   }
 
   builder.blank().separator('-')
@@ -648,4 +664,65 @@ function truncateString(str: string, maxLength: number): string {
   if (str.length <= safeLength) return str
   if (safeLength <= 3) return str.slice(0, safeLength)
   return `${str.slice(0, safeLength - 3)}...`
+}
+
+function aggregateSaleItems(items: (SaleItem & { product: Product })[]): Array<{
+  name: string
+  quantity: number
+  unitPrice: number
+  total: number
+  notes?: string
+}> {
+  const map = new Map<string, { name: string; quantity: number; total: number; notes?: string }>()
+
+  for (const item of items) {
+    const key = item.productId || `${item.product.name}-${item.price}`
+    const quantity = Number(item.quantity || 0)
+    const price = Number(item.price || 0)
+    const total = quantity * price
+    const existing = map.get(key)
+
+    if (existing) {
+      existing.quantity += quantity
+      existing.total += total
+    } else {
+      map.set(key, {
+        name: item.product.name,
+        quantity,
+        total,
+        notes: typeof item.product.description === 'string' ? item.product.description : undefined
+      })
+    }
+  }
+
+  return Array.from(map.values()).map(entry => ({
+    name: entry.name,
+    quantity: entry.quantity,
+    total: entry.total,
+    unitPrice: entry.quantity > 0 ? entry.total / entry.quantity : 0,
+    notes: entry.notes
+  }))
+}
+
+function buildMapsNavigationUrl(delivery: any): string | null {
+  const parts = [
+    delivery.deliveryAddress || delivery.address || '',
+    delivery.addressNumber || '',
+    delivery.district || '',
+    delivery.city || '',
+    delivery.state || '',
+    delivery.zipCode || delivery.postalCode || ''
+  ]
+
+  const address = parts
+    .map(part => String(part || '').trim())
+    .filter(Boolean)
+    .join(', ')
+
+  if (!address) {
+    return null
+  }
+
+  const encoded = encodeURIComponent(address)
+  return `https://www.google.com/maps/search/?api=1&query=${encoded}`
 }

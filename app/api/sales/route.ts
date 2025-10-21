@@ -535,6 +535,7 @@ export async function POST(request: NextRequest) {
         customerPhone: sanitizedCustomerPhone ?? null,
         customerDocument: sanitizedCustomerDocument ?? null,
         customerAddress: sanitizedCustomerAddress ?? null,
+        customerId: customerRecordId ?? null,
         channel: sanitizedChannel ?? null,
         subtotal,
         discountValue,
@@ -543,8 +544,8 @@ export async function POST(request: NextRequest) {
         costOfGoods,
         grossMargin: grossMarginValue,
         notes: sanitizedNotes ?? null,
-  pointOfSale: pointOfSaleId ? { connect: { id: pointOfSaleId } } : undefined,
-  cashSession: { connect: { id: activeCashSession.id } },
+        pointOfSale: pointOfSaleId ? { connect: { id: pointOfSaleId } } : undefined,
+        cashSession: { connect: { id: activeCashSession.id } },
         pendingCart: pendingCartId ? { connect: { id: pendingCartId } } : undefined,
         items: {
           create: saleItems.map((item) => ({
