@@ -116,10 +116,14 @@ export async function POST(request: NextRequest) {
       case 'delivery':
       case 'delivery-driver':
       case 'delivery-customer':
-      case 'delivery-organizer':
-        // Busca entrega completa se for um ID
-  let deliveryData: Record<string, any> = payload
-        const deliveryId = typeof payload.id === 'string' ? payload.id : typeof payload.deliveryId === 'string' ? payload.deliveryId : null
+      case 'delivery-organizer': {
+        let deliveryData: Record<string, any> = payload
+        const deliveryId =
+          typeof payload.id === 'string'
+            ? payload.id
+            : typeof payload.deliveryId === 'string'
+              ? payload.deliveryId
+              : null
 
         if (deliveryId) {
           const delivery = await prisma.delivery.findUnique({
@@ -127,30 +131,59 @@ export async function POST(request: NextRequest) {
             include: {
               customer: true,
               driver: true,
+              pointOfSale: true,
+              sale: {
+                include: {
+                  items: {
+                    include: {
+                      product: true,
+                    },
+                  },
+                },
+              },
             },
           })
-          
+
           if (!delivery) {
             return NextResponse.json(
               { success: false, message: 'Entrega não encontrada' },
               { status: 404 }
             )
           }
-          
+
+          const payloadItems = Array.isArray(payload.items) ? payload.items : []
+          const saleItems = delivery.sale?.items ?? []
+          const mappedItems = saleItems.map((item) => ({
+            id: item.id,
+            productId: item.productId,
+            name: item.product?.name ?? 'Item',
+            quantity: item.quantity,
+            unitPrice: item.price,
+            price: item.price,
+            totalPrice: item.price * item.quantity,
+          }))
+
           deliveryData = {
             ...delivery,
-            items: Array.isArray(payload.items) ? payload.items : [],
+            ...payload,
+            customer: payload.customer ?? delivery.customer,
+            driver: payload.driver ?? delivery.driver,
+            pointOfSaleId: payload.pointOfSaleId ?? delivery.pointOfSaleId ?? undefined,
+            pointOfSale: delivery.pointOfSale,
+            items: payloadItems.length > 0 ? payloadItems : mappedItems,
           }
         }
-        
-        // Determina o tipo de recibo
+
         let receiptType: 'driver' | 'customer' | 'organizer' = 'customer'
         if (type === 'delivery-driver') receiptType = 'driver'
         else if (type === 'delivery-organizer') receiptType = 'organizer'
-        else if (typeof payload.receiptType === 'string') receiptType = payload.receiptType as 'driver' | 'customer' | 'organizer'
+        else if (typeof payload.receiptType === 'string') {
+          receiptType = payload.receiptType as 'driver' | 'customer' | 'organizer'
+        }
 
         template = generateDeliveryReceipt(deliveryData, config, receiptType)
         break
+      }
 
       default:
         return NextResponse.json(

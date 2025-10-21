@@ -302,9 +302,14 @@ export interface DeliverySummary {
   customerName: string
   customerPhone?: string | null
   deliveryAddress: string
+  addressNumber?: string | null
+  addressComplement?: string | null
   district: string
   city: string
   state?: string | null
+  postalCode?: string | null
+  referencePoint?: string | null
+  deliveryInstructions?: string | null
   status: DeliveryStatus
   subtotal: number
   total: number
@@ -315,6 +320,7 @@ export interface DeliverySummary {
   vehicleType?: VehicleType | null
   rating?: number | null
   pointOfSaleName?: string | null
+  pointOfSaleId?: string | null
   distance?: number | null
   estimatedTime?: number | null
   createdAt: string | Date

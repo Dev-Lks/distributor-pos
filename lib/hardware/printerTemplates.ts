@@ -25,265 +25,298 @@ interface ReceiptConfig {
   showQRCode?: boolean
 }
 
+interface ColumnSpec {
+  text: string
+  width?: number
+  align?: 'left' | 'right' | 'center'
+}
+
+class ThermalTemplateBuilder {
+  private readonly commands: PrintCommand[] = []
+  private readonly width: number
+
+  constructor(width?: number) {
+    this.width = normalizeWidth(width)
+  }
+
+  align(value: 'left' | 'center' | 'right'): this {
+    this.commands.push({ type: 'align', value })
+    return this
+  }
+
+  text(value: string, options?: { bold?: boolean; size?: 'small' | 'normal' | 'large'; align?: 'left' | 'center' | 'right' }): this {
+    const command: PrintCommand = { type: 'text', value }
+    if (options?.bold) command.bold = true
+    if (options?.size) command.size = options.size
+    if (options?.align) command.align = options.align
+    this.commands.push(command)
+    return this
+  }
+
+  blank(lines = 1): this {
+    if (lines > 0) {
+      this.commands.push({ type: 'feed', lines })
+    }
+    return this
+  }
+
+  separator(char: string = '-'): this {
+    this.commands.push({ type: 'separator', char })
+    return this
+  }
+
+  qrcode(data: string): this {
+    this.commands.push({ type: 'qrcode', data })
+    return this
+  }
+
+  barcode(data: string): this {
+    this.commands.push({ type: 'barcode', data })
+    return this
+  }
+
+  keyValue(label: string, value: string, options?: { bold?: boolean; size?: 'small' | 'normal' | 'large'; gap?: number }): this {
+    const textLine = formatColumns([
+      { text: label },
+      { text: value, align: 'right' }
+    ], this.width, options?.gap ?? 2)
+
+    return this.text(textLine, { bold: options?.bold, size: options?.size })
+  }
+
+  columns(columns: ColumnSpec[], gap = 1, options?: { bold?: boolean; size?: 'small' | 'normal' | 'large' }): this {
+    const textLine = formatColumns(columns, this.width, gap)
+    return this.text(textLine, { bold: options?.bold, size: options?.size })
+  }
+
+  raw(command: PrintCommand): this {
+    this.commands.push(command)
+    return this
+  }
+
+  cut(): this {
+    this.commands.push({ type: 'cut' })
+    return this
+  }
+
+  getWidth(): number {
+    return this.width
+  }
+
+  build(): ReceiptTemplate {
+    return { commands: this.commands }
+  }
+}
+
 export function generateSaleReceipt(
   sale: SaleWithItems,
   config: ReceiptConfig
 ): ReceiptTemplate {
-  const commands: PrintCommand[] = []
-  const lineWidth = config.width || 48
-  
-  // Header - Centralizado e bem formatado
-  commands.push({ type: 'align', value: 'center' })
-  commands.push({ type: 'text', value: config.storeName.toUpperCase(), size: 'large', bold: true })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  if (config.storeDocument) {
-    commands.push({ type: 'text', value: `CNPJ: ${config.storeDocument}` })
+  const builder = new ThermalTemplateBuilder(config.width)
+  const width = builder.getWidth()
+
+  renderStoreHeader(builder, config, { uppercase: true })
+
+  builder
+    .text('CUPOM NAO-FISCAL')
+    .text(`Venda #${sale.id.slice(-8).toUpperCase()}`)
+    .text(`Data: ${formatDateTime(sale.date, {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })}`)
+
+  if (sale.pointOfSale?.name) {
+    builder.text(`PDV: ${sale.pointOfSale.name}`)
   }
-  
-  if (config.storeAddress) {
-    commands.push({ type: 'text', value: config.storeAddress })
-  }
-  
-  if (config.storePhone) {
-    commands.push({ type: 'text', value: `Tel: ${config.storePhone}` })
-  }
-  
-  commands.push({ type: 'feed', lines: 1 })
-  // Separador com largura exata
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  // Informações da venda
-  commands.push({ type: 'align', value: 'left' })
-  commands.push({ type: 'text', value: `CUPOM NAO-FISCAL` })
-  commands.push({ type: 'text', value: `Venda #${sale.id.slice(-8).toUpperCase()}` })
-  commands.push({ type: 'text', value: `Data: ${new Date(sale.date).toLocaleString('pt-BR', {
-    day: '2-digit',
-    month: '2-digit', 
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })}` })
-  
-  if (sale.pointOfSale) {
-    commands.push({ type: 'text', value: `PDV: ${sale.pointOfSale.name}` })
-  }
-  
+
   if (sale.customerName) {
-    commands.push({ type: 'text', value: `Cliente: ${sale.customerName}` })
+    builder.text(`Cliente: ${sale.customerName}`)
   }
-  
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '-' })
-  
-  // Cabeçalho dos produtos - Melhor formatado
-  commands.push({ type: 'text', value: padString('ITEM', 20) + ' ' + padString('QTD', 4, ' ') + ' ' + padString('TOTAL', lineWidth - 26) })
-  commands.push({ type: 'separator', char: '-' })
-  
-  // Produtos - Com melhor formatação
+
+  builder
+    .blank()
+    .separator('-')
+    .columns([
+      { text: 'ITEM', width: Math.max(16, width - 18) },
+      { text: 'QTD', width: 6, align: 'right' },
+      { text: 'TOTAL', align: 'right' }
+    ], 2, { bold: true })
+    .separator('-')
+
   for (const item of sale.items) {
-    const productName = truncateString(item.product.name, lineWidth - 2)
-    commands.push({ type: 'text', value: productName })
-    
-    const qtyText = `${item.quantity}x`
-    const priceText = `R$ ${item.price.toFixed(2)}`
-    const totalText = `R$ ${(item.quantity * item.price).toFixed(2)}`
-    
-    const itemLine = '  ' + padString(qtyText, 5) + ' ' + 
-                     padString(priceText, 12) + ' ' + 
-                     padString(totalText, lineWidth - 20, ' ', 'right')
-    commands.push({ type: 'text', value: itemLine })
-    commands.push({ type: 'feed', lines: 1 })
+    const itemName = truncateString(item.product.name, width)
+    const quantity = Number(item.quantity || 0)
+    const unitPrice = Number(item.price || 0)
+    const total = quantity * unitPrice
+
+    builder
+      .text(itemName)
+      .columns([
+        { text: '', width: 2 },
+        { text: `${quantity}x`, width: 6 },
+        { text: formatCurrency(unitPrice), width: 12, align: 'right' },
+        { text: formatCurrency(total), align: 'right' }
+      ], 1)
+      .blank()
   }
-  
-  commands.push({ type: 'separator', char: '-' })
-  
-  // Totais - Melhor alinhamento
+
+  builder.separator('-')
+
   if (sale.subtotal && sale.subtotal !== sale.total) {
-    commands.push({ 
-      type: 'text', 
-      value: padString('Subtotal:', lineWidth - 15) + padString(`R$ ${sale.subtotal.toFixed(2)}`, 15, ' ', 'right')
-    })
+    builder.keyValue('Subtotal:', formatCurrency(Number(sale.subtotal)))
   }
-  
-  if (sale.discountValue > 0) {
-    commands.push({ 
-      type: 'text', 
-      value: padString('Desconto:', lineWidth - 15) + padString(`-R$ ${sale.discountValue.toFixed(2)}`, 15, ' ', 'right')
-    })
+
+  const discountValue = Number(sale.discountValue || 0)
+  if (discountValue > 0) {
+    builder.keyValue('Desconto:', formatCurrency(-discountValue))
   }
-  
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ 
-    type: 'text', 
-    value: padString('TOTAL:', lineWidth - 15) + padString(`R$ ${sale.total.toFixed(2)}`, 15, ' ', 'right'),
-    size: 'large',
-    bold: true
-  })
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  // Pagamento
+
+  builder
+    .separator('=')
+    .keyValue('TOTAL:', formatCurrency(Number(sale.total)), { bold: true, size: 'large' })
+    .separator('=')
+    .blank()
+
   if (sale.paymentMethod) {
     const paymentMap: Record<string, string> = {
-      'cash': 'Dinheiro',
-      'card': 'Cartão',
-      'pix': 'PIX',
-      'debit': 'Cartão Débito',
-      'credit': 'Cartão Crédito',
+      cash: 'Dinheiro',
+      card: 'Cartao',
+      pix: 'PIX',
+      debit: 'Cartao Debito',
+      credit: 'Cartao Credito'
     }
-    commands.push({ 
-      type: 'text', 
-      value: `Forma de Pagamento: ${paymentMap[sale.paymentMethod] || sale.paymentMethod}` 
-    })
+    builder.text(`Forma de Pagamento: ${paymentMap[sale.paymentMethod] || sale.paymentMethod}`)
   }
-  
-  commands.push({ type: 'feed', lines: 2 })
-  
-  // QR Code (se configurado)
+
+  builder.blank(2)
+
   if (config.showQRCode !== false) {
-    commands.push({ type: 'align', value: 'center' })
-    commands.push({ type: 'text', value: 'Consulte sua venda:' })
-    commands.push({ type: 'feed', lines: 1 })
-    commands.push({ type: 'qrcode', data: sale.id })
-    commands.push({ type: 'feed', lines: 1 })
+    builder
+      .align('center')
+      .text('Consulte sua venda:')
+      .blank()
+      .qrcode(sale.id)
+      .blank()
+      .align('left')
   }
-  
-  // Footer
+
   if (config.footerMessage) {
-    commands.push({ type: 'text', value: config.footerMessage })
+    builder.text(config.footerMessage)
   } else {
-    commands.push({ type: 'text', value: 'Obrigado pela preferência!' })
-    commands.push({ type: 'text', value: 'Volte sempre! 😊' })
+    builder
+      .text('Obrigado pela preferencia!')
+      .text('Volte sempre! :)')
   }
-  
-  commands.push({ type: 'feed', lines: 2 })
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'feed', lines: 3 })
-  commands.push({ type: 'cut' })
-  
-  return { commands }
+
+  builder
+    .blank(2)
+    .separator('=')
+    .blank(3)
+    .cut()
+
+  return builder.build()
 }
 
 export function generateCashTransactionReceipt(
   transaction: CashTransaction,
   config: ReceiptConfig
 ): ReceiptTemplate {
-  const commands: PrintCommand[] = []
-  
-  // Header
-  commands.push({ type: 'align', value: 'center' })
-  commands.push({ type: 'text', value: config.storeName, size: 'large', bold: true })
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  // Tipo de transação
-  let transactionTitle = ''
-  switch (transaction.type) {
-    case 'OPENING':
-      transactionTitle = 'ABERTURA DE CAIXA'
-      break
-    case 'SUPPLY':
-      transactionTitle = 'SUPRIMENTO'
-      break
-    case 'WITHDRAWAL':
-      transactionTitle = 'SANGRIA'
-      break
-    case 'ADJUSTMENT':
-      transactionTitle = 'AJUSTE DE CAIXA'
-      break
-    default:
-      transactionTitle = 'TRANSAÇÃO DE CAIXA'
-  }
-  
-  commands.push({ type: 'text', value: transactionTitle, size: 'large', bold: true })
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  // Detalhes
-  commands.push({ type: 'align', value: 'left' })
-  commands.push({ type: 'text', value: `Data: ${new Date(transaction.createdAt).toLocaleString('pt-BR')}` })
-  
+  const builder = new ThermalTemplateBuilder(config.width)
+
+  renderStoreHeader(builder, config, { uppercase: false })
+
+  const transactionTitle = getTransactionTitle(transaction.type)
+
+  builder
+    .align('center')
+    .text(transactionTitle, { bold: true, size: 'large' })
+    .blank()
+    .separator('=')
+    .blank()
+    .align('left')
+    .text(`Data: ${formatDateTime(transaction.createdAt)}`)
+
   if (transaction.performedBy) {
-    commands.push({ type: 'text', value: `Operador: ${transaction.performedBy}` })
+    builder.text(`Operador: ${transaction.performedBy}`)
   }
-  
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '-' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  // Valor
-  commands.push({ type: 'align', value: 'center' })
-  commands.push({ 
-    type: 'text', 
-    value: `R$ ${transaction.amount.toFixed(2)}`,
-    size: 'large',
-    bold: true
-  })
-  
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '-' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  // Descrição
+
+  builder
+    .blank()
+    .separator('-')
+    .blank()
+    .align('center')
+    .text(formatCurrency(Number(transaction.amount)), { bold: true, size: 'large' })
+    .blank()
+    .separator('-')
+
   if (transaction.description) {
-    commands.push({ type: 'align', value: 'left' })
-    commands.push({ type: 'text', value: 'Observação:' })
-    commands.push({ type: 'text', value: transaction.description })
+    builder
+      .blank()
+      .align('left')
+      .text('Observacao:')
+      .text(transaction.description)
   }
-  
-  commands.push({ type: 'feed', lines: 2 })
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'feed', lines: 3 })
-  commands.push({ type: 'cut' })
-  
-  return { commands }
+
+  builder
+    .blank(2)
+    .separator('=')
+    .blank(3)
+    .cut()
+
+  return builder.build()
 }
 
 export function generateCashClosingReceipt(
   cashSession: any,
   config: ReceiptConfig
 ): ReceiptTemplate {
-  const commands: PrintCommand[] = []
-  
-  commands.push({ type: 'align', value: 'center' })
-  commands.push({ type: 'text', value: config.storeName, size: 'large', bold: true })
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'text', value: 'FECHAMENTO DE CAIXA', size: 'large', bold: true })
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  commands.push({ type: 'align', value: 'left' })
-  commands.push({ type: 'text', value: `Abertura: ${new Date(cashSession.openedAt).toLocaleString('pt-BR')}` })
-  commands.push({ type: 'text', value: `Fechamento: ${new Date(cashSession.closedAt).toLocaleString('pt-BR')}` })
-  commands.push({ type: 'text', value: `Operador: ${cashSession.user?.fullName || 'N/A'}` })
-  
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '-' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  commands.push({ type: 'text', value: padString('Abertura:', config.width - 15) + padString(`R$ ${cashSession.openingAmount.toFixed(2)}`, 15) })
-  commands.push({ type: 'text', value: padString('Vendas:', config.width - 15) + padString(`R$ ${(cashSession.expectedClosingAmount - cashSession.openingAmount).toFixed(2)}`, 15) })
-  commands.push({ type: 'separator', char: '-' })
-  commands.push({ type: 'text', value: padString('Esperado:', config.width - 15) + padString(`R$ ${cashSession.expectedClosingAmount.toFixed(2)}`, 15), bold: true })
-  commands.push({ type: 'text', value: padString('Informado:', config.width - 15) + padString(`R$ ${cashSession.closingAmount.toFixed(2)}`, 15), bold: true })
-  
-  if (cashSession.differenceAmount !== 0) {
-    const diffLabel = cashSession.differenceAmount > 0 ? 'Sobra:' : 'Falta:'
-    commands.push({ type: 'separator', char: '-' })
-    commands.push({ type: 'text', value: padString(diffLabel, config.width - 15) + padString(`R$ ${Math.abs(cashSession.differenceAmount).toFixed(2)}`, 15), bold: true })
+  const builder = new ThermalTemplateBuilder(config.width)
+
+  renderStoreHeader(builder, config, { uppercase: false })
+
+  builder
+    .align('center')
+    .text('FECHAMENTO DE CAIXA', { bold: true, size: 'large' })
+    .blank()
+    .separator('=')
+    .blank()
+    .align('left')
+    .text(`Abertura: ${formatDateTime(cashSession.openedAt)}`)
+    .text(`Fechamento: ${formatDateTime(cashSession.closedAt)}`)
+    .text(`Operador: ${cashSession.user?.fullName || 'N/A'}`)
+    .blank()
+    .separator('-')
+
+  const opening = Number(cashSession.openingAmount || 0)
+  const expected = Number(cashSession.expectedClosingAmount || 0)
+  const closing = Number(cashSession.closingAmount || 0)
+  const difference = Number(cashSession.differenceAmount || 0)
+  const salesTotal = expected - opening
+
+  builder
+    .keyValue('Abertura:', formatCurrency(opening))
+    .keyValue('Vendas:', formatCurrency(salesTotal))
+    .separator('-')
+    .keyValue('Esperado:', formatCurrency(expected), { bold: true })
+    .keyValue('Informado:', formatCurrency(closing), { bold: true })
+
+  if (difference !== 0) {
+    const diffLabel = difference > 0 ? 'Sobra:' : 'Falta:'
+    builder
+      .separator('-')
+      .keyValue(diffLabel, formatCurrency(Math.abs(difference)), { bold: true })
   }
-  
-  commands.push({ type: 'feed', lines: 2 })
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'feed', lines: 3 })
-  commands.push({ type: 'cut' })
-  
-  return { commands }
+
+  builder
+    .blank(2)
+    .separator('=')
+    .blank(3)
+    .cut()
+
+  return builder.build()
 }
 
 export function generateDeliveryReceipt(
@@ -291,201 +324,328 @@ export function generateDeliveryReceipt(
   config: ReceiptConfig,
   receiptType: 'driver' | 'customer' | 'organizer' = 'customer'
 ): ReceiptTemplate {
-  const commands: PrintCommand[] = []
-  const lineWidth = config.width || 48
-  
-  // Header
-  commands.push({ type: 'align', value: 'center' })
-  commands.push({ type: 'text', value: config.storeName.toUpperCase(), size: 'large', bold: true })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  if (config.storeAddress) {
-    commands.push({ type: 'text', value: config.storeAddress })
-  }
-  if (config.storePhone) {
-    commands.push({ type: 'text', value: `Tel: ${config.storePhone}` })
-  }
-  
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '=' })
-  
-  // Tipo de comprovante
+  const builder = new ThermalTemplateBuilder(config.width)
+  const width = builder.getWidth()
+
+  renderStoreHeader(builder, config, { uppercase: true })
+
   const titles: Record<typeof receiptType, string> = {
     driver: 'COMPROVANTE - ENTREGADOR',
     customer: 'COMPROVANTE - CLIENTE',
     organizer: 'COMPROVANTE - ORGANIZADOR'
   }
-  
-  commands.push({ type: 'text', value: titles[receiptType], size: 'large', bold: true })
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '-' })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  // Informações da Entrega
-  commands.push({ type: 'align', value: 'left' })
-  commands.push({ type: 'text', value: `Entrega: #${delivery.deliveryNumber || delivery.id}`, bold: true })
-  commands.push({ type: 'text', value: `Data: ${new Date().toLocaleDateString('pt-BR')} ${new Date().toLocaleTimeString('pt-BR')}` })
-  
+
+  builder
+    .align('center')
+    .text(titles[receiptType], { bold: true, size: 'large' })
+    .blank()
+    .separator('-')
+    .blank()
+    .align('left')
+
+  const now = new Date()
+  builder
+    .text(`Entrega: #${delivery.deliveryNumber || delivery.id || 'N/A'}`, { bold: true })
+    .text(`Data: ${formatDateTime(now)}`)
+
   if (delivery.scheduledFor) {
-    commands.push({ type: 'text', value: `Agendado: ${new Date(delivery.scheduledFor).toLocaleString('pt-BR')}` })
+    builder.text(`Agendado: ${formatDateTime(delivery.scheduledFor)}`)
   }
-  
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '-' })
-  
-  // Cliente
-  commands.push({ type: 'text', value: 'CLIENTE', bold: true })
-  commands.push({ type: 'text', value: delivery.customer?.name || delivery.customerName || 'N/A' })
-  
-  const phone = delivery.customer?.phone || delivery.customerPhone
-  if (phone) {
-    commands.push({ type: 'text', value: `Tel: ${phone}` })
+
+  builder
+    .blank()
+    .separator('-')
+    .text('CLIENTE', { bold: true })
+    .text(delivery.customer?.name || delivery.customerName || 'N/A')
+
+  const customerPhone = delivery.customer?.phone || delivery.customerPhone
+  if (customerPhone) {
+    builder.text(`Tel: ${customerPhone}`)
   }
-  
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '-' })
-  
-  // Endereço de Entrega
-  commands.push({ type: 'text', value: 'ENDERECO DE ENTREGA', bold: true })
-  
+
+  builder
+    .blank()
+    .separator('-')
+    .text('ENDERECO DE ENTREGA', { bold: true })
+
   const address = delivery.deliveryAddress || delivery.address || ''
-  const number = delivery.addressNumber || ''
-  const complement = delivery.addressComplement || ''
+  const number = delivery.addressNumber ? `, ${delivery.addressNumber}` : ''
+  const complement = delivery.addressComplement
   const district = delivery.district || ''
   const city = delivery.city || ''
   const state = delivery.state || ''
-  
-  commands.push({ type: 'text', value: `${address}${number ? ', ' + number : ''}` })
+
+  if (address) {
+    builder.text(`${address}${number}`.trim())
+  }
   if (complement) {
-    commands.push({ type: 'text', value: `Compl: ${complement}` })
+    builder.text(`Compl: ${complement}`)
   }
-  commands.push({ type: 'text', value: `${district} - ${city}/${state}` })
-  
+  if (district || city || state) {
+    builder.text(`${district} - ${city}/${state}`.trim())
+  }
   if (delivery.referencePoint) {
-    commands.push({ type: 'text', value: `Ref: ${delivery.referencePoint}` })
+    builder.text(`Ref: ${delivery.referencePoint}`)
   }
-  
   if (delivery.deliveryInstructions) {
-    commands.push({ type: 'feed', lines: 1 })
-    commands.push({ type: 'text', value: 'INSTRUCOES:', bold: true })
-    commands.push({ type: 'text', value: delivery.deliveryInstructions })
+    builder
+      .blank()
+      .text('INSTRUCOES:', { bold: true })
+      .text(delivery.deliveryInstructions)
   }
-  
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '-' })
-  
-  // Items (se houver)
-  if (delivery.items && delivery.items.length > 0) {
-    commands.push({ type: 'text', value: 'ITENS', bold: true })
-    commands.push({ type: 'feed', lines: 1 })
-    
-    delivery.items.forEach((item: any) => {
-      const itemName = truncateString(item.name || item.product?.name || 'Item', lineWidth - 12)
-      const qty = `${item.quantity}x`
-      const price = `R$ ${(item.price * item.quantity).toFixed(2)}`
-      
-      commands.push({ type: 'text', value: `${qty} ${itemName}` })
-      commands.push({ type: 'text', value: `    ${price}`, align: 'right' })
-    })
-    
-    commands.push({ type: 'feed', lines: 1 })
-    commands.push({ type: 'separator', char: '-' })
+
+  builder.blank().separator('-')
+
+  const items = Array.isArray(delivery.items) ? delivery.items : []
+  if (items.length > 0) {
+    builder
+      .text('ITENS', { bold: true })
+      .blank()
+
+    for (const item of items) {
+      const itemName = truncateString(item.name || item.product?.name || 'Item', width)
+      const quantity = Number(item.quantity || 0)
+      const unitPrice = Number(item.price || 0)
+      const lineTotal = quantity * unitPrice
+
+      builder
+        .text(itemName)
+        .columns([
+          { text: '', width: 2 },
+          { text: `${quantity}x`, width: 6 },
+          { text: formatCurrency(unitPrice), width: 12, align: 'right' },
+          { text: formatCurrency(lineTotal), align: 'right' }
+        ])
+        .blank()
+    }
+
+    builder.separator('-')
   }
-  
-  // Valores
-  commands.push({ type: 'text', value: 'VALORES', bold: true })
-  commands.push({ type: 'feed', lines: 1 })
-  
-  const subtotal = delivery.subtotal || 0
-  const deliveryFee = delivery.deliveryFee || 0
-  const discount = delivery.discountValue || 0
-  const total = delivery.total || (subtotal + deliveryFee - discount)
-  
-  const createValueLine = (label: string, value: number) => {
-    const valueStr = `R$ ${value.toFixed(2)}`
-    const spaces = lineWidth - label.length - valueStr.length
-    return label + ' '.repeat(Math.max(1, spaces)) + valueStr
-  }
-  
+
+  const subtotal = Number(delivery.subtotal || 0)
+  const deliveryFee = Number(delivery.deliveryFee || 0)
+  const discountValue = Number(delivery.discountValue || 0)
+  const total = Number(delivery.total ?? subtotal + deliveryFee - discountValue)
+
   if (subtotal > 0) {
-    commands.push({ type: 'text', value: createValueLine('Subtotal:', subtotal) })
+    builder.keyValue('Subtotal:', formatCurrency(subtotal))
   }
-  commands.push({ type: 'text', value: createValueLine('Taxa de Entrega:', deliveryFee) })
-  if (discount > 0) {
-    commands.push({ type: 'text', value: createValueLine('Desconto:', -discount) })
+  builder.keyValue('Taxa de Entrega:', formatCurrency(deliveryFee))
+  if (discountValue > 0) {
+    builder.keyValue('Desconto:', formatCurrency(-discountValue))
   }
-  
-  commands.push({ type: 'separator', char: '-' })
-  commands.push({ type: 'text', value: createValueLine('TOTAL:', total), bold: true, size: 'large' })
-  
-  // Forma de pagamento
+
+  builder
+    .separator('-')
+    .keyValue('TOTAL:', formatCurrency(total), { bold: true, size: 'large' })
+
   if (delivery.paymentMethod) {
-    commands.push({ type: 'feed', lines: 1 })
-    commands.push({ type: 'text', value: `Pagamento: ${delivery.paymentMethod}` })
-    
+    builder
+      .blank()
+      .text(`Pagamento: ${delivery.paymentMethod}`)
+
     if (delivery.paidInAdvance) {
-      commands.push({ type: 'text', value: '** JA PAGO **', bold: true })
+      builder.text('** JA PAGO **', { bold: true })
     } else if (delivery.changeFor) {
-      commands.push({ type: 'text', value: `Troco para: R$ ${delivery.changeFor.toFixed(2)}` })
-      commands.push({ type: 'text', value: `Troco: R$ ${(delivery.changeFor - total).toFixed(2)}` })
+      const changeFor = Number(delivery.changeFor)
+      builder
+        .text(`Troco para: ${formatCurrency(changeFor)}`)
+        .text(`Troco: ${formatCurrency(changeFor - total)}`)
     }
   }
-  
-  // Entregador (para comprovante do motorista e organizador)
+
   if ((receiptType === 'driver' || receiptType === 'organizer') && delivery.driver) {
-    commands.push({ type: 'feed', lines: 1 })
-    commands.push({ type: 'separator', char: '-' })
-    commands.push({ type: 'text', value: 'ENTREGADOR', bold: true })
-    commands.push({ type: 'text', value: delivery.driver.name || 'N/A' })
+    builder
+      .blank()
+      .separator('-')
+      .text('ENTREGADOR', { bold: true })
+      .text(delivery.driver.name || 'N/A')
+
     if (delivery.driver.phone) {
-      commands.push({ type: 'text', value: `Tel: ${delivery.driver.phone}` })
+      builder.text(`Tel: ${delivery.driver.phone}`)
     }
     if (delivery.driver.vehicleType) {
-      commands.push({ type: 'text', value: `Veiculo: ${delivery.driver.vehicleType}` })
+      builder.text(`Veiculo: ${delivery.driver.vehicleType}`)
     }
   }
-  
-  // Observações
+
   if (delivery.notes) {
-    commands.push({ type: 'feed', lines: 1 })
-    commands.push({ type: 'separator', char: '-' })
-    commands.push({ type: 'text', value: 'OBS:', bold: true })
-    commands.push({ type: 'text', value: delivery.notes })
+    builder
+      .blank()
+      .separator('-')
+      .text('OBS:', { bold: true })
+      .text(delivery.notes)
   }
-  
-  // Assinatura (para comprovante do cliente)
+
   if (receiptType === 'customer') {
-    commands.push({ type: 'feed', lines: 2 })
-    commands.push({ type: 'separator', char: '-' })
-    commands.push({ type: 'align', value: 'center' })
-    commands.push({ type: 'text', value: 'Assinatura do Recebedor' })
-    commands.push({ type: 'feed', lines: 1 })
+    builder
+      .blank(2)
+      .separator('-')
+      .align('center')
+      .text('Assinatura do Recebedor')
+      .blank()
+      .align('left')
   }
-  
-  // Footer
-  commands.push({ type: 'feed', lines: 1 })
-  commands.push({ type: 'separator', char: '=' })
-  commands.push({ type: 'align', value: 'center' })
-  
+
+  builder
+    .blank()
+    .separator('=')
+    .align('center')
+
   if (config.footerMessage) {
-    commands.push({ type: 'text', value: config.footerMessage })
+    builder.text(config.footerMessage)
   }
-  
-  commands.push({ type: 'feed', lines: 3 })
-  commands.push({ type: 'cut' })
-  
-  return { commands }
+
+  builder
+    .blank(3)
+    .cut()
+
+  return builder.build()
 }
 
-// Funções auxiliares
-function padString(str: string, length: number, char: string = ' ', align: 'left' | 'right' = 'left'): string {
-  if (align === 'right') {
-    return str.padStart(length, char).slice(-length)
+function renderStoreHeader(
+  builder: ThermalTemplateBuilder,
+  config: ReceiptConfig,
+  options?: { uppercase?: boolean; showContacts?: boolean }
+): void {
+  const title = options?.uppercase === false ? config.storeName : config.storeName.toUpperCase()
+
+  builder
+    .align('center')
+    .text(title, { bold: true, size: 'large' })
+    .blank()
+
+  if (options?.showContacts !== false) {
+    if (config.storeDocument) {
+      builder.text(`CNPJ: ${config.storeDocument}`)
+    }
+    if (config.storeAddress) {
+      builder.text(config.storeAddress)
+    }
+    if (config.storePhone) {
+      builder.text(`Tel: ${config.storePhone}`)
+    }
   }
-  return str.padEnd(length, char).slice(0, length)
+
+  builder
+    .blank()
+    .separator('=')
+    .blank()
+    .align('left')
+}
+
+function getTransactionTitle(type: string): string {
+  switch (type) {
+    case 'OPENING':
+      return 'ABERTURA DE CAIXA'
+    case 'SUPPLY':
+      return 'SUPRIMENTO'
+    case 'WITHDRAWAL':
+      return 'SANGRIA'
+    case 'ADJUSTMENT':
+      return 'AJUSTE DE CAIXA'
+    default:
+      return 'TRANSACAO DE CAIXA'
+  }
+}
+
+function normalizeWidth(width?: number): number {
+  const value = Number(width) || 0
+  if (value >= 24 && value <= 80) {
+    return value
+  }
+  return 48
+}
+
+function formatCurrency(value: number): string {
+  const safeValue = Number.isFinite(value) ? value : 0
+  return `R$ ${safeValue.toFixed(2)}`
+}
+
+function formatDateTime(
+  value: Date | string | number,
+  options?: Intl.DateTimeFormatOptions
+): string {
+  const date = value instanceof Date ? value : new Date(value)
+  return date.toLocaleString('pt-BR', options)
+}
+
+function formatColumns(columns: ColumnSpec[], totalWidth: number, gap = 1): string {
+  if (!columns.length) return ''
+
+  const safeGap = Math.max(1, gap)
+  const totalGapWidth = safeGap * (columns.length - 1)
+  const availableWidth = Math.max(1, totalWidth - totalGapWidth)
+
+  const providedWidth = columns
+    .filter(col => typeof col.width === 'number')
+    .reduce((sum, col) => sum + (col.width || 0), 0)
+
+  let remainingWidth = Math.max(0, availableWidth - providedWidth)
+  let unspecifiedColumns = columns.filter(col => col.width === undefined).length
+
+  const resolvedWidths = columns.map((col, index) => {
+    if (typeof col.width === 'number' && col.width > 0) {
+      return col.width
+    }
+
+    if (unspecifiedColumns <= 0) {
+      return 1
+    }
+
+    const widthShare = unspecifiedColumns === 1
+      ? Math.max(1, remainingWidth)
+      : Math.max(1, Math.floor(remainingWidth / unspecifiedColumns))
+
+    remainingWidth = Math.max(0, remainingWidth - widthShare)
+    unspecifiedColumns -= 1
+
+    return widthShare
+  })
+
+  // Distribui largura remanescente (se houver) para a última coluna
+  if (remainingWidth > 0 && resolvedWidths.length > 0) {
+    resolvedWidths[resolvedWidths.length - 1] += remainingWidth
+  }
+
+  const gapString = ' '.repeat(safeGap)
+
+  const formatted = columns.map((col, index) => {
+    const targetWidth = Math.max(1, resolvedWidths[index])
+    const truncated = truncateString(col.text ?? '', targetWidth)
+    const align = col.align || 'left'
+    return padString(truncated, targetWidth, ' ', align)
+  })
+
+  return formatted.join(gapString).slice(0, totalWidth)
+}
+
+function padString(
+  str: string,
+  length: number,
+  char: string = ' ',
+  align: 'left' | 'right' | 'center' = 'left'
+): string {
+  const safeLength = Math.max(0, length)
+  const trimmed = str.slice(0, safeLength)
+
+  if (align === 'right') {
+    return trimmed.padStart(safeLength, char).slice(-safeLength)
+  }
+
+  if (align === 'center') {
+    const totalPadding = Math.max(0, safeLength - trimmed.length)
+    const leftPadding = Math.floor(totalPadding / 2)
+    const rightPadding = totalPadding - leftPadding
+    return `${char.repeat(leftPadding)}${trimmed}${char.repeat(rightPadding)}`.slice(0, safeLength)
+  }
+
+  return trimmed.padEnd(safeLength, char).slice(0, safeLength)
 }
 
 function truncateString(str: string, maxLength: number): string {
-  if (str.length <= maxLength) return str
-  return str.slice(0, maxLength - 3) + '...'
+  const safeLength = Math.max(0, maxLength)
+  if (str.length <= safeLength) return str
+  if (safeLength <= 3) return str.slice(0, safeLength)
+  return `${str.slice(0, safeLength - 3)}...`
 }
