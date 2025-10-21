@@ -5,7 +5,12 @@ export interface CustomerSummary {
   name: string
   document: string | null
   phone: string | null
+  email: string | null
   address: string | null
+  totalOrders: number
+  totalSpend: number
+  averageTicket: number | null
+  lastPurchaseAt: string | null
   bonificationsCount: number
   createdAt: string
   updatedAt: string
@@ -43,7 +48,7 @@ export function useCustomers(search?: string) {
 export function useCreateCustomer() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (input: { name: string; document?: string | null; phone?: string | null; address?: string | null }) => {
+    mutationFn: async (input: { name: string; document?: string | null; phone?: string | null; email?: string | null; address?: string | null }) => {
       const response = await fetch("/api/customers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -76,6 +81,7 @@ export function useUpdateCustomer() {
       name?: string
       document?: string | null
       phone?: string | null
+      email?: string | null
       address?: string | null
     }) => {
       const response = await fetch("/api/customers", {

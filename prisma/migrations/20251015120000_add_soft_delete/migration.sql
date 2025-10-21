@@ -48,4 +48,3 @@ ALTER TABLE "public"."Delivery"
 	ADD COLUMN "deletedBy" TEXT;
 
 CREATE INDEX "Delivery_deletedAt_idx" ON "public"."Delivery" ("deletedAt");
- WARN  allowNonAppliedPatches is deprecated, use allowUnusedPatches instead.

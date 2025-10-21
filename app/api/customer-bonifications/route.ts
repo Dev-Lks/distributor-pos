@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { BonificationCategory, Prisma } from "@prisma/client"
+import { BonificationCategory, RecipientType, Prisma } from "@prisma/client"
 
 import { prisma } from "@/lib/prisma"
 
@@ -18,14 +18,18 @@ const mapBonification = (
 ) => ({
   id: bonification.id,
   customerId: bonification.customerId,
+  recipientType: bonification.recipientType,
+  companyName: bonification.companyName,
   customer: bonification.customer,
   givenBy: bonification.givenBy,
+  reason: bonification.reason,
   observation: bonification.observation ?? null,
-  products: Array.isArray(bonification.products) ? (bonification.products as string[]) : [],
+  products: Array.isArray(bonification.products) ? bonification.products : [],
+  itemsValue: bonification.itemsValue.toString(),
   category: bonification.category,
-  bonifiedAt: bonification.bonifiedAt,
-  createdAt: bonification.createdAt,
-  updatedAt: bonification.updatedAt,
+  bonifiedAt: bonification.bonifiedAt.toISOString(),
+  createdAt: bonification.createdAt.toISOString(),
+  updatedAt: bonification.updatedAt.toISOString(),
 })
 
 const parseProducts = (input: unknown) => {
@@ -44,7 +48,16 @@ const parseProducts = (input: unknown) => {
 const sanitizeCategory = (value: unknown): BonificationCategory => {
   if (typeof value !== "string") return BonificationCategory.BONIFICATION
   const normalized = value.toUpperCase()
-  return normalized === "DEGUSTATION" ? BonificationCategory.DEGUSTATION : BonificationCategory.BONIFICATION
+  const categories = Object.values(BonificationCategory)
+  return categories.includes(normalized as BonificationCategory)
+    ? (normalized as BonificationCategory)
+    : BonificationCategory.BONIFICATION
+}
+
+const sanitizeRecipientType = (value: unknown): RecipientType => {
+  if (typeof value !== "string") return RecipientType.CUSTOMER
+  const normalized = value.toUpperCase()
+  return normalized === "COMPANY" ? RecipientType.COMPANY : RecipientType.CUSTOMER
 }
 
 export async function GET(request: NextRequest) {
@@ -72,20 +85,49 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Payload inválido." }, { status: 400 })
     }
 
-    const { customerId, givenBy, observation, products, category, bonifiedAt } = body as {
-      customerId?: string
+    const { 
+      recipientType,
+      customerId, 
+      companyName,
+      givenBy, 
+      reason,
+      observation, 
+      products, 
+      itemsValue,
+      category, 
+      bonifiedAt 
+    } = body as {
+      recipientType?: string
+      customerId?: string | null
+      companyName?: string | null
       givenBy?: string
+      reason?: string
       observation?: string | null
       products?: unknown
+      itemsValue?: number
       category?: string
       bonifiedAt?: string | null
     }
 
-    if (!customerId || !givenBy?.trim()) {
-      return NextResponse.json({ error: "Cliente e responsável são obrigatórios." }, { status: 400 })
+    if (!givenBy?.trim()) {
+      return NextResponse.json({ error: "Responsável é obrigatório." }, { status: 400 })
     }
 
-    const parsedProducts = parseProducts(products)
+    if (!reason?.trim()) {
+      return NextResponse.json({ error: "Motivo é obrigatório." }, { status: 400 })
+    }
+
+    const parsedRecipientType = sanitizeRecipientType(recipientType)
+    
+    if (parsedRecipientType === RecipientType.CUSTOMER && !customerId) {
+      return NextResponse.json({ error: "Cliente é obrigatório." }, { status: 400 })
+    }
+
+    if (parsedRecipientType === RecipientType.COMPANY && !companyName?.trim()) {
+      return NextResponse.json({ error: "Nome da empresa é obrigatório." }, { status: 400 })
+    }
+
+    const parsedProducts = Array.isArray(products) ? products : parseProducts(products)
     const parsedCategory = sanitizeCategory(category)
     const parsedDate = bonifiedAt ? new Date(bonifiedAt) : new Date()
     if (Number.isNaN(parsedDate.getTime())) {
@@ -94,10 +136,14 @@ export async function POST(request: NextRequest) {
 
     const bonification = await prisma.customerBonification.create({
       data: {
-        customerId,
+        recipientType: parsedRecipientType,
+        customerId: parsedRecipientType === RecipientType.CUSTOMER ? customerId! : null,
+        companyName: parsedRecipientType === RecipientType.COMPANY ? companyName?.trim() || null : null,
         givenBy: givenBy.trim(),
+        reason: reason.trim(),
         observation: observation?.trim() || null,
         products: parsedProducts,
+        itemsValue: itemsValue || 0,
         category: parsedCategory,
         bonifiedAt: parsedDate,
       },
@@ -118,12 +164,28 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Payload inválido." }, { status: 400 })
     }
 
-    const { id, customerId, givenBy, observation, products, category, bonifiedAt } = body as {
+    const { 
+      id, 
+      recipientType,
+      customerId, 
+      companyName,
+      givenBy, 
+      reason,
+      observation, 
+      products,
+      itemsValue, 
+      category, 
+      bonifiedAt 
+    } = body as {
       id?: string
-      customerId?: string
+      recipientType?: string
+      customerId?: string | null
+      companyName?: string | null
       givenBy?: string
+      reason?: string
       observation?: string | null
       products?: unknown
+      itemsValue?: number
       category?: string
       bonifiedAt?: string | null
     }
@@ -133,24 +195,53 @@ export async function PATCH(request: NextRequest) {
     }
 
     const data: Prisma.CustomerBonificationUpdateInput = {}
-    if (customerId) {
-      data.customer = { connect: { id: customerId } }
+    
+    if (recipientType !== undefined) {
+      data.recipientType = sanitizeRecipientType(recipientType)
     }
+    
+    if (customerId !== undefined) {
+      if (customerId) {
+        data.customer = { connect: { id: customerId } }
+      } else {
+        data.customer = { disconnect: true }
+      }
+    }
+    
+    if (companyName !== undefined) {
+      data.companyName = companyName?.trim() || null
+    }
+    
     if (givenBy !== undefined) {
       if (!givenBy.trim()) {
         return NextResponse.json({ error: "Quem concedeu a bonificação é obrigatório." }, { status: 400 })
       }
       data.givenBy = givenBy.trim()
     }
+    
+    if (reason !== undefined) {
+      if (!reason.trim()) {
+        return NextResponse.json({ error: "Motivo é obrigatório." }, { status: 400 })
+      }
+      data.reason = reason.trim()
+    }
+    
     if (observation !== undefined) {
       data.observation = observation?.trim() || null
     }
+    
     if (products !== undefined) {
-      data.products = parseProducts(products)
+      data.products = Array.isArray(products) ? products : parseProducts(products)
     }
+    
+    if (itemsValue !== undefined) {
+      data.itemsValue = itemsValue
+    }
+    
     if (category !== undefined) {
       data.category = sanitizeCategory(category)
     }
+    
     if (bonifiedAt !== undefined) {
       const parsedDate = bonifiedAt ? new Date(bonifiedAt) : new Date()
       if (Number.isNaN(parsedDate.getTime())) {

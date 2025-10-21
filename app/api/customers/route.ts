@@ -16,7 +16,12 @@ const CUSTOMER_SELECT = {
   name: true,
   document: true,
   phone: true,
+  email: true,
   address: true,
+  totalOrders: true,
+  totalSpend: true,
+  averageTicket: true,
+  lastPurchaseAt: true,
   createdAt: true,
   updatedAt: true,
   _count: {
@@ -31,9 +36,14 @@ const mapCustomer = (customer: Prisma.CustomerGetPayload<{ select: typeof CUSTOM
   name: customer.name,
   document: customer.document ?? null,
   phone: customer.phone ?? null,
+  email: customer.email ?? null,
   address: customer.address ?? null,
-  createdAt: customer.createdAt,
-  updatedAt: customer.updatedAt,
+  totalOrders: customer.totalOrders ?? 0,
+  totalSpend: customer.totalSpend ?? 0,
+  averageTicket: customer.averageTicket ?? null,
+  lastPurchaseAt: customer.lastPurchaseAt?.toISOString() ?? null,
+  createdAt: customer.createdAt.toISOString(),
+  updatedAt: customer.updatedAt.toISOString(),
   bonificationsCount: customer._count?.bonifications ?? 0,
 })
 
@@ -146,6 +156,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: validated.name,
         phone: validated.phone?.trim() || null,
+        email: validated.email?.trim() || null,
         address: validated.address?.trim() || null,
         document: sanitizedDocument,
         type: detectPersonType(validated.document ?? undefined),
@@ -198,6 +209,7 @@ export async function PATCH(request: NextRequest) {
     const data: Prisma.CustomerUpdateInput = {
       ...(validated.name !== undefined ? { name: validated.name } : {}),
       ...(validated.phone !== undefined ? { phone: validated.phone?.trim() || null } : {}),
+      ...(validated.email !== undefined ? { email: validated.email?.trim() || null } : {}),
       ...(validated.address !== undefined ? { address: validated.address?.trim() || null } : {}),
     }
 

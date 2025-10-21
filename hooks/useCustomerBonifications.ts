@@ -1,15 +1,19 @@
-import type { BonificationCategory } from "@prisma/client"
+import type { BonificationCategory, RecipientType } from "@prisma/client"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 
 import type { CustomerSummary } from "./useCustomers"
 
 export interface CustomerBonificationEntry {
   id: string
-  customerId: string
-  customer: Pick<CustomerSummary, "id" | "name" | "phone">
+  customerId: string | null
+  recipientType: string
+  companyName: string | null
+  customer: Pick<CustomerSummary, "id" | "name" | "phone"> | null
   givenBy: string
+  reason: string
   observation: string | null
-  products: string[]
+  products: string[] | any[]
+  itemsValue: string
   category: BonificationCategory
   bonifiedAt: string
   createdAt: string
@@ -46,10 +50,14 @@ export function useCreateCustomerBonification() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: async (input: {
-      customerId: string
+      recipientType?: string
+      customerId?: string | null
+      companyName?: string | null
       givenBy: string
+      reason: string
       observation?: string | null
-      products?: string[]
+      products?: any[]
+      itemsValue?: number
       category?: BonificationCategory | string
       bonifiedAt?: string
     }) => {
@@ -76,10 +84,14 @@ export function useUpdateCustomerBonification() {
   return useMutation({
     mutationFn: async (input: {
       id: string
-      customerId?: string
+      recipientType?: string
+      customerId?: string | null
+      companyName?: string | null
       givenBy?: string
+      reason?: string
       observation?: string | null
-      products?: string[]
+      products?: any[]
+      itemsValue?: number
       category?: BonificationCategory | string
       bonifiedAt?: string | null
     }) => {

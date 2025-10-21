@@ -120,6 +120,14 @@ enum PendingCartStatus {
 enum BonificationCategory {
   BONIFICATION
   DEGUSTATION
+  FREE_SAMPLE
+  PROMOTIONAL_GIFT
+  COURTESY
+}
+
+enum RecipientType {
+  CUSTOMER
+  COMPANY
 }
 
 enum DailyReportStatus {
@@ -462,19 +470,24 @@ model Customer {
 }
 
 model CustomerBonification {
-  id          String               @id @default(cuid())
-  customerId  String
-  givenBy     String
-  observation String?
-  products    Json?
-  category    BonificationCategory @default(BONIFICATION)
-  bonifiedAt  DateTime             @default(now())
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
+  id            String               @id @default(cuid())
+  customerId    String?
+  recipientType RecipientType        @default(CUSTOMER)
+  companyName   String?
+  givenBy       String
+  reason        String
+  observation   String?
+  products      Json?
+  itemsValue    Decimal              @default(0) @db.Decimal(10, 2)
+  category      BonificationCategory @default(BONIFICATION)
+  bonifiedAt    DateTime             @default(now())
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
-  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   @@index([customerId, bonifiedAt])
+  @@index([recipientType, bonifiedAt])
 }
 
 model SaleItem {

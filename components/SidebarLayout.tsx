@@ -29,7 +29,8 @@ import {
   LogOut,
   User,
   Bell,
-  Truck
+  Truck,
+  Gift
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
@@ -86,9 +87,16 @@ const navSections: Array<{
       },
       {
         label: "Clientes",
-        description: "Cadastro e bonificações",
-        href: "/dashboard/customers",
+        description: "Cadastro de clientes",
+        href: "/dashboard/clientes",
         icon: UserRound,
+        permission: "viewCustomers"
+      },
+      {
+        label: "Bonificações",
+        description: "Brindes e degustações",
+        href: "/dashboard/bonificacoes",
+        icon: Gift,
         permission: "viewCustomers"
       }
     ]
