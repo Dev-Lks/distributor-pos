@@ -240,31 +240,57 @@ export interface UpdateDeliveryInput {
 
 // Dados para calcular taxa de entrega
 export interface CalculateDeliveryFeeInput {
-  originLat: number
-  originLng: number
-  destinationLat: number
-  destinationLng: number
-  vehicleType: VehicleType
-  subtotal: number
-  volume?: number | null
-  weight?: number | null
-  zoneId?: string | null
+  origin?: {
+    address?: string
+    latitude?: number
+    longitude?: number
+  }
+  pointOfSaleId?: string | null
+  destination: {
+    address: string
+    district?: string
+    city?: string
+    state?: string
+    postalCode?: string
+    latitude?: number
+    longitude?: number
+  }
+  vehicleType?: VehicleType
+  subtotal?: number
+  pricingOverrides?: {
+    baseFee?: number
+    includedKm?: number
+    perKm?: number
+    maxFee?: number
+    perMinute?: number
+    vehicleMultipliers?: Partial<Record<VehicleType, number>>
+  }
 }
 
 // Resposta do cálculo de taxa
 export interface CalculateDeliveryFeeResponse {
   deliveryFee: number
-  distance: number
-  estimatedTime: number
-  zone?: DeliveryZone | null
+  distanceKm: number
+  estimatedTimeMinutes: number
   vehicleType: VehicleType
+  originPointOfSaleId?: string | null
+  origin: {
+    latitude: number
+    longitude: number
+    resolvedAddress: string
+  }
+  destination: {
+    latitude: number
+    longitude: number
+    resolvedAddress: string
+  }
   breakdown: {
     baseFee: number
     distanceFee: number
-    vehicleFee: number
-    volumeFee: number
-    weightFee: number
-    zoneFee: number
+    vehicleMultiplier: number
+    timeFee: number
+    subtotalSurcharge: number
+    capped: boolean
     total: number
   }
 }
@@ -278,6 +304,7 @@ export interface DeliverySummary {
   deliveryAddress: string
   district: string
   city: string
+  state?: string | null
   status: DeliveryStatus
   subtotal: number
   total: number
@@ -287,6 +314,9 @@ export interface DeliverySummary {
   driverName?: string | null
   vehicleType?: VehicleType | null
   rating?: number | null
+  pointOfSaleName?: string | null
+  distance?: number | null
+  estimatedTime?: number | null
   createdAt: string | Date
 }
 

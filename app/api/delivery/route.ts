@@ -103,6 +103,12 @@ export async function GET(request: NextRequest) {
             name: true,
           },
         },
+        pointOfSale: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
       },
       orderBy: [
         { status: "asc" },
@@ -120,6 +126,7 @@ export async function GET(request: NextRequest) {
       deliveryAddress: delivery.deliveryAddress,
       district: delivery.district,
       city: delivery.city,
+  state: delivery.state,
       status: delivery.status,
       subtotal: delivery.subtotal ?? 0,
       total: delivery.total ?? 0,
@@ -129,6 +136,9 @@ export async function GET(request: NextRequest) {
       driverName: delivery.driver?.name ?? null,
       vehicleType: delivery.vehicleUsed,
       rating: delivery.rating,
+      pointOfSaleName: delivery.pointOfSale?.name ?? null,
+      distance: delivery.distance,
+      estimatedTime: delivery.estimatedTime,
       createdAt: delivery.createdAt,
     }))
 

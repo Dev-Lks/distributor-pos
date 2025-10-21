@@ -23,11 +23,12 @@ import {
 } from "@/components/ui/select"
 import { CustomerSelector } from "@/components/customers/CustomerSelector"
 import { useDeliveryDrivers } from "@/hooks/useDeliveryDrivers"
+import { usePointsOfSale, type PointOfSale } from "@/hooks/usePointsOfSale"
 import { useCreateDelivery, useCalculateDeliveryFee } from "@/hooks/useDeliveries"
 import type { CustomerSummary } from "@/hooks/useCustomers"
 import type { CreateDeliveryInput } from "@/types/delivery"
 import { toast } from "sonner"
-import { Loader2, MapPin, DollarSign, Truck } from "lucide-react"
+import { Loader2, MapPin, DollarSign, Truck, Calculator } from "lucide-react"
 
 interface CreateDeliveryDialogProps {
   open: boolean
@@ -68,6 +69,7 @@ interface DeliveryFormData {
   paymentMethod?: string
   paidInAdvance: boolean
   changeFor?: number
+  pointOfSaleId?: string
 }
 
 export function CreateDeliveryDialog({
@@ -77,8 +79,14 @@ export function CreateDeliveryDialog({
   orderId,
 }: CreateDeliveryDialogProps) {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerSummary | null>(null)
+  const [distanceInfo, setDistanceInfo] = useState<{ distanceKm: number; estimatedTimeMinutes: number } | null>(null)
   
   const { data: drivers = [], isLoading: isLoadingDrivers } = useDeliveryDrivers({ activeOnly: true })
+  const {
+    data: pointsOfSale,
+    isLoading: isLoadingPoints,
+  } = usePointsOfSale()
+  const availablePointsOfSale: PointOfSale[] = pointsOfSale ?? []
   
   const createDelivery = useCreateDelivery()
   const calculateFee = useCalculateDeliveryFee()
@@ -98,12 +106,14 @@ export function CreateDeliveryDialog({
       discountValue: 0,
       state: "SP",
       city: "São Paulo",
+      pointOfSaleId: undefined,
     },
   })
 
   const watchedSubtotal = watch("subtotal")
   const watchedDeliveryFee = watch("deliveryFee")
   const watchedDiscount = watch("discountValue")
+  const watchedPointOfSaleId = watch("pointOfSaleId")
 
   // Auto-preencher endereço do cliente
   const handleCustomerSelect = (customer: CustomerSummary | null) => {
@@ -125,6 +135,55 @@ export function CreateDeliveryDialog({
     return watchedSubtotal + watchedDeliveryFee - watchedDiscount
   }
 
+  const handleCalculateDeliveryFee = async () => {
+    const deliveryAddress = watch("deliveryAddress")
+    const addressNumber = watch("addressNumber")
+    const district = watch("district")
+    const city = watch("city")
+    const state = watch("state")
+    const postalCode = watch("postalCode")
+
+    if (!deliveryAddress || !city || !state) {
+      toast.error("Preencha endereço, cidade e estado para calcular a taxa")
+      return
+    }
+
+    const addressLine = addressNumber ? `${deliveryAddress}, ${addressNumber}` : deliveryAddress
+
+    try {
+      const result = await calculateFee.mutateAsync({
+        destination: {
+          address: addressLine,
+          district: district || undefined,
+          city,
+          state,
+          postalCode: postalCode || undefined,
+        },
+        subtotal: watchedSubtotal,
+        pointOfSaleId: watchedPointOfSaleId || undefined,
+      })
+
+      setValue("deliveryFee", result.deliveryFee)
+      setValue("distance", result.distanceKm)
+      setValue("estimatedTime", result.estimatedTimeMinutes)
+      setValue("latitude", result.destination.latitude)
+      setValue("longitude", result.destination.longitude)
+
+      if (!watchedPointOfSaleId && result.originPointOfSaleId) {
+        setValue("pointOfSaleId", result.originPointOfSaleId)
+      }
+
+      setDistanceInfo({
+        distanceKm: result.distanceKm,
+        estimatedTimeMinutes: result.estimatedTimeMinutes,
+      })
+
+      toast.success(`Taxa calculada: R$ ${result.deliveryFee.toFixed(2)}`)
+    } catch (error: any) {
+      toast.error(error.message ?? "Não foi possível calcular a taxa automaticamente")
+    }
+  }
+
   const onSubmit = async (data: DeliveryFormData) => {
     if (!selectedCustomer) {
       toast.error("Selecione um cliente")
@@ -140,6 +199,7 @@ export function CreateDeliveryDialog({
         customerId: selectedCustomer.id,
         zoneId: data.zoneId || undefined,
         driverId: data.driverId || undefined,
+  pointOfSaleId: data.pointOfSaleId || undefined,
         
         deliveryAddress: data.deliveryAddress,
         addressNumber: data.addressNumber,
@@ -175,6 +235,7 @@ export function CreateDeliveryDialog({
       toast.success("Entrega criada com sucesso!")
       reset()
       setSelectedCustomer(null)
+  setDistanceInfo(null)
       onOpenChange(false)
     } catch (error: any) {
       toast.error(error.message || "Erro ao criar entrega")
@@ -304,6 +365,29 @@ export function CreateDeliveryDialog({
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
+                <Label htmlFor="pointOfSaleId">Ponto de Origem</Label>
+                <Select
+                  value={watchedPointOfSaleId || "DEFAULT"}
+                  onValueChange={(value) =>
+                    setValue("pointOfSaleId", value === "DEFAULT" ? undefined : value)
+                  }
+                  disabled={isLoadingPoints}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o ponto de venda" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="DEFAULT">Padrão do sistema</SelectItem>
+                    {availablePointsOfSale.map((point) => (
+                      <SelectItem key={point.id} value={point.id}>
+                        {point.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="driverId">Entregador</Label>
                 <Select
                   value={watch("driverId") || "NONE"}
@@ -372,18 +456,44 @@ export function CreateDeliveryDialog({
 
               <div>
                 <Label htmlFor="deliveryFee">Taxa de Entrega *</Label>
-                <Input
-                  id="deliveryFee"
-                  type="number"
-                  step="0.01"
-                  {...register("deliveryFee", { 
-                    required: "Taxa é obrigatória",
-                    valueAsNumber: true,
-                  })}
-                  placeholder="0.00"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="deliveryFee"
+                    type="number"
+                    step="0.01"
+                    {...register("deliveryFee", { 
+                      required: "Taxa é obrigatória",
+                      valueAsNumber: true,
+                    })}
+                    placeholder="0.00"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={handleCalculateDeliveryFee}
+                    disabled={calculateFee.isPending}
+                    className="whitespace-nowrap"
+                  >
+                    {calculateFee.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Calculando
+                      </>
+                    ) : (
+                      <>
+                        <Calculator className="h-4 w-4 mr-2" />
+                        Calcular
+                      </>
+                    )}
+                  </Button>
+                </div>
                 {errors.deliveryFee && (
                   <p className="text-xs text-red-500 mt-1">{errors.deliveryFee.message}</p>
+                )}
+                {distanceInfo && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {distanceInfo.distanceKm.toFixed(2)} km · {distanceInfo.estimatedTimeMinutes} min de rota estimada
+                  </p>
                 )}
               </div>
 

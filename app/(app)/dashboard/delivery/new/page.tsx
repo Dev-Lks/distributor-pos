@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge"
 import { ImprovedCustomerSelector } from "@/components/customers/ImprovedCustomerSelector"
 import { useCreateDelivery } from "@/hooks/useDeliveries"
 import { useDeliveryDrivers } from "@/hooks/useDeliveryDrivers"
+import { usePointsOfSale, type PointOfSale } from "@/hooks/usePointsOfSale"
 import { useDeliveryCart } from "../hooks/useDeliveryCart"
 import { ProductSelector } from "../components/ProductSelector"
 import { DeliveryCart } from "../components/DeliveryCart"
@@ -77,6 +78,7 @@ interface DeliveryFormData {
   
   // Entregador
   driverId?: string | null
+  pointOfSaleId?: string | null
 }
 
 export default function NewDeliveryPage() {
@@ -86,6 +88,7 @@ export default function NewDeliveryPage() {
     deliveryFee: 0,
     discountValue: 0,
     paidInAdvance: false,
+    pointOfSaleId: null,
   })
   const [isCalculatingDistance, setIsCalculatingDistance] = useState(false)
   const [distanceInfo, setDistanceInfo] = useState<{
@@ -96,6 +99,14 @@ export default function NewDeliveryPage() {
 
   const createDelivery = useCreateDelivery()
   const { data: drivers = [], isLoading: isLoadingDrivers } = useDeliveryDrivers({ activeOnly: true })
+  const {
+    data: pointsOfSale,
+    isLoading: isLoadingPoints,
+  } = usePointsOfSale()
+  const availablePointsOfSale: PointOfSale[] = pointsOfSale ?? []
+  const selectedPointOfSale = formData.pointOfSaleId
+    ? availablePointsOfSale.find((point) => point.id === formData.pointOfSaleId) ?? null
+    : null
   
   // Carrinho dinâmico
   const {
@@ -121,13 +132,19 @@ export default function NewDeliveryPage() {
 
     setIsCalculatingDistance(true)
     try {
-      const fullAddress = `${formData.deliveryAddress}, ${formData.addressNumber || ''} - ${formData.district}, ${formData.city} - ${formData.state}, ${formData.postalCode || ''}`
-      
-      const response = await fetch('/api/delivery/calculate-distance', {
+      const response = await fetch('/api/delivery/calculate-fee', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          destinationAddress: fullAddress
+          destination: {
+            address: `${formData.deliveryAddress}${formData.addressNumber ? `, ${formData.addressNumber}` : ''}`,
+            district: formData.district,
+            city: formData.city,
+            state: formData.state,
+            postalCode: formData.postalCode,
+          },
+          subtotal,
+          pointOfSaleId: formData.pointOfSaleId,
         }),
       })
 
@@ -136,14 +153,18 @@ export default function NewDeliveryPage() {
       }
 
       const data = await response.json()
-      
-      setFormData(prev => ({ ...prev, deliveryFee: data.fee }))
+
+      setFormData(prev => ({
+        ...prev,
+        deliveryFee: data.deliveryFee,
+        pointOfSaleId: prev.pointOfSaleId ?? data.originPointOfSaleId ?? prev.pointOfSaleId,
+      }))
       setDistanceInfo({
-        distance: data.distance,
-        estimatedTime: data.estimatedTime
+        distance: data.distanceKm,
+        estimatedTime: data.estimatedTimeMinutes
       })
       
-      toast.success(`Distância: ${data.distance.toFixed(2)} km | Tempo estimado: ${data.estimatedTime.toFixed(0)} min`)
+      toast.success(`Distância: ${data.distanceKm.toFixed(2)} km | Tempo estimado: ${data.estimatedTimeMinutes.toFixed(0)} min`)
     } catch (error) {
       console.error('Erro ao calcular distância:', error)
       toast.error('Erro ao calcular distância. Defina manualmente.')
@@ -219,6 +240,7 @@ export default function NewDeliveryPage() {
         changeFor: formData.changeFor || null,
         scheduledFor: formData.scheduledFor || null,
         driverId: formData.driverId || null,
+        pointOfSaleId: formData.pointOfSaleId || null,
       }
 
       const result = await createDelivery.mutateAsync(deliveryData) as any
@@ -281,11 +303,59 @@ export default function NewDeliveryPage() {
                     referencePoint: formData.referencePoint,
                     deliveryInstructions: formData.deliveryInstructions,
                   }}
-                  onChange={(field, value) => {
+                  onChange={(field: any, value: any) => {
                     setFormData(prev => ({ ...prev, [field]: value }))
                   }}
                   customerId={formData.customerId}
                 />
+
+                <Card className="border-dashed">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      Origem da Entrega
+                    </CardTitle>
+                    <CardDescription>
+                      Escolha o ponto de venda responsável pela saída do pedido
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <Select
+                      value={formData.pointOfSaleId ?? "DEFAULT"}
+                      onValueChange={(value) =>
+                        setFormData(prev => ({
+                          ...prev,
+                          pointOfSaleId: value === "DEFAULT" ? null : value,
+                        }))
+                      }
+                      disabled={isLoadingPoints}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o ponto de venda" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="DEFAULT">Ponto padrão configurado</SelectItem>
+                        {availablePointsOfSale.map((point) => (
+                          <SelectItem key={point.id} value={point.id}>
+                            {point.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {selectedPointOfSale ? (
+                      <div className="text-sm text-muted-foreground leading-relaxed">
+                        {selectedPointOfSale.address || "Endereço não informado"}
+                        {selectedPointOfSale.city ? ` • ${selectedPointOfSale.city}` : ""}
+                        {selectedPointOfSale.state ? `/${selectedPointOfSale.state}` : ""}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        Sem seleção, será utilizado o ponto padrão configurado na plataforma.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {/* Calculadora de Distância */}
                 <Card className="border-primary/20">
@@ -347,6 +417,12 @@ export default function NewDeliveryPage() {
                           <span className="text-muted-foreground">Tempo estimado:</span>
                           <span className="font-semibold">{distanceInfo.estimatedTime.toFixed(0)} min</span>
                         </div>
+                        {selectedPointOfSale && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Origem:</span>
+                            <span className="font-medium">{selectedPointOfSale.name}</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -534,7 +610,7 @@ export default function NewDeliveryPage() {
                   <CardContent>
                     <DateTimePicker
                       value={formData.scheduledFor || null}
-                      onChange={(value) => setFormData({ ...formData, scheduledFor: value || undefined })}
+                      onChange={(value: any) => setFormData({ ...formData, scheduledFor: value || undefined })}
                       label=""
                     />
                   </CardContent>
@@ -676,6 +752,11 @@ export default function NewDeliveryPage() {
                     <strong>Referência:</strong> {formData.referencePoint}
                   </div>
                 )}
+                {selectedPointOfSale && (
+                  <div className="text-xs text-muted-foreground mt-3">
+                    Origem: {selectedPointOfSale.name}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -688,7 +769,13 @@ export default function NewDeliveryPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
-                  {cart.map((item) => (
+                  {cart.map((item: {
+                    productId: string
+                    name: string
+                    quantity: number
+                    price: number
+                    discount?: number
+                  }) => (
                     <div key={item.productId} className="flex justify-between items-start py-2 border-b last:border-0">
                       <div className="flex-1">
                         <div className="font-medium">{item.name}</div>
