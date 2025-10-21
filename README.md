@@ -109,6 +109,25 @@ Acesse: **http://localhost:3000**
 - 🔌 [API Documentation](docs/API.md) - Documentação da API
 - 🤝 [Contributing](docs/CONTRIBUTING.md) - Como contribuir
 - 📋 [Improvement Checklist](docs/IMPROVEMENT_CHECKLIST.md) - Progresso das melhorias
+- 🧪 [QA Plan](docs/QA_PLAN.md) - Estratégia de testes automatizados
+
+## 🔐 Configuração Operacional
+
+### CORS (`ALLOWED_ORIGINS`)
+- Defina a variável de ambiente `ALLOWED_ORIGINS` no arquivo `.env` (ou no painel de variáveis da Vercel) com a lista de domínios permitidos, separados por vírgula.
+- Exemplo local: `ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000`
+- Exemplo produção: `ALLOWED_ORIGINS=https://app.claudiao.com,https://admin.claudiao.com`
+- Após alterar a variável, reinicie o servidor (`pnpm dev`) ou faça o redeploy para que as novas origens sejam consideradas pelo middleware de CORS (`lib/middleware/cors.ts`).
+
+### 🔁 Backup e Restauração
+1. Certifique-se de que `BACKUP_ENABLED=true` e `DATABASE_URL` estão configurados.
+2. Execute `pnpm backup` para gerar um dump comprimido (`.sqlc`) na pasta `backups/`.
+3. Para restaurar localmente, use o `pg_restore` apontando para o arquivo desejado:
+  ```bash
+  pg_restore --clean --if-exists -h <host> -p <port> -U <usuario> -d <database> backups/backup-AAAA-MM-DDTHH-MM-SS.sqlc
+  ```
+4. Em ambientes com Vercel ou outro provedor, baixe o arquivo da pasta `backups/` e execute o comando acima a partir de uma máquina com acesso ao banco (configure `PGPASSWORD` ou use `psql` com prompt de senha).
+5. Após restaurar, rode `pnpm prisma migrate deploy` se necessário para aplicar migrações pendentes.
 
 ## 🎯 Roadmap
 
