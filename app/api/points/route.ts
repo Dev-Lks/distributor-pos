@@ -18,7 +18,10 @@ export async function GET() {
       where: withoutDeleted({}),
       orderBy: { createdAt: 'asc' }
     })
-    return NextResponse.json(points)
+    const response = NextResponse.json(points)
+    response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=900')
+    response.headers.set('Vary', 'Cookie, Authorization, Origin')
+    return response
   } catch (error) {
     logger.error('Failed to fetch points of sale', { error })
     return NextResponse.json({ error: 'Erro ao buscar pontos de venda' }, { status: 500 })
@@ -73,7 +76,7 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const validated = updatePointOfSaleSchema.parse(body)
 
-  const updateData: Prisma.PointOfSaleUpdateInput = {}
+    const updateData: Prisma.PointOfSaleUpdateInput = {}
     if (validated.name !== undefined) updateData.name = validated.name
     if (validated.isActive !== undefined) updateData.isActive = validated.isActive
     if (validated.address !== undefined) updateData.address = validated.address

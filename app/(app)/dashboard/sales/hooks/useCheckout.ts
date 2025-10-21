@@ -2,6 +2,7 @@ import { useState, useCallback } from "react"
 import { toast } from "sonner"
 import { handleError } from "@/lib/errors"
 import { logger } from "@/lib/logger"
+import { calculateCartSubtotal } from "@/lib/utils/calculations"
 import type { CartItem } from "./useCart"
 
 interface CheckoutOptions<T = unknown> {
@@ -59,7 +60,7 @@ export function useCheckout() {
     setIsProcessing(true)
 
     try {
-      const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const total = calculateCartSubtotal(cart)
 
       const saleData = {
         items: cart.map((item) => ({

@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo } from "react"
 import { toast } from "sonner"
+import { calculateCartSummary } from "@/lib/utils/calculations"
 
 export interface DeliveryCartItem {
   productId: string
@@ -128,24 +129,7 @@ export function useDeliveryCart() {
   /**
    * Calcula valores do carrinho
    */
-  const calculations = useMemo(() => {
-    const subtotal = cart.reduce((sum, item) => {
-      const itemTotal = item.price * item.quantity
-      return sum + itemTotal
-    }, 0)
-
-    const totalDiscount = cart.reduce((sum, item) => {
-      return sum + (item.discount || 0)
-    }, 0)
-
-    const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0)
-
-    return {
-      subtotal,
-      totalDiscount,
-      itemCount,
-    }
-  }, [cart])
+  const summary = useMemo(() => calculateCartSummary(cart), [cart])
 
   /**
    * Exporta os itens no formato esperado pela API
@@ -169,6 +153,6 @@ export function useDeliveryCart() {
     removeFromCart,
     clearCart,
     getCartItems,
-    ...calculations,
+    ...summary,
   }
 }

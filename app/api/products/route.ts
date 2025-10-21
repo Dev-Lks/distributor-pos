@@ -67,7 +67,10 @@ export async function GET() {
       productPointsOfSale: pointsByProductId.get(product.id) ?? [],
     }))
 
-    return NextResponse.json(productsWithPoints)
+    const response = NextResponse.json(productsWithPoints)
+    response.headers.set('Cache-Control', 'private, max-age=180, stale-while-revalidate=900')
+    response.headers.set('Vary', 'Cookie, Authorization, Origin')
+    return response
   } catch (error) {
     logger.error('Error fetching products', { error })
     return NextResponse.json({ error: 'Failed to fetch products', details: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 })

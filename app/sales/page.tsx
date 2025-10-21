@@ -22,6 +22,7 @@ import { useBarcodeScanner } from '@/lib/hardware/useBarcodeScanner'
 import { useThermalPrinter } from '@/lib/hardware/useThermalPrinter'
 import { Button } from '@/components/button'
 import { toast } from 'sonner'
+import { calculateCartSubtotal } from '@/lib/utils/calculations'
 
 interface CartItem {
   productId: string
@@ -109,7 +110,7 @@ export default function SalesWithHardwareExample() {
   }
 
   // Calcular totais
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+  const subtotal = calculateCartSubtotal(cart)
   const total = subtotal // TODO: Adicionar descontos, taxas, etc.
 
   // Finalizar venda e imprimir

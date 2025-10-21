@@ -2,6 +2,7 @@ import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { checkRoutePermission } from "@/lib/middleware/permissions";
+import { resolveCors } from "@/lib/middleware/cors";
 import {
   isPublicRoute,
   createNoCacheResponse,
@@ -14,6 +15,14 @@ export default withAuth(
   async function middleware(req) {
     const token = req.nextauth.token;
     const path = req.nextUrl.pathname;
+    const corsResolution = resolveCors(req);
+
+    if (corsResolution?.kind === "handled") {
+      return corsResolution.response;
+    }
+
+    const applyCors = (response: NextResponse) =>
+      corsResolution?.kind === "apply" ? corsResolution.apply(response) : response;
 
     // Get IP for rate limiting
     const ip = req.headers.get('x-forwarded-for') ?? req.headers.get('x-real-ip') ?? 'anonymous';
@@ -29,26 +38,28 @@ export default withAuth(
         }
       } catch {
         logger.warn('Rate limit exceeded', { ip, path });
-        return NextResponse.json(
-          { error: 'Too many requests. Please try again later.' },
-          { 
-            status: 429,
-            headers: {
-              'Retry-After': '60'
+        return applyCors(
+          NextResponse.json(
+            { error: 'Too many requests. Please try again later.' },
+            { 
+              status: 429,
+              headers: {
+                'Retry-After': '60'
+              }
             }
-          }
+          )
         );
       }
     }
 
     // Public routes - allow with no-cache headers
     if (isPublicRoute(path)) {
-      return createNoCacheResponse(NextResponse.next());
+      return applyCors(createNoCacheResponse(NextResponse.next()));
     }
 
     // Unauthenticated user - redirect to login
     if (!token) {
-      return redirectToLogin(req);
+      return applyCors(redirectToLogin(req));
     }
 
     // Check if admin requires password change
@@ -58,12 +69,12 @@ export default withAuth(
         !path.includes('/api/users/') && 
         !path.includes('/change-password')) {
       logger.info('Redirecting admin to change password', { email: token.email })
-      return NextResponse.redirect(new URL('/change-password', req.url))
+      return applyCors(NextResponse.redirect(new URL('/change-password', req.url)))
     }
 
     // Allow access to change-password page if flag is set
     if (path === '/change-password' && token.requiresPasswordChange) {
-      return NextResponse.next()
+      return applyCors(NextResponse.next())
     }
 
     // Extract user info from token
@@ -89,10 +100,10 @@ export default withAuth(
         email: token.email,
         reason: permissionCheck.reason,
       });
-      return redirectToUnauthorized(req);
+      return applyCors(redirectToUnauthorized(req));
     }
 
-    return NextResponse.next();
+    return applyCors(NextResponse.next());
   },
   {
     callbacks: {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { sumBy } from '@/lib/utils/calculations';
 
 // GET /api/inventory/analysis/abc - Gerar análise ABC
 export async function GET(request: NextRequest) {
@@ -28,24 +29,18 @@ export async function GET(request: NextRequest) {
     });
 
     // Calcular receita por produto
-    const productRevenues = products.map((product) => {
-      const totalRevenue = product.saleItems.reduce(
-        (sum, item) => sum + item.quantity * item.price,
-        0
-      );
-      return {
-        productId: product.id,
-        name: product.name,
-        size: product.size,
-        totalRevenue,
-      };
-    });
+    const productRevenues = products.map((product) => ({
+      productId: product.id,
+      name: product.name,
+      size: product.size,
+      totalRevenue: sumBy(product.saleItems, (item) => item.quantity * item.price),
+    }));
 
     // Ordenar por receita (maior para menor)
     productRevenues.sort((a, b) => b.totalRevenue - a.totalRevenue);
 
     // Calcular receita total
-    const totalRevenue = productRevenues.reduce((sum, p) => sum + p.totalRevenue, 0);
+    const totalRevenue = sumBy(productRevenues, (p) => p.totalRevenue);
 
     // Classificar em ABC
     let cumulativeRevenue = 0;
@@ -76,9 +71,8 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // Atualizar a classificação ABC no inventário
-    for (const item of abcAnalysis) {
-      await prisma.inventory.upsert({
+    const upsertOperations = abcAnalysis.map((item) =>
+      prisma.inventory.upsert({
         where: { productId: item.productId },
         create: {
           productId: item.productId,
@@ -89,7 +83,11 @@ export async function GET(request: NextRequest) {
           abcClass: item.abcClass,
           revenueContribution: item.revenueContribution,
         },
-      });
+      }),
+    );
+
+    if (upsertOperations.length > 0) {
+      await prisma.$transaction(upsertOperations);
     }
 
     // Estatísticas por classe
@@ -102,29 +100,34 @@ export async function GET(request: NextRequest) {
       totalRevenue,
       classA: {
         count: classA.length,
-        percentage: (classA.length / abcAnalysis.length) * 100,
-        revenue: classA.reduce((sum, p) => sum + p.totalRevenue, 0),
-        revenuePercentage: classA.reduce((sum, p) => sum + p.revenueContribution, 0),
+        percentage: abcAnalysis.length > 0 ? (classA.length / abcAnalysis.length) * 100 : 0,
+        revenue: sumBy(classA, (p) => p.totalRevenue),
+        revenuePercentage: sumBy(classA, (p) => p.revenueContribution),
       },
       classB: {
         count: classB.length,
-        percentage: (classB.length / abcAnalysis.length) * 100,
-        revenue: classB.reduce((sum, p) => sum + p.totalRevenue, 0),
-        revenuePercentage: classB.reduce((sum, p) => sum + p.revenueContribution, 0),
+        percentage: abcAnalysis.length > 0 ? (classB.length / abcAnalysis.length) * 100 : 0,
+        revenue: sumBy(classB, (p) => p.totalRevenue),
+        revenuePercentage: sumBy(classB, (p) => p.revenueContribution),
       },
       classC: {
         count: classC.length,
-        percentage: (classC.length / abcAnalysis.length) * 100,
-        revenue: classC.reduce((sum, p) => sum + p.totalRevenue, 0),
-        revenuePercentage: classC.reduce((sum, p) => sum + p.revenueContribution, 0),
+        percentage: abcAnalysis.length > 0 ? (classC.length / abcAnalysis.length) * 100 : 0,
+        revenue: sumBy(classC, (p) => p.totalRevenue),
+        revenuePercentage: sumBy(classC, (p) => p.revenueContribution),
       },
     };
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       analysis: abcAnalysis,
       summary,
       generatedAt: new Date().toISOString(),
     });
+
+    response.headers.set('Cache-Control', 'private, max-age=600, stale-while-revalidate=1800');
+    response.headers.set('Vary', 'Cookie, Authorization, Origin');
+
+    return response;
   } catch (error) {
     console.error('Error generating ABC analysis:', error);
     return NextResponse.json(

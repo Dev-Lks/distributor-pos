@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useMemo, useRef, useState } from "react"
+import dynamic from "next/dynamic"
 import { useQueryClient } from "@tanstack/react-query"
 import { useProducts, type Product } from "@/hooks/useProducts"
 import { usePointsOfSale, type PointOfSale } from "@/hooks/usePointsOfSale"
@@ -48,21 +49,12 @@ import {
 import { AdvancedFilters } from "@/components/inventory/AdvancedFilters"
 import { BulkToolbar } from "@/components/inventory/BulkToolbar"
 import { InventoryDashboard } from "@/components/inventory/InventoryDashboard"
-import { InventoryHistoryDialog } from "@/components/inventory/InventoryHistoryDialog"
-import { ABCAnalysisTab } from "@/components/inventory/ABCAnalysisTab"
-import { DemandForecastCard } from "@/components/inventory/DemandForecastCard"
-import { ExpirationAlertsCard } from "@/components/inventory/ExpirationAlertsCard"
-import { BatchManagementTab } from "@/components/inventory/BatchManagementTab"
-import { AuditManagementTab } from "@/components/inventory/AuditManagementTab"
-import { MovementHistoryTab } from "@/components/inventory/MovementHistoryTab"
 import { ProductQuickActions } from "@/components/inventory/ProductQuickActions"
 import { StockLevelBar } from "@/components/inventory/StockLevelBar"
 import { LocationPills } from "@/components/inventory/LocationPills"
 import { ProductHealthScore } from "@/components/inventory/ProductHealthScore"
 import { ViewToggle, type ViewType } from "@/components/inventory/ViewToggle"
 import { ProductCard } from "@/components/inventory/ProductCard"
-import { DistributeStockDialog } from "@/components/inventory/DistributeStockDialog"
-import { AddStockDialog } from "@/components/inventory/AddStockDialog"
 
 // Sprint 2: Pull-to-Refresh e Gestos
 import { usePullToRefresh } from "@/hooks/usePullToRefresh"
@@ -71,6 +63,86 @@ import { PullToRefreshIndicator } from "@/components/PullToRefreshIndicator"
 // Hardware
 import { useBarcodeScanner } from "@/lib/hardware/useBarcodeScanner"
 import { BarcodeInput } from "@/components/hardware/BarcodeInput"
+
+type InventoryHistoryDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  productId: string
+  productName: string
+}
+
+type AddStockDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  products: Product[]
+  preSelectedProductId?: string | null
+  preSelectedProductName?: string
+  onSuccess: () => void
+}
+
+type DistributeStockDialogProps = {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  product: Product | null
+  pointsOfSale: PointOfSale[]
+  onSuccess: () => void
+}
+
+const TabSkeleton = () => (
+  <Card>
+    <CardContent className="space-y-4 p-6">
+      <Skeleton className="h-6 w-48" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-full" />
+      <Skeleton className="h-4 w-full" />
+    </CardContent>
+  </Card>
+)
+
+const ABCAnalysisTab = dynamic(
+  () => import("@/components/inventory/ABCAnalysisTab").then((mod) => mod.ABCAnalysisTab),
+  { loading: () => <TabSkeleton />, ssr: false }
+)
+
+const DemandForecastCard = dynamic(
+  () => import("@/components/inventory/DemandForecastCard").then((mod) => mod.DemandForecastCard),
+  { loading: () => <TabSkeleton />, ssr: false }
+)
+
+const ExpirationAlertsCard = dynamic(
+  () => import("@/components/inventory/ExpirationAlertsCard").then((mod) => mod.ExpirationAlertsCard),
+  { loading: () => <TabSkeleton />, ssr: false }
+)
+
+const BatchManagementTab = dynamic(
+  () => import("@/components/inventory/BatchManagementTab").then((mod) => mod.BatchManagementTab),
+  { loading: () => <TabSkeleton />, ssr: false }
+)
+
+const AuditManagementTab = dynamic(
+  () => import("@/components/inventory/AuditManagementTab").then((mod) => mod.AuditManagementTab),
+  { loading: () => <TabSkeleton />, ssr: false }
+)
+
+const MovementHistoryTab = dynamic(
+  () => import("@/components/inventory/MovementHistoryTab").then((mod) => mod.MovementHistoryTab),
+  { loading: () => <TabSkeleton />, ssr: false }
+)
+
+const InventoryHistoryDialog = dynamic<InventoryHistoryDialogProps>(
+  () => import("@/components/inventory/InventoryHistoryDialog").then((mod) => mod.InventoryHistoryDialog),
+  { loading: () => null, ssr: false }
+)
+
+const AddStockDialog = dynamic<AddStockDialogProps>(
+  () => import("@/components/inventory/AddStockDialog").then((mod) => mod.AddStockDialog),
+  { loading: () => null, ssr: false }
+)
+
+const DistributeStockDialog = dynamic<DistributeStockDialogProps>(
+  () => import("@/components/inventory/DistributeStockDialog").then((mod) => mod.DistributeStockDialog),
+  { loading: () => null, ssr: false }
+)
 
 type Location = "coldRoom" | "house" | "salePoint"
 type ProductInventory = NonNullable<Product["inventory"]>
@@ -902,7 +974,11 @@ export default function InventoryPage() {
           productId={historyProductId}
           productName={products.find(p => p.id === historyProductId)?.name ?? "Produto"}
           open={!!historyProductId}
-          onOpenChange={(open) => !open && setHistoryProductId(null)}
+          onOpenChange={(open: boolean) => {
+            if (!open) {
+              setHistoryProductId(null)
+            }
+          }}
         />
       )}
       {/* Modal Melhorado de Adicionar Estoque */}

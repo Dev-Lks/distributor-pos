@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react"
 import { toast } from "sonner"
+import { calculateCartItemCount, calculateCartSubtotal } from "@/lib/utils/calculations"
 
 export interface CartItem {
   productId: string
@@ -105,14 +106,14 @@ export function useCart() {
    * Calcula o total do carrinho
    */
   const getCartTotal = useCallback(() => {
-    return cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
+    return calculateCartSubtotal(cart)
   }, [cart])
 
   /**
    * Retorna a quantidade total de itens
    */
   const getItemCount = useCallback(() => {
-    return cart.reduce((sum, item) => sum + item.quantity, 0)
+    return calculateCartItemCount(cart)
   }, [cart])
 
   return {

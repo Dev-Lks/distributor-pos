@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { sumBy } from '@/lib/utils/calculations';
 
 // GET /api/inventory/forecast - Previsão de demanda
 export async function GET(request: NextRequest) {
@@ -14,6 +15,8 @@ export async function GET(request: NextRequest) {
     // Período de análise: últimos 30 dias
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const fifteenDaysAgo = new Date();
+    fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
 
     // Buscar produtos ativos com inventário e vendas recentes
     const products = await prisma.product.findMany({
@@ -41,49 +44,57 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    const forecasts = [];
+    const forecasts: Array<{
+      productId: string;
+      productName: string;
+      size: string;
+      averageDailyConsumption: number;
+      currentStock: number;
+      daysUntilStockout: number;
+      suggestedReorderPoint: number;
+      suggestedOrderQuantity: number;
+      seasonalTrend: 'up' | 'down' | 'stable';
+      confidence: number;
+      needsReorder: boolean;
+      urgency: 'critical' | 'high' | 'medium' | 'low';
+    }> = [];
+
+    const inventoryUpdates: Array<{
+      productId: string;
+      data: {
+        averageDailyConsumption: number;
+        reorderPoint: number;
+        economicOrderQuantity: number;
+      };
+    }> = [];
 
     for (const product of products) {
-      if (!product.inventory) continue;
+      if (!product.inventory) {
+        continue;
+      }
 
-      // Calcular consumo diário médio
-      const totalSold = product.saleItems.reduce((sum, item) => sum + item.quantity, 0);
+      const saleItems = product.saleItems;
+      const totalSold = sumBy(saleItems, (item) => item.quantity);
       const averageDailyConsumption = totalSold / 30;
 
-      // Estoque atual total
       const currentStock =
-        product.inventory.coldRoomQuantity +
-        product.inventory.houseQuantity +
-        product.inventory.salePointQuantity;
+        (product.inventory.coldRoomQuantity ?? 0) +
+        (product.inventory.houseQuantity ?? 0) +
+        (product.inventory.salePointQuantity ?? 0);
 
-      // Dias até esgotar
-      const daysUntilStockout =
-        averageDailyConsumption > 0 ? Math.floor(currentStock / averageDailyConsumption) : 999;
-
-      // Ponto de reposição (quando o estoque durar apenas 7 dias)
+      const daysUntilStockout = averageDailyConsumption > 0 ? Math.floor(currentStock / averageDailyConsumption) : 999;
       const suggestedReorderPoint = Math.ceil(averageDailyConsumption * 7);
-
-      // Quantidade econômica de pedido (para 14 dias)
       const suggestedOrderQuantity = Math.ceil(averageDailyConsumption * 14);
 
-      // Calcular tendência (comparar primeira quinzena vs segunda quinzena)
-      const firstHalf = product.saleItems
-        .filter((item) => {
-          const date = new Date(item.sale.date);
-          const fifteenDaysAgo = new Date();
-          fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
-          return date >= thirtyDaysAgo && date < fifteenDaysAgo;
-        })
-        .reduce((sum, item) => sum + item.quantity, 0);
+      const firstHalf = sumBy(saleItems, (item) => {
+        const date = new Date(item.sale.date);
+        return date >= thirtyDaysAgo && date < fifteenDaysAgo ? item.quantity : 0;
+      });
 
-      const secondHalf = product.saleItems
-        .filter((item) => {
-          const date = new Date(item.sale.date);
-          const fifteenDaysAgo = new Date();
-          fifteenDaysAgo.setDate(fifteenDaysAgo.getDate() - 15);
-          return date >= fifteenDaysAgo;
-        })
-        .reduce((sum, item) => sum + item.quantity, 0);
+      const secondHalf = sumBy(saleItems, (item) => {
+        const date = new Date(item.sale.date);
+        return date >= fifteenDaysAgo ? item.quantity : 0;
+      });
 
       let seasonalTrend: 'up' | 'down' | 'stable' = 'stable';
       if (secondHalf > firstHalf * 1.2) {
@@ -92,12 +103,10 @@ export async function GET(request: NextRequest) {
         seasonalTrend = 'down';
       }
 
-      // Confiança (baseado na variabilidade das vendas)
       const confidence = totalSold > 10 ? 90 : totalSold > 5 ? 70 : 50;
 
-      // Atualizar campos de previsão no inventário
-      await prisma.inventory.update({
-        where: { productId: product.id },
+      inventoryUpdates.push({
+        productId: product.id,
         data: {
           averageDailyConsumption,
           reorderPoint: suggestedReorderPoint,
@@ -105,13 +114,12 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Adicionar ao resultado se relevante (tem movimentação)
       if (totalSold > 0) {
         forecasts.push({
           productId: product.id,
           productName: product.name,
           size: product.size,
-          averageDailyConsumption: parseFloat(averageDailyConsumption.toFixed(2)),
+          averageDailyConsumption: Number(averageDailyConsumption.toFixed(2)),
           currentStock,
           daysUntilStockout,
           suggestedReorderPoint,
@@ -131,10 +139,21 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (inventoryUpdates.length > 0) {
+      await prisma.$transaction(
+        inventoryUpdates.map((update) =>
+          prisma.inventory.update({
+            where: { productId: update.productId },
+            data: update.data,
+          }),
+        ),
+      );
+    }
+
     // Ordenar por urgência (menor dias até esgotar primeiro)
     forecasts.sort((a, b) => a.daysUntilStockout - b.daysUntilStockout);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       forecasts,
       summary: {
         totalProducts: forecasts.length,
@@ -148,6 +167,11 @@ export async function GET(request: NextRequest) {
         end: new Date().toISOString(),
       },
     });
+
+    response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=900');
+    response.headers.set('Vary', 'Cookie, Authorization, Origin');
+
+    return response;
   } catch (error) {
     console.error('Error generating demand forecast:', error);
     return NextResponse.json(
