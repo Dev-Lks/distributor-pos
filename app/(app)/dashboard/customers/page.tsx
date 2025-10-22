@@ -259,7 +259,7 @@ export default function CustomersPage() {
   const handleOpenEditBonification = (entry: CustomerBonificationEntry) => {
     setBonificationBeingEdited(entry)
     setBonificationForm({
-      customerId: entry.customerId,
+      customerId: entry.customerId || "",
       givenBy: entry.givenBy,
       observation: entry.observation ?? "",
       products: entry.products.join(", "),
@@ -282,6 +282,7 @@ export default function CustomersPage() {
     const payload = {
       customerId: bonificationForm.customerId,
       givenBy: bonificationForm.givenBy.trim(),
+      reason: bonificationForm.observation.trim() || "Bonificação",
       observation: bonificationForm.observation.trim() || null,
       products: bonificationForm.products
         .split(",")
@@ -504,7 +505,7 @@ export default function CustomersPage() {
                   ) : (
                     bonifications.map((entry) => (
                       <TableRow key={entry.id}>
-                        <TableCell className="font-medium">{entry.customer.name}</TableCell>
+                        <TableCell className="font-medium">{entry.customer?.name || "—"}</TableCell>
                         <TableCell>
                           <Badge variant={entry.category === "DEGUSTATION" ? "secondary" : "default"}>
                             {CATEGORY_OPTIONS.find((option) => option.value === entry.category)?.label ?? entry.category}

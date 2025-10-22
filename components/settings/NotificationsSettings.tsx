@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { NotificationTestPanel } from './NotificationTestPanel';
 
 interface NotificationSettings {
   enableDeliveryUpdates: boolean;
@@ -329,6 +330,11 @@ export function NotificationsSettings() {
                 <li>Clique em uma notificação para abrir a página correspondente</li>
                 <li>Em celulares, você receberá notificações mesmo sem a aba aberta</li>
               </ul>
+            </div>
+
+            {/* Painel de teste */}
+            <div className="border-t pt-6">
+              <NotificationTestPanel />
             </div>
           </>
         )}
