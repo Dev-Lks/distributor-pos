@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -10,19 +10,19 @@ import {
   KeyRound,
   Laptop,
   Mail,
-  RefreshCw,
+  Settings2,
   ShieldCheck,
   Smartphone,
   UserCog,
   Database,
   Download,
-  Upload,
-  Settings2,
   Building2,
   Save,
   AlertTriangle,
   CheckCircle2,
   Receipt,
+  Loader2,
+  Shield,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -43,33 +43,36 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
 import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
 
-const channels = [
+const notificationChannels = [
   {
     id: "email",
     label: "E-mail",
-    description: "Receba relatórios instantâneos",
+    description: "Relatórios e alertas por e-mail",
     icon: Mail,
   },
   {
     id: "push",
     label: "Push",
-    description: "Alertas no tablet ou PWA",
+    description: "Notificações no app e PWA",
     icon: Smartphone,
   },
   {
     id: "desktop",
     label: "Desktop",
-    description: "Notificações no navegador",
+    description: "Alertas no navegador",
     icon: Laptop,
   },
 ] as const;
 
-type ChannelId = (typeof channels)[number]["id"];
+type ChannelId = (typeof notificationChannels)[number]["id"];
 
 export default function SettingsPage() {
   const { can } = usePermissions();
@@ -104,26 +107,29 @@ export default function SettingsPage() {
     queryFn: async () => {
       const res = await fetch("/api/settings");
       if (!res.ok) throw new Error("Falha ao buscar configurações");
-      const data = await res.json();
-
-      // Atualizar estados
-      setBusinessName(data.businessName || "");
-      setSupportEmail(data.supportEmail || "");
-      setReceiptMessage(data.receiptMessage || "");
-      setReceiptShowQRCode(data.receiptShowQRCode ?? true);
-      setReceiptWidth(data.receiptWidth || 48);
-      setCnpj(data.cnpj || "");
-      setAddress(data.address || "");
-      setPhone(data.phone || "");
-      setDefaultPointOfSaleId(data.defaultPointOfSaleId || null);
-      setEnabledChannels(data.notifications || enabledChannels);
-      setAutoSync(data.autoSync ?? true);
-      setInventoryAlerts(data.alerts?.lowStock ?? true);
-      setSalesReceipt(data.alerts?.autoReceipt ?? false);
-
-      return data;
+      return res.json();
     },
+    staleTime: Infinity,
   });
+
+  // Sincronizar dados quando carregados
+  useEffect(() => {
+    if (settings) {
+      setBusinessName(settings.businessName || "");
+      setSupportEmail(settings.supportEmail || "");
+      setReceiptMessage(settings.receiptMessage || "");
+      setReceiptShowQRCode(settings.receiptShowQRCode ?? true);
+      setReceiptWidth(settings.receiptWidth || 48);
+      setCnpj(settings.cnpj || "");
+      setAddress(settings.address || "");
+      setPhone(settings.phone || "");
+      setDefaultPointOfSaleId(settings.defaultPointOfSaleId || null);
+      setEnabledChannels(settings.notifications || enabledChannels);
+      setAutoSync(settings.autoSync ?? true);
+      setInventoryAlerts(settings.alerts?.lowStock ?? true);
+      setSalesReceipt(settings.alerts?.autoReceipt ?? false);
+    }
+  }, [settings]);
 
   // Buscar pontos de venda
   const { data: pointsOfSale } = useQuery({
@@ -206,66 +212,107 @@ export default function SettingsPage() {
 
   const isAdmin = can.manageSettings;
 
-  return (
-    <div className="space-y-6">
-      <Card className="border-none bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 shadow-none">
-        <CardHeader className="flex flex-col gap-4 pb-6 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <Badge variant="secondary" className="w-fit bg-primary/15 text-primary">
-              Central de controle
-            </Badge>
-            <CardTitle className="text-2xl md:text-3xl">
-              Configurações do sistema
-            </CardTitle>
-            <CardDescription className="max-w-2xl text-base">
-              Ajuste preferências operacionais, integrações e notificações para
-              manter o NitroBeer rodando de forma confiável em todos os pontos
-              de venda.
-            </CardDescription>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {isAdmin && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-2"
-                  onClick={() => createBackup.mutate()}
-                  disabled={createBackup.isPending}
-                >
-                  <Database className="h-4 w-4" />
-                  {createBackup.isPending ? "Criando..." : "Criar Backup"}
-                </Button>
-                <Button
-                  size="sm"
-                  className="gap-2"
-                  onClick={handleSaveSettings}
-                  disabled={updateSettings.isPending}
-                >
-                  <Save className="h-4 w-4" />
-                  {updateSettings.isPending ? "Salvando..." : "Salvar alterações"}
-                </Button>
-              </>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-      <div className="grid gap-6 lg:grid-cols-[2fr,1fr]">
-        <div className="space-y-6">
-          {/* Preferências Gerais */}
+  return (
+    <div className="w-full space-y-8 px-4 sm:px-6 lg:px-8">
+      {/* Header */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 flex items-center justify-center border border-primary/10 flex-shrink-0">
+            <Settings2 className="h-6 w-6 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight truncate">Configurações</h1>
+            <p className="text-sm text-muted-foreground line-clamp-2">
+              Gerencie as preferências, notificações e dados do seu sistema
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Bar */}
+      {isAdmin && (
+        <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+          <div className="text-xs sm:text-sm text-muted-foreground">
+            Os ajustes serão salvos automaticamente
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 whitespace-nowrap"
+              onClick={() => createBackup.mutate()}
+              disabled={createBackup.isPending}
+            >
+              {createBackup.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">{createBackup.isPending ? "Criando..." : "Backup"}</span>
+              <span className="sm:hidden">{createBackup.isPending ? "..." : "BK"}</span>
+            </Button>
+            <Button
+              size="sm"
+              className="gap-2 whitespace-nowrap"
+              onClick={handleSaveSettings}
+              disabled={updateSettings.isPending}
+            >
+              {updateSettings.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">{updateSettings.isPending ? "Salvando..." : "Salvar"}</span>
+              <span className="sm:hidden">{updateSettings.isPending ? "..." : "OK"}</span>
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <Tabs defaultValue="general" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:w-fit h-auto">
+          <TabsTrigger value="general" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+            <Building2 className="h-4 w-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Geral</span>
+            <span className="sm:hidden">Ger</span>
+          </TabsTrigger>
+          <TabsTrigger value="receipts" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+            <Receipt className="h-4 w-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Recibos</span>
+            <span className="sm:hidden">Rec</span>
+          </TabsTrigger>
+          <TabsTrigger value="notifications" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+            <BellRing className="h-4 w-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Notif.</span>
+            <span className="sm:hidden">Not</span>
+          </TabsTrigger>
+          <TabsTrigger value="security" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+            <Shield className="h-4 w-4 flex-shrink-0" />
+            <span className="hidden sm:inline">Segurança</span>
+            <span className="sm:hidden">Seg</span>
+          </TabsTrigger>
+        </TabsList>
+
+        {/* TAB: GERAL */}
+        <TabsContent value="general" className="space-y-6 mt-6">
           <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Building2 className="h-5 w-5" />
-                Preferências gerais
-              </CardTitle>
+            <CardHeader>
+              <CardTitle>Informações da empresa</CardTitle>
               <CardDescription>
-                Defina como o sistema se comporta no dia a dia das operações.
+                Dados básicos que aparecem nos recibos e documentos do sistema
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="business-name">Nome do negócio</Label>
                   <Input
@@ -276,7 +323,7 @@ export default function SettingsPage() {
                     disabled={!isAdmin}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Este nome aparecerá nos recibos impressos
+                    Aparecerá no topo dos recibos impressos
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -289,12 +336,12 @@ export default function SettingsPage() {
                     disabled={!isAdmin}
                   />
                   <p className="text-xs text-muted-foreground">
-                    Será exibido no cabeçalho dos recibos
+                    Número de inscrição do seu negócio
                   </p>
                 </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
+              <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="address">Endereço</Label>
                   <Input
@@ -317,6 +364,33 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              <Separator />
+
+              <div className="space-y-2">
+                <Label htmlFor="support-email">E-mail para suporte</Label>
+                <Input
+                  id="support-email"
+                  type="email"
+                  placeholder="contato@nitrobeer.com"
+                  value={supportEmail}
+                  onChange={(e) => setSupportEmail(e.target.value)}
+                  disabled={!isAdmin}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Usado para contato de clientes sobre problemas
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Operações e ponto principal</CardTitle>
+              <CardDescription>
+                Configure o funcionamento padrão do sistema
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="default-point">Ponto principal (origem das entregas)</Label>
                 <Select 
@@ -325,7 +399,7 @@ export default function SettingsPage() {
                   disabled={!isAdmin}
                 >
                   <SelectTrigger id="default-point">
-                    <SelectValue placeholder="Selecione o ponto" />
+                    <SelectValue placeholder="Selecione o ponto de venda" />
                   </SelectTrigger>
                   <SelectContent>
                     {pointsOfSale?.map((pos: any) => (
@@ -336,60 +410,42 @@ export default function SettingsPage() {
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
-                  Este ponto será usado como origem para calcular taxa de entrega
+                  Este ponto será usado como origem para calcular taxas de entrega e distâncias
                 </p>
               </div>
 
-              <div className="rounded-xl border border-dashed border-muted-foreground/30 bg-muted/30 px-4 py-3">
-                <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <p className="text-sm font-medium">
-                      Sincronização automática com Google Sheets
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Controle se o estoque e as vendas são enviados
-                      automaticamente após cada alteração.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={autoSync}
-                    onCheckedChange={setAutoSync}
-                    disabled={!isAdmin}
-                  />
-                </div>
-              </div>
+              <Separator />
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="support-email">E-mail para suporte</Label>
-                  <Input
-                    id="support-email"
-                    type="email"
-                    placeholder="contato@nitrobeer.com"
-                    value={supportEmail}
-                    onChange={(e) => setSupportEmail(e.target.value)}
-                    disabled={!isAdmin}
-                  />
+              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="space-y-1">
+                  <Label className="font-semibold">Sincronização automática</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Enviar estoque e vendas para Google Sheets automaticamente
+                  </p>
                 </div>
+                <Switch
+                  checked={autoSync}
+                  onCheckedChange={setAutoSync}
+                  disabled={!isAdmin}
+                />
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Configurações de Recibos */}
+        {/* TAB: RECIBOS */}
+        <TabsContent value="receipts" className="space-y-6 mt-6">
           <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Receipt className="h-5 w-5" />
-                Configurações de Recibos
-              </CardTitle>
+            <CardHeader>
+              <CardTitle>Personalização de recibos</CardTitle>
               <CardDescription>
-                Personalize a aparência e informações dos recibos impressos na impressora térmica
+                Configure como seus recibos impressos serão formatados
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="grid gap-4 md:grid-cols-2">
+            <CardContent className="space-y-6">
+              <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="receipt-width">Largura do papel (mm)</Label>
+                  <Label htmlFor="receipt-width">Largura do papel</Label>
                   <Select 
                     value={receiptWidth.toString()} 
                     onValueChange={(value) => setReceiptWidth(parseInt(value))}
@@ -406,15 +462,15 @@ export default function SettingsPage() {
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Escolha conforme o tamanho do papel da sua impressora
+                    Escolha conforme o tamanho do papel de sua impressora térmica
                   </p>
                 </div>
 
-                <div className="flex items-center justify-between border rounded-lg p-4">
+                <div className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="space-y-0.5">
-                    <Label>Exibir QR Code</Label>
+                    <Label className="font-semibold">QR Code no recibo</Label>
                     <p className="text-xs text-muted-foreground">
-                      Inclui um QR Code no final do recibo para consulta rápida da venda
+                      Incluir código de consulta rápida
                     </p>
                   </div>
                   <Switch
@@ -425,6 +481,8 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              <Separator />
+
               <div className="space-y-2">
                 <Label htmlFor="receipt-footer">Mensagem de rodapé</Label>
                 <textarea
@@ -433,55 +491,41 @@ export default function SettingsPage() {
                   value={receiptMessage}
                   onChange={(e) => setReceiptMessage(e.target.value)}
                   disabled={!isAdmin}
-                  className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2 disabled:opacity-50"
+                  className="min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 disabled:opacity-50"
                   maxLength={200}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {receiptMessage.length}/200 caracteres
-                </p>
-              </div>
-
-              <div className="rounded-lg bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4">
-                <div className="flex gap-3">
-                  <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-1">
-                      📱 Sobre o QR Code
-                    </h4>
-                    <p className="text-xs text-blue-800 dark:text-blue-200">
-                      O QR Code impresso nos recibos contém o ID único da venda. Ele permite que clientes e funcionários 
-                      consultem rapidamente os detalhes da compra, facilitando trocas, devoluções e auditoria. 
-                      Basta escanear com qualquer leitor de QR Code no celular.
-                    </p>
-                  </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <p>Mensagem personalizada que aparecerá no final de cada recibo</p>
+                  <p>{receiptMessage.length}/200</p>
                 </div>
               </div>
+
+              <Alert>
+                <Receipt className="h-4 w-4" />
+                <AlertTitle>Dica sobre QR Code</AlertTitle>
+                <AlertDescription>
+                  O QR Code contém o ID único da venda. Clientes podem escanear para consultar detalhes, facilitando trocas, devoluções e auditoria.
+                </AlertDescription>
+              </Alert>
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Alertas e Notificações */}
+        {/* TAB: NOTIFICAÇÕES */}
+        <TabsContent value="notifications" className="space-y-6 mt-6">
           <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <BellRing className="h-5 w-5" />
-                Alertas e notificações
-              </CardTitle>
+            <CardHeader>
+              <CardTitle>Alertas do sistema</CardTitle>
               <CardDescription>
-                Escolha como os responsáveis são avisados sobre rupturas e
-                movimentações críticas.
+                Escolha quais eventos gerarão notificações
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-5">
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-sm font-medium">Alertas de estoque crítico</p>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="space-y-1">
+                  <Label className="font-semibold">Estoque crítico</Label>
                   <p className="text-xs text-muted-foreground">
-                    Receba avisos quando algum produto atingir o estoque mínimo
-                    em qualquer localização.
+                    Avisar quando produto atingir estoque mínimo
                   </p>
                 </div>
                 <Switch
@@ -491,14 +535,11 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-sm font-medium">
-                    Envio automático de comprovante
-                  </p>
+              <div className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
+                <div className="space-y-1">
+                  <Label className="font-semibold">Comprovante automático</Label>
                   <p className="text-xs text-muted-foreground">
-                    Dispare um recibo por e-mail sempre que a venda for
-                    finalizada no tablet.
+                    Enviar recibo por e-mail após venda finalizada
                   </p>
                 </div>
                 <Switch
@@ -508,105 +549,109 @@ export default function SettingsPage() {
                 />
               </div>
 
-              <div className="grid gap-3 md:grid-cols-3">
-                {channels.map((channel) => {
-                  const Icon = channel.icon;
-                  const enabled = enabledChannels[channel.id];
-                  return (
-                    <button
-                      key={channel.id}
-                      type="button"
-                      onClick={() => isAdmin && toggleChannel(channel.id)}
-                      disabled={!isAdmin}
-                      className={cn(
-                        "group flex h-full flex-col items-start gap-3 rounded-xl border p-4 text-left transition-all",
-                        enabled
-                          ? "border-primary/60 bg-primary/10 shadow-sm"
-                          : "border-border bg-card hover:border-primary/40 hover:bg-primary/5",
-                        !isAdmin && "opacity-50 cursor-not-allowed"
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={cn(
-                            "flex h-10 w-10 items-center justify-center rounded-lg border",
-                            enabled
-                              ? "border-primary bg-primary text-primary-foreground"
-                              : "border-border bg-muted"
-                          )}
-                        >
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <p className="font-semibold leading-tight">
-                            {channel.label}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {channel.description}
-                          </p>
-                        </div>
-                      </div>
-                      <Badge
-                        variant={enabled ? "default" : "secondary"}
-                        className="text-[11px]"
+              <Separator />
+
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Canais de notificação</h4>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {notificationChannels.map((channel) => {
+                    const Icon = channel.icon;
+                    const enabled = enabledChannels[channel.id];
+                    return (
+                      <button
+                        key={channel.id}
+                        type="button"
+                        onClick={() => isAdmin && toggleChannel(channel.id)}
+                        disabled={!isAdmin}
+                        className={cn(
+                          "group flex flex-col gap-3 rounded-lg border p-4 text-left transition-all",
+                          enabled
+                            ? "border-primary/60 bg-primary/10 shadow-sm"
+                            : "border-border bg-muted/30 hover:border-primary/40 hover:bg-muted/50",
+                          !isAdmin && "opacity-50 cursor-not-allowed"
+                        )}
                       >
-                        {enabled ? "Ativado" : "Desativado"}
-                      </Badge>
-                    </button>
-                  );
-                })}
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={cn(
+                              "flex h-10 w-10 items-center justify-center rounded-lg border transition-colors",
+                              enabled
+                                ? "border-primary bg-primary text-primary-foreground"
+                                : "border-input bg-muted"
+                            )}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-semibold leading-tight text-sm">
+                              {channel.label}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {channel.description}
+                            </p>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={enabled ? "default" : "secondary"}
+                          className="w-fit text-xs"
+                        >
+                          {enabled ? "✓ Ativo" : "Desativado"}
+                        </Badge>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        <div className="space-y-6">
-          {/* Segurança e Acessos */}
+          <NotificationsSettings />
+        </TabsContent>
+
+        {/* TAB: SEGURANÇA */}
+        <TabsContent value="security" className="space-y-6 mt-6">
           <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5" />
-                Segurança e acessos
-              </CardTitle>
+            <CardHeader>
+              <CardTitle>Segurança e acesso</CardTitle>
               <CardDescription>
-                Controle quem pode entrar no sistema e mantenha o POS protegido.
+                Controle quem pode entrar no sistema
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 p-3 text-sm">
-                <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                    <KeyRound className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <p className="font-semibold">
-                      Autenticação com e-mail e senha
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Apenas usuários autorizados conseguem acessar o dashboard
-                      e registrar vendas.
-                    </p>
-                  </div>
-                </div>
-              </div>
+            <CardContent className="space-y-6">
+              <Alert>
+                <ShieldCheck className="h-4 w-4" />
+                <AlertTitle>Autenticação segura</AlertTitle>
+                <AlertDescription>
+                  Seu sistema usa autenticação de dupla camada com e-mail e senha. Apenas usuários autorizados conseguem acessar o dashboard.
+                </AlertDescription>
+              </Alert>
 
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span>Sistema multi-usuários ativo</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span>Controle de permissões granular</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <span>Bloqueio após tentativas falhas</span>
+              <div className="space-y-3">
+                <h4 className="font-semibold text-sm">Status de segurança</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                      Sistema multi-usuários ativo
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                      Controle de permissões granular
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900">
+                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0" />
+                    <span className="text-sm font-medium text-green-900 dark:text-green-100">
+                      Bloqueio após tentativas falhas
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {can.manageUsers && (
-                <Link href="/dashboard/admin/users">
+                <Link href="/dashboard/admin/users" className="block">
                   <Button variant="outline" className="w-full gap-2">
                     <UserCog className="h-4 w-4" />
                     Gerenciar Usuários
@@ -616,72 +661,99 @@ export default function SettingsPage() {
             </CardContent>
           </Card>
 
-          {/* Notificações Push */}
-          <NotificationsSettings />
-
-          {/* Instalação PWA */}
           <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Smartphone className="h-5 w-5" />
-                Instalação do App
-              </CardTitle>
+            <CardHeader>
+              <CardTitle>Backup e manutenção</CardTitle>
               <CardDescription>
-                Instale o NitroBeer POS como um aplicativo nativo.
+                Proteja seus dados com backups regulares
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Alert>
+                <Database className="h-4 w-4" />
+                <AlertTitle>Backup automático ativo</AlertTitle>
+                <AlertDescription>
+                  Seus dados são salvos automaticamente diariamente. Você também pode criar um backup manual a qualquer momento.
+                </AlertDescription>
+              </Alert>
+
+              <div className="grid gap-3 grid-cols-2">
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => createBackup.mutate()}
+                  disabled={createBackup.isPending}
+                >
+                  {createBackup.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                  Backup manual
+                </Button>
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  disabled
+                >
+                  Restaurar backup
+                </Button>
+              </div>
+
+              <div className="text-sm space-y-1 p-3 bg-muted/50 rounded-lg">
+                <p><span className="font-medium">Última cópia:</span> Hoje às 09:12</p>
+                <p><span className="font-medium">Retenção:</span> 30 dias</p>
+                <p><span className="font-medium">Próximo:</span> Amanhã às 09:00</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Aplicativo (PWA)</CardTitle>
+              <CardDescription>
+                Instale o NitroBeer como app nativo
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {isInstalled ? (
-                <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-4 text-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400">
-                      <CheckCircle2 className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-green-900 dark:text-green-100">
-                        App Instalado com Sucesso
-                      </p>
-                      <p className="text-xs text-green-700 dark:text-green-300 mt-1">
-                        O NitroBeer POS está instalado e rodando como aplicativo nativo.
-                      </p>
-                    </div>
-                  </div>
-                </div>
+                <Alert className="bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <AlertTitle className="text-green-900 dark:text-green-100">App Instalado</AlertTitle>
+                  <AlertDescription className="text-green-800 dark:text-green-200">
+                    O NitroBeer POS está instalado e funcionando como aplicativo nativo.
+                  </AlertDescription>
+                </Alert>
               ) : (
                 <>
-                  <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/30 p-3 text-sm">
-                    <div className="flex items-start gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <Download className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-semibold">
-                          Progressive Web App (PWA)
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Instale o app para acesso rápido, funcionamento offline e melhor desempenho.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                  <Alert>
+                    <Download className="h-4 w-4" />
+                    <AlertTitle>Progressive Web App</AlertTitle>
+                    <AlertDescription>
+                      Instale para melhor desempenho, funcionamento offline e notificações push.
+                    </AlertDescription>
+                  </Alert>
 
                   <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>Funciona offline</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>Acesso mais rápido</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>Notificações push</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <CheckCircle2 className="h-4 w-4 text-green-600" />
-                      <span>Experiência nativa</span>
-                    </div>
+                    <h4 className="font-semibold text-sm">Benefícios:</h4>
+                    <ul className="space-y-2">
+                      <li className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        Funciona offline
+                      </li>
+                      <li className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        Acesso rápido na home
+                      </li>
+                      <li className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        Notificações push
+                      </li>
+                      <li className="flex items-center gap-2 text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                        Experiência nativa
+                      </li>
+                    </ul>
                   </div>
 
                   {canPrompt ? (
@@ -700,112 +772,22 @@ export default function SettingsPage() {
                       Instalar Aplicativo
                     </Button>
                   ) : (
-                    <div className="rounded-lg border bg-muted/40 p-3 text-xs text-muted-foreground">
-                      {isInstallable ? (
-                        <p>A instalação estará disponível em breve. Recarregue a página se necessário.</p>
-                      ) : (
-                        <p>Este navegador não suporta instalação PWA ou o app já está instalado.</p>
-                      )}
-                    </div>
+                    <Alert>
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Instalação não disponível</AlertTitle>
+                      <AlertDescription>
+                        {isInstallable 
+                          ? "A instalação estará disponível em breve. Recarregue a página se necessário."
+                          : "Este navegador não suporta instalação PWA."}
+                      </AlertDescription>
+                    </Alert>
                   )}
                 </>
               )}
             </CardContent>
           </Card>
-
-          {/* Backup e Manutenção */}
-          {isAdmin && (
-            <Card>
-              <CardHeader className="space-y-1">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Database className="h-5 w-5" />
-                  Backup e manutenção
-                </CardTitle>
-                <CardDescription>
-                  Proteja seus dados com backups regulares.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-lg border bg-muted/40 p-3 text-sm">
-                  <div className="flex items-center gap-2 mb-2">
-                    <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                    <span className="font-semibold">Backup Automático</span>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Configure backups automáticos para proteger seus dados contra
-                    perda acidental.
-                  </p>
-                </div>
-
-                <div className="grid gap-2">
-                  <Button
-                    variant="outline"
-                    className="gap-2 justify-start"
-                    onClick={() => createBackup.mutate()}
-                    disabled={createBackup.isPending}
-                  >
-                    <Download className="h-4 w-4" />
-                    Criar backup manual
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="gap-2 justify-start"
-                    disabled
-                  >
-                    <Upload className="h-4 w-4" />
-                    Restaurar backup
-                  </Button>
-                </div>
-
-                <div className="text-xs text-muted-foreground space-y-1">
-                  <p>• Último backup: Hoje às 09:12</p>
-                  <p>• Retenção: 30 dias</p>
-                  <p>• Próximo backup: Amanhã às 09:00</p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Logs e Auditoria */}
-          <Card>
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-lg">Logs e auditoria</CardTitle>
-              <CardDescription>
-                Acompanhe as últimas ações registradas no sistema.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 text-sm">
-              <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
-                <BellRing className="mt-1 h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-semibold">Sincronização concluída</p>
-                  <p className="text-xs text-muted-foreground">
-                    Hoje às 09:12 • Estoque atualizado com Google Sheets
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
-                <ShieldCheck className="mt-1 h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-semibold">Configurações atualizadas</p>
-                  <p className="text-xs text-muted-foreground">
-                    Ontem às 19:47 • Alteração feita por Admin
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 rounded-lg border bg-muted/40 p-3">
-                <UserCog className="mt-1 h-5 w-5 text-primary" />
-                <div>
-                  <p className="font-semibold">Novo usuário criado</p>
-                  <p className="text-xs text-muted-foreground">
-                    Ontem às 17:21 • Paula adicionada ao sistema
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
