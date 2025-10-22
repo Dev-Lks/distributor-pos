@@ -1,13 +1,11 @@
 export type ThemeName = 
   | 'light-minimal' 
-  | 'light-warm' 
   | 'light-ocean' 
   | 'light-rose' 
-  | 'dark-minimal' 
   | 'dark-slate' 
+  | 'dark-minimal' 
+  | 'dark-ocean'
   | 'dark-purple' 
-  | 'dark-forest' 
-  | 'lucao' 
   | 'dark-amber'
 
 export interface Theme {
@@ -67,75 +65,33 @@ export const themes: Record<ThemeName, Theme> = {
       cardForeground: 'oklch(0.15 0 0)',
       popover: 'oklch(0.98 0 0)',
       popoverForeground: 'oklch(0.15 0 0)',
-      primary: 'oklch(0.25 0 0)',
+      primary: 'oklch(0.45 0.18 250)',
       primaryForeground: 'oklch(0.99 0 0)',
       secondary: 'oklch(0.96 0 0)',
       secondaryForeground: 'oklch(0.15 0 0)',
       muted: 'oklch(0.95 0 0)',
       mutedForeground: 'oklch(0.45 0 0)',
-      accent: 'oklch(0.94 0 0)',
+      accent: 'oklch(0.60 0.20 50)',
       accentForeground: 'oklch(0.15 0 0)',
       destructive: 'oklch(0.55 0.20 25)',
       destructiveForeground: 'oklch(0.99 0 0)',
       border: 'oklch(0.90 0 0)',
       input: 'oklch(0.90 0 0)',
-      ring: 'oklch(0.25 0 0)',
-      chart1: 'oklch(0.40 0.15 250)',
-      chart2: 'oklch(0.50 0.15 150)',
-      chart3: 'oklch(0.60 0.15 50)',
-      chart4: 'oklch(0.45 0.15 320)',
-      chart5: 'oklch(0.55 0.15 180)',
+      ring: 'oklch(0.45 0.18 250)',
+      chart1: 'oklch(0.55 0.18 250)',
+      chart2: 'oklch(0.60 0.18 150)',
+      chart3: 'oklch(0.58 0.18 50)',
+      chart4: 'oklch(0.52 0.18 320)',
+      chart5: 'oklch(0.59 0.18 180)',
       sidebar: 'oklch(0.97 0 0)',
       sidebarForeground: 'oklch(0.15 0 0)',
-      sidebarPrimary: 'oklch(0.25 0 0)',
+      sidebarPrimary: 'oklch(0.45 0.18 250)',
       sidebarPrimaryForeground: 'oklch(0.99 0 0)',
-      sidebarAccent: 'oklch(0.94 0 0)',
+      sidebarAccent: 'oklch(0.60 0.20 50)',
       sidebarAccentForeground: 'oklch(0.15 0 0)',
       sidebarBorder: 'oklch(0.90 0 0)',
-      sidebarRing: 'oklch(0.25 0 0)',
+      sidebarRing: 'oklch(0.45 0.18 250)',
       radius: '0.5rem',
-    }
-  },
-  
-  'light-warm': {
-    name: 'light-warm',
-    label: 'Light Warm',
-    description: 'Warm and cozy light theme with orange accents',
-    type: 'light',
-    cssVars: {
-      background: 'oklch(0.98 0.01 80)',
-      foreground: 'oklch(0.20 0.02 60)',
-      card: 'oklch(0.99 0.01 80)',
-      cardForeground: 'oklch(0.20 0.02 60)',
-      popover: 'oklch(0.99 0.01 80)',
-      popoverForeground: 'oklch(0.20 0.02 60)',
-      primary: 'oklch(0.55 0.18 50)',
-      primaryForeground: 'oklch(0.99 0 0)',
-      secondary: 'oklch(0.94 0.02 70)',
-      secondaryForeground: 'oklch(0.25 0.02 60)',
-      muted: 'oklch(0.96 0.01 70)',
-      mutedForeground: 'oklch(0.50 0.02 60)',
-      accent: 'oklch(0.92 0.03 65)',
-      accentForeground: 'oklch(0.25 0.02 60)',
-      destructive: 'oklch(0.55 0.22 30)',
-      destructiveForeground: 'oklch(0.99 0 0)',
-      border: 'oklch(0.88 0.02 70)',
-      input: 'oklch(0.88 0.02 70)',
-      ring: 'oklch(0.55 0.18 50)',
-      chart1: 'oklch(0.60 0.18 50)',
-      chart2: 'oklch(0.55 0.16 30)',
-      chart3: 'oklch(0.65 0.14 70)',
-      chart4: 'oklch(0.50 0.15 20)',
-      chart5: 'oklch(0.58 0.17 85)',
-      sidebar: 'oklch(0.97 0.01 75)',
-      sidebarForeground: 'oklch(0.25 0.02 60)',
-      sidebarPrimary: 'oklch(0.55 0.18 50)',
-      sidebarPrimaryForeground: 'oklch(0.99 0 0)',
-      sidebarAccent: 'oklch(0.92 0.03 65)',
-      sidebarAccentForeground: 'oklch(0.25 0.02 60)',
-      sidebarBorder: 'oklch(0.88 0.02 70)',
-      sidebarRing: 'oklch(0.55 0.18 50)',
-      radius: '0.75rem',
     }
   },
   
@@ -351,48 +307,6 @@ export const themes: Record<ThemeName, Theme> = {
     }
   },
   
-  'dark-forest': {
-    name: 'dark-forest',
-    label: 'Dark Forest',
-    description: 'Natural dark theme with green and earthy tones',
-    type: 'dark',
-    cssVars: {
-      background: 'oklch(0.14 0.02 150)',
-      foreground: 'oklch(0.92 0.02 140)',
-      card: 'oklch(0.17 0.02 150)',
-      cardForeground: 'oklch(0.92 0.02 140)',
-      popover: 'oklch(0.17 0.02 150)',
-      popoverForeground: 'oklch(0.92 0.02 140)',
-      primary: 'oklch(0.62 0.14 155)',
-      primaryForeground: 'oklch(0.98 0 0)',
-      secondary: 'oklch(0.24 0.02 150)',
-      secondaryForeground: 'oklch(0.92 0.02 140)',
-      muted: 'oklch(0.22 0.02 150)',
-      mutedForeground: 'oklch(0.63 0.02 140)',
-      accent: 'oklch(0.32 0.04 140)',
-      accentForeground: 'oklch(0.92 0.02 140)',
-      destructive: 'oklch(0.60 0.18 25)',
-      destructiveForeground: 'oklch(0.95 0 0)',
-      border: 'oklch(0.30 0.03 150)',
-      input: 'oklch(0.30 0.03 150)',
-      ring: 'oklch(0.62 0.14 155)',
-      chart1: 'oklch(0.68 0.14 155)',
-      chart2: 'oklch(0.65 0.13 130)',
-      chart3: 'oklch(0.70 0.12 170)',
-      chart4: 'oklch(0.63 0.15 140)',
-      chart5: 'oklch(0.72 0.11 180)',
-      sidebar: 'oklch(0.12 0.02 150)',
-      sidebarForeground: 'oklch(0.92 0.02 140)',
-      sidebarPrimary: 'oklch(0.62 0.14 155)',
-      sidebarPrimaryForeground: 'oklch(0.98 0 0)',
-      sidebarAccent: 'oklch(0.32 0.04 140)',
-      sidebarAccentForeground: 'oklch(0.92 0.02 140)',
-      sidebarBorder: 'oklch(0.30 0.03 150)',
-      sidebarRing: 'oklch(0.62 0.14 155)',
-      radius: '0.6rem',
-    }
-  },
-  
   'dark-amber': {
     name: 'dark-amber',
     label: 'Dark Amber',
@@ -434,46 +348,46 @@ export const themes: Record<ThemeName, Theme> = {
       radius: '0.65rem',
     }
   },
-  
-  'lucao': {
-    name: 'lucao',
-    label: 'Lucao',
-    description: 'Custom theme with green accents',
+
+  'dark-ocean': {
+    name: 'dark-ocean',
+    label: 'Dark Ocean',
+    description: 'Fresh and calm dark theme with blue tones',
     type: 'dark',
     cssVars: {
-      background: 'oklch(0.1822 0 0)',
-      foreground: 'oklch(0.9288 0.0126 255.5078)',
-      card: 'oklch(0.2046 0 0)',
-      cardForeground: 'oklch(0.9288 0.0126 255.5078)',
-      popover: 'oklch(0.2603 0 0)',
-      popoverForeground: 'oklch(0.7348 0 0)',
-      primary: 'oklch(0.4365 0.1044 156.7556)',
-      primaryForeground: 'oklch(0.9213 0.0135 167.1556)',
-      secondary: 'oklch(0.2603 0 0)',
-      secondaryForeground: 'oklch(0.9851 0 0)',
-      muted: 'oklch(0.2393 0 0)',
-      mutedForeground: 'oklch(0.7122 0 0)',
-      accent: 'oklch(0.3132 0 0)',
-      accentForeground: 'oklch(0.9851 0 0)',
-      destructive: 'oklch(0.3123 0.0852 29.7877)',
-      destructiveForeground: 'oklch(0.9368 0.0045 34.3092)',
-      border: 'oklch(0.2809 0 0)',
-      input: 'oklch(0.2603 0 0)',
-      ring: 'oklch(0.8003 0.1821 151.7110)',
-      chart1: 'oklch(0.8003 0.1821 151.7110)',
-      chart2: 'oklch(0.7137 0.1434 254.6240)',
-      chart3: 'oklch(0.7090 0.1592 293.5412)',
-      chart4: 'oklch(0.8369 0.1644 84.4286)',
-      chart5: 'oklch(0.7845 0.1325 181.9120)',
-      sidebar: 'oklch(0.1822 0 0)',
-      sidebarForeground: 'oklch(0.6301 0 0)',
-      sidebarPrimary: 'oklch(0.4365 0.1044 156.7556)',
-      sidebarPrimaryForeground: 'oklch(0.9213 0.0135 167.1556)',
-      sidebarAccent: 'oklch(0.3132 0 0)',
-      sidebarAccentForeground: 'oklch(0.9851 0 0)',
-      sidebarBorder: 'oklch(0.2809 0 0)',
-      sidebarRing: 'oklch(0.8003 0.1821 151.7110)',
-      radius: '0.5rem',
+      background: 'oklch(0.13 0.02 220)',
+      foreground: 'oklch(0.92 0.02 220)',
+      card: 'oklch(0.16 0.02 220)',
+      cardForeground: 'oklch(0.92 0.02 220)',
+      popover: 'oklch(0.16 0.02 220)',
+      popoverForeground: 'oklch(0.92 0.02 220)',
+      primary: 'oklch(0.60 0.16 220)',
+      primaryForeground: 'oklch(0.98 0 0)',
+      secondary: 'oklch(0.22 0.02 220)',
+      secondaryForeground: 'oklch(0.92 0.02 220)',
+      muted: 'oklch(0.20 0.02 220)',
+      mutedForeground: 'oklch(0.62 0.02 220)',
+      accent: 'oklch(0.28 0.03 210)',
+      accentForeground: 'oklch(0.92 0.02 220)',
+      destructive: 'oklch(0.60 0.18 25)',
+      destructiveForeground: 'oklch(0.95 0 0)',
+      border: 'oklch(0.28 0.02 220)',
+      input: 'oklch(0.28 0.02 220)',
+      ring: 'oklch(0.60 0.16 220)',
+      chart1: 'oklch(0.68 0.16 220)',
+      chart2: 'oklch(0.65 0.15 200)',
+      chart3: 'oklch(0.70 0.14 240)',
+      chart4: 'oklch(0.63 0.17 190)',
+      chart5: 'oklch(0.67 0.16 250)',
+      sidebar: 'oklch(0.11 0.02 220)',
+      sidebarForeground: 'oklch(0.92 0.02 220)',
+      sidebarPrimary: 'oklch(0.60 0.16 220)',
+      sidebarPrimaryForeground: 'oklch(0.98 0 0)',
+      sidebarAccent: 'oklch(0.28 0.03 210)',
+      sidebarAccentForeground: 'oklch(0.92 0.02 220)',
+      sidebarBorder: 'oklch(0.28 0.02 220)',
+      sidebarRing: 'oklch(0.60 0.16 220)',
+      radius: '0.55rem',
     }
   },
 }
@@ -487,8 +401,8 @@ export function applyTheme(theme: Theme) {
   
   // Remove all theme classes
   root.classList.remove(
-    'light-minimal', 'light-warm', 'light-ocean', 'light-rose',
-    'dark-minimal', 'dark-slate', 'dark-purple', 'dark-forest', 'dark-amber', 'lucao'
+    'light-minimal', 'light-ocean', 'light-rose',
+    'dark-minimal', 'dark-slate', 'dark-ocean', 'dark-purple', 'dark-amber'
   )
   root.classList.remove('light', 'dark')
   

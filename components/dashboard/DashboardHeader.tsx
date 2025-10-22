@@ -2,9 +2,11 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
-import { ShoppingCart, Package, Receipt, DollarSign, Clock } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { ShoppingCart, Package, Receipt, DollarSign, Clock, TrendingUp } from "lucide-react"
 import Link from "next/link"
 import { useSession } from "next-auth/react"
+import { cn } from "@/lib/utils"
 
 const periodOptions = [
   { value: "today", label: "Hoje", emoji: "📅" },
@@ -49,14 +51,14 @@ export function DashboardHeader({ period, onPeriodChange, quickStats }: Dashboar
   const firstName = session?.user?.name?.split(" ")[0] || "Operador"
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Greeting and Date */}
-      <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-start md:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-            {getGreeting()}, {firstName}! 👋
+    <div className="space-y-5">
+      {/* Main Header - Greeting and Period Selector */}
+      <div className="flex flex-col gap-4 sm:gap-6 md:flex-row md:items-start md:justify-between">
+        <div className="space-y-2 flex-1">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
+            {getGreeting()}, <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">{firstName}</span> 👋
           </h1>
-          <p className="text-xs sm:text-sm text-muted-foreground capitalize">
+          <p className="text-sm text-muted-foreground capitalize">
             {getCurrentDate()}
           </p>
         </div>
@@ -64,7 +66,7 @@ export function DashboardHeader({ period, onPeriodChange, quickStats }: Dashboar
         {/* Period Selector */}
         <div className="flex items-center gap-2">
           <Select value={period} onValueChange={(value) => onPeriodChange(value as DashboardPeriod)}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px] border-primary/20">
               <SelectValue placeholder="Selecionar período" />
             </SelectTrigger>
             <SelectContent align="end">
@@ -81,64 +83,86 @@ export function DashboardHeader({ period, onPeriodChange, quickStats }: Dashboar
         </div>
       </div>
 
-      {/* Quick Stats & Actions Bar */}
-      <div className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between">
-        {/* Quick Stats */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-sm">
-          {quickStats?.sessionDuration && (
-            <div className="flex items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-xs text-muted-foreground">Sessão atual</p>
-                <p className="font-semibold">{quickStats.sessionDuration}</p>
-              </div>
+      {/* Quick Stats Cards */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+        {/* Session Duration */}
+        {quickStats?.sessionDuration && (
+          <div className="group flex items-center gap-3 rounded-lg border border-border/50 bg-card/50 p-4 backdrop-blur transition-all hover:border-primary/30 hover:bg-card/80">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/15">
+              <Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
-          )}
-          {quickStats?.todaySales && (
-            <div className="flex items-center gap-2 rounded-lg bg-emerald-500/10 px-3 py-2">
-              <DollarSign className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-              <div>
-                <p className="text-xs text-muted-foreground">Vendas hoje</p>
-                <p className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  {quickStats.todaySales}
-                </p>
-              </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-muted-foreground">Sessão</p>
+              <p className="font-semibold truncate">{quickStats.sessionDuration}</p>
             </div>
-          )}
-          {quickStats?.alertsCount !== undefined && quickStats.alertsCount > 0 && (
-            <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2">
-              <Package className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-              <div>
-                <p className="text-xs text-muted-foreground">Alertas</p>
-                <p className="font-semibold text-amber-600 dark:text-amber-400">
-                  {quickStats.alertsCount}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Quick Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          <Link href="/dashboard/sales">
-            <Button size="sm" variant="outline" className="text-xs sm:text-sm">
-              <ShoppingCart className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Nova Venda</span>
-            </Button>
-          </Link>
-          <Link href="/dashboard/inventory">
-            <Button size="sm" variant="outline" className="text-xs sm:text-sm">
-              <Package className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Estoque</span>
-            </Button>
-          </Link>
-          <Link href="/dashboard/orders">
-            <Button size="sm" variant="outline" className="text-xs sm:text-sm">
-              <Receipt className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Encomendas</span>
-            </Button>
-          </Link>
+        {/* Today's Sales */}
+        {quickStats?.todaySales && (
+          <div className="group flex items-center gap-3 rounded-lg border border-border/50 bg-card/50 p-4 backdrop-blur transition-all hover:border-primary/30 hover:bg-card/80">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-500/15">
+              <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-muted-foreground">Vendas Hoje</p>
+              <p className="font-semibold truncate text-green-600 dark:text-green-400">
+                {quickStats.todaySales}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Stock Alerts */}
+        {quickStats?.alertsCount !== undefined && quickStats.alertsCount > 0 && (
+          <div className="group flex items-center gap-3 rounded-lg border border-border/50 bg-card/50 p-4 backdrop-blur transition-all hover:border-primary/30 hover:bg-card/80">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/15">
+              <Package className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-xs font-medium text-muted-foreground">Alertas</p>
+              <Badge className="mt-1 bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30">
+                {quickStats.alertsCount}
+              </Badge>
+            </div>
+          </div>
+        )}
+
+        {/* Quick Action Button */}
+        <div className="group flex items-center gap-3 rounded-lg border-2 border-dashed border-primary/30 bg-card/20 p-4 backdrop-blur transition-all hover:border-primary/60 hover:bg-card/40">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15">
+            <TrendingUp className="h-5 w-5 text-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-muted-foreground">Status</p>
+            <p className="font-semibold text-xs">Operacional</p>
+          </div>
         </div>
+      </div>
+
+      {/* Quick Actions Bar */}
+      <div className="flex flex-wrap items-center gap-2 md:justify-end">
+        <Link href="/dashboard/sales">
+          <Button size="sm" className="gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            <span className="hidden sm:inline">Nova Venda</span>
+            <span className="inline sm:hidden">Venda</span>
+          </Button>
+        </Link>
+        <Link href="/dashboard/inventory">
+          <Button size="sm" variant="outline" className="gap-2">
+            <Package className="h-4 w-4" />
+            <span className="hidden sm:inline">Estoque</span>
+            <span className="inline sm:hidden">Estq.</span>
+          </Button>
+        </Link>
+        <Link href="/dashboard/orders">
+          <Button size="sm" variant="outline" className="gap-2">
+            <Receipt className="h-4 w-4" />
+            <span className="hidden sm:inline">Encomendas</span>
+            <span className="inline sm:hidden">Enc.</span>
+          </Button>
+        </Link>
       </div>
     </div>
   )

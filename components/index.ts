@@ -28,3 +28,8 @@ export { RippleButton } from './ui/ripple-button'
 export { VirtualList } from './VirtualList'
 export { InfiniteScrollList } from './InfiniteScrollList'
 export { LazySection } from './LazySection'
+
+// Navigation & UI Improvements (from Sprint 5)
+export { Breadcrumb } from './Breadcrumb'
+export { SidebarNotifications } from './SidebarNotifications'
+export { NotificationsTester } from './NotificationsTester'
