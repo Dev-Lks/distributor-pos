@@ -201,6 +201,7 @@ model User {
   ordersAssigned     Order[]             @relation("OrderAssignedTo")
   deliveriesCreated  Delivery[]          @relation("DeliveryCreatedBy")
   permissions        UserPermission[]
+  preferences        UserPreferences?
 
   @@index([email])
   @@index([status])
@@ -1233,4 +1234,33 @@ model SystemSettings {
   updatedAt DateTime @updatedAt
   
   @@map("system_settings")
+}
+
+// ========================================
+// PREFERÊNCIAS DO USUÁRIO
+// ========================================
+
+model UserPreferences {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  // Notificações
+  notificationDeliveries Boolean @default(true)
+  notificationStockAlerts Boolean @default(true)
+  notificationSales Boolean @default(true)
+  notificationDesktop Boolean @default(true)
+  
+  // Experiência sensorial
+  notificationSound Boolean @default(true)
+  notificationVibration Boolean @default(true)
+  
+  // Outros
+  metadata Json?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
 }

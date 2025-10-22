@@ -22,6 +22,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useDelivery, useUpdateDelivery } from "@/hooks/useDeliveries"
 import { useDeliveryDrivers } from "@/hooks/useDeliveryDrivers"
+import { useDeliveryNotifications } from "@/hooks/useDeliveryNotifications"
 import type { DeliveryStatus } from "@/types/delivery"
 import { toast } from "sonner"
 import {
@@ -72,6 +73,7 @@ export function DeliveryDetailsDialog({
   const { data: delivery, isLoading } = useDelivery(deliveryId)
   const { data: drivers = [], isLoading: isLoadingDrivers } = useDeliveryDrivers({ activeOnly: true })
   const updateDelivery = useUpdateDelivery()
+  const { notifyDeliveryStatusChange } = useDeliveryNotifications()
 
   const handleUpdateStatus = async () => {
     if (!deliveryId || !newStatus) return
@@ -81,6 +83,15 @@ export function DeliveryDetailsDialog({
         id: deliveryId,
         status: newStatus,
       })
+
+      // 🔔 Enviar notificação
+      const driverName = drivers?.find(d => d.id === delivery?.driverId)?.name
+      await notifyDeliveryStatusChange(
+        deliveryId,
+        newStatus,
+        driverName,
+        delivery?.customer?.name
+      )
       
       toast.success("Status atualizado com sucesso!")
       setNewStatus("")

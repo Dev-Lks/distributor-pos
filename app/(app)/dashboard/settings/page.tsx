@@ -46,6 +46,7 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import Link from "next/link";
+import { NotificationsSettings } from "@/components/settings/NotificationsSettings";
 
 const channels = [
   {
@@ -614,6 +615,9 @@ export default function SettingsPage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Notificações Push */}
+          <NotificationsSettings />
 
           {/* Instalação PWA */}
           <Card>
