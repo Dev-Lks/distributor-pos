@@ -95,6 +95,21 @@ Realizei uma reimaginação completa da sidebar e dos temas da dashboard, manten
    - Provider: `NotificationProvider` - Context global
    - Componente: `SidebarNotifications` - UI no popover
 
+### 6. **Reorganização da Sidebar** (NOVO)
+
+   🎯 **Mudanças:**
+   - ❌ Removido "Relatórios Z" (item desnecessário)
+   - Renomeado "Vendas" → "Operações" (mais abrangente)
+   - Movido "Análise de Vendas" para "Operações"
+   - Renomeado "Registro de Vendas" → "Histórico de Vendas"
+   - Nova ordem mais intuitiva: Dashboard → Operações → Estoque → Clientes → Configuração → Admin
+
+   ✨ **Benefícios:**
+   - Fluxo de trabalho mais natural
+   - Menos poluição visual
+   - Melhor agrupamento lógico
+   - Facilita navegação
+
 ---
 
 ## 🎯 Características Técnicas
@@ -165,7 +180,7 @@ As mudanças foram totalmente isoladas na dashboard:
 
 ```
 components/
-  ├── SidebarLayout.tsx (adicionado breadcrumb + notificações) 🔄
+  ├── SidebarLayout.tsx (reorganizado nav items) 🔄
   ├── Breadcrumb.tsx (novo) ✨
   ├── SidebarNotifications.tsx (novo) ✨
   ├── NotificationsTester.tsx (novo - para testes) ✨
@@ -181,7 +196,9 @@ hooks/
 
 docs/
   ├── FEATURES_BREADCRUMB_NOTIFICATIONS.md (novo) ✨
-  └── INTEGRATION_BREADCRUMB_NOTIFICATIONS.md (novo) ✨
+  ├── INTEGRATION_BREADCRUMB_NOTIFICATIONS.md (novo) ✨
+  ├── SIDEBAR_REORGANIZATION.md (novo) ✨
+  └── REDESIGN_DASHBOARD_RESUMO.md (atualizado) 🔄
 ```
 
 ---
@@ -237,10 +254,12 @@ Veja os documentos para mais detalhes:
 
 1. ✅ **Adicionar breadcrumb melhorado** - IMPLEMENTADO!
 2. ✅ **Notificações em tempo real na sidebar** - IMPLEMENTADO!
-3. Adicionar animações de transição entre páginas
-4. Criar temas customizados por usuário
-5. Notificações de desktop via Notification API
-6. Atalhos de teclado para navegação
+3. ✅ **Reorganizar páginas na sidebar** - IMPLEMENTADO!
+4. ✅ **Remover Relatórios Z** - IMPLEMENTADO!
+5. Adicionar animações de transição entre páginas
+6. Criar temas customizados por usuário
+7. Notificações de desktop via Notification API
+8. Atalhos de teclado para navegação
 
 ---
 
@@ -257,4 +276,4 @@ Veja os documentos para mais detalhes:
 
 **Status:** ✅ Pronto para produção
 **Data:** 22 de outubro de 2025
-**Versão:** 2.6.0
+**Versão:** 2.7.0

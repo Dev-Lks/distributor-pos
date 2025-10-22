@@ -90,7 +90,7 @@ const navItems: Array<{
   },
   {
     id: "sales",
-    label: "Vendas",
+    label: "Operações",
     icon: ShoppingCart,
     items: [
       {
@@ -108,35 +108,16 @@ const navItems: Array<{
         permission: "viewDeliveries"
       },
       {
-        label: "Registro de Vendas",
+        label: "Histórico de Vendas",
         href: "/dashboard/sales/ledger",
         icon: FileText,
         permission: "viewOwnSales"
-      }
-    ]
-  },
-  {
-    id: "customers",
-    label: "Clientes",
-    icon: Users2,
-    items: [
-      {
-        label: "Clientes",
-        href: "/dashboard/clientes",
-        icon: UserRound,
-        permission: "viewCustomers"
       },
       {
-        label: "Encomendas",
-        href: "/dashboard/orders",
-        icon: Receipt,
-        permission: "viewOrders"
-      },
-      {
-        label: "Bonificações",
-        href: "/dashboard/bonificacoes",
-        icon: Gift,
-        permission: "viewCustomers"
+        label: "Análise de Vendas",
+        href: "/dashboard/reports/sales",
+        icon: ListChecks,
+        permission: "viewReports"
       }
     ]
   },
@@ -166,21 +147,27 @@ const navItems: Array<{
     ]
   },
   {
-    id: "reports",
-    label: "Relatórios",
-    icon: FileText,
+    id: "customers",
+    label: "Clientes",
+    icon: Users2,
     items: [
       {
-        label: "Relatórios Z",
-        href: "/dashboard/reports/daily",
-        icon: FileText,
-        permission: "viewReports"
+        label: "Clientes",
+        href: "/dashboard/clientes",
+        icon: UserRound,
+        permission: "viewCustomers"
       },
       {
-        label: "Análise de Vendas",
-        href: "/dashboard/reports/sales",
-        icon: ListChecks,
-        permission: "viewReports"
+        label: "Encomendas",
+        href: "/dashboard/orders",
+        icon: Receipt,
+        permission: "viewOrders"
+      },
+      {
+        label: "Bonificações",
+        href: "/dashboard/bonificacoes",
+        icon: Gift,
+        permission: "viewCustomers"
       }
     ]
   },
