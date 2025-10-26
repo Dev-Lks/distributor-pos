@@ -69,13 +69,9 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     permissions: ["VIEW_INVENTORY"],
   },
 
-  // Customers routes
+  // Customers routes (using /clientes in Portuguese)
   {
-    pattern: "/dashboard/customers",
-    permissions: ["VIEW_CUSTOMERS"],
-  },
-  {
-    pattern: "/customers",
+    pattern: "/dashboard/clientes",
     permissions: ["VIEW_CUSTOMERS"],
   },
 
