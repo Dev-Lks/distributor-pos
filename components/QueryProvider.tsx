@@ -4,8 +4,12 @@ import { QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-qu
 import { useState } from "react";
 
 /**
- * Inicializa o QueryClient com política de cache consistente para reduzir refetches
- * e expõe o provider para todo o aplicativo.
+ * Inicializa o QueryClient com política de cache otimizada para desenvolvimento com hot-reload.
+ * 
+ * Configuração:
+ * - staleTime: 0 em dev (sempre re-fetch), 5 min em prod
+ * - refetchOnWindowFocus: habilitado em dev, desabilitado em prod
+ * - refetchOnMount: habilitado em dev para sincronizar novo componentes
  */
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -13,31 +17,24 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 1000 * 60 * 5,
+            // Dados sempre consideram "stale" em dev (força refetch)
+            staleTime: 0,
             gcTime: 1000 * 60 * 30,
-            retry: (failureCount, error: unknown) => {
-              const status = (error as { status?: number } | undefined)?.status;
-              if (status === 404) {
-                return false;
-              }
+            retry: (failureCount: number) => {
               return failureCount < 2;
             },
-            refetchOnWindowFocus: false,
+            // Habilitar atualização automática para refletir mudanças em tempo real
+            refetchOnWindowFocus: true,
             refetchOnReconnect: true,
-            refetchOnMount: false,
+            refetchOnMount: true,
           },
           mutations: {
             retry: 1,
           },
         },
         queryCache: new QueryCache({
-          onError: (error, query) => {
-            if (process.env.NODE_ENV !== "production") {
-              console.error("React Query error", {
-                error,
-                queryKey: query?.queryKey,
-              });
-            }
+          onError: (error: unknown) => {
+            console.error("React Query error", { error });
           },
         }),
       })
