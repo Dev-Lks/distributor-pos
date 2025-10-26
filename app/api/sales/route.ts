@@ -221,9 +221,12 @@ export async function POST(request: NextRequest) {
   const sanitizedCustomerEmail = input.customerEmail?.trim() || undefined
   const sanitizedCustomerPhone = input.customerPhone?.trim() || undefined
   const sanitizedCustomerDocument = sanitizeDocument(input.customerDocument) || undefined
-  if (!validateCpfCnpj(sanitizedCustomerDocument)) {
+  
+  // Validar documento APENAS se fornecido
+  if (sanitizedCustomerDocument && !validateCpfCnpj(sanitizedCustomerDocument)) {
     return NextResponse.json({ error: 'Documento do cliente inválido' }, { status: 400 })
   }
+  
   const customerPersonType = detectPersonType(sanitizedCustomerDocument)
   const sanitizedCustomerAddress = input.customerAddress?.trim() || undefined
   const sanitizedCustomerId = input.customerId?.trim() || undefined
