@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { toast } from 'sonner'
 
 export interface ProductPointOfSale {
   id: string
@@ -37,14 +38,25 @@ export function useCreateProductPointOfSale() {
       })
       const result = await res.json()
       if (!res.ok) {
-        throw new Error(result.error || 'Failed to create product point of sale')
+        // Se há detalhes de erro, mostrar campo por campo
+        if (result.details && Array.isArray(result.details)) {
+          const messages = result.details
+            .map((d: { field?: string; message?: string }) => `• ${d.field || 'Campo'}: ${d.message || 'Erro desconhecido'}`)
+            .join('\n')
+          throw new Error(`${result.error}\n\n${messages}`)
+        }
+        throw new Error(result.error || 'Falha ao criar alocação de produto')
       }
       return result
     },
     onSuccess: () => {
+      toast.success('Alocação criada com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['product-points-of-sale'] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
     },
+    onError: (error: Error) => {
+      toast.error(error.message, { duration: 5000 })
+    }
   })
 }
 
@@ -59,14 +71,24 @@ export function useUpdateProductPointOfSale() {
       })
       const result = await res.json()
       if (!res.ok) {
-        throw new Error(result.error || 'Failed to update product point of sale')
+        if (result.details && Array.isArray(result.details)) {
+          const messages = result.details
+            .map((d: { field?: string; message?: string }) => `• ${d.field || 'Campo'}: ${d.message || 'Erro desconhecido'}`)
+            .join('\n')
+          throw new Error(`${result.error}\n\n${messages}`)
+        }
+        throw new Error(result.error || 'Falha ao atualizar alocação')
       }
       return result
     },
     onSuccess: () => {
+      toast.success('Alocação atualizada!')
       queryClient.invalidateQueries({ queryKey: ['product-points-of-sale'] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
     },
+    onError: (error: Error) => {
+      toast.error(error.message, { duration: 5000 })
+    }
   })
 }
 
@@ -77,13 +99,23 @@ export function useDeleteProductPointOfSale() {
       const res = await fetch(`/api/product-points-of-sale?id=${id}`, { method: 'DELETE' })
       const result = await res.json()
       if (!res.ok) {
-        throw new Error(result.error || 'Failed to delete product point of sale')
+        if (result.details && Array.isArray(result.details)) {
+          const messages = result.details
+            .map((d: { field?: string; message?: string }) => `• ${d.field || 'Campo'}: ${d.message || 'Erro desconhecido'}`)
+            .join('\n')
+          throw new Error(`${result.error}\n\n${messages}`)
+        }
+        throw new Error(result.error || 'Falha ao remover alocação')
       }
       return result
     },
     onSuccess: () => {
+      toast.success('Alocação removida com sucesso!')
       queryClient.invalidateQueries({ queryKey: ['product-points-of-sale'] })
       queryClient.invalidateQueries({ queryKey: ['products'] })
     },
+    onError: (error: Error) => {
+      toast.error(error.message, { duration: 5000 })
+    }
   })
 }
