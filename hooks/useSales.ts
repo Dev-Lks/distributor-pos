@@ -109,6 +109,7 @@ export interface SaleRecord {
 export interface UpdateSalePayload {
   status?: 'completed' | 'pending' | 'processing' | 'flagged'
   paymentMethod?: 'cash' | 'card' | 'pix' | 'other' | null
+  customerId?: string | null
   customerName?: string | null
   customerEmail?: string | null
   customerPhone?: string | null

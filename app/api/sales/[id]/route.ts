@@ -12,6 +12,7 @@ export const revalidate = 0
 const updateSaleSchema = z.object({
   status: z.enum(['completed', 'pending', 'processing', 'flagged']).optional(),
   paymentMethod: z.enum(['cash', 'card', 'pix', 'other']).nullish(),
+  customerId: z.string().nullish(),
   customerName: z.string().nullish(),
   customerEmail: z.string().email('E-mail inválido').nullish(),
   customerPhone: z.string().nullish(),
@@ -196,6 +197,25 @@ export async function PATCH(
       updateData.paymentMethod = data.paymentMethod ?? null
     }
 
+    // Se customerId for fornecido, conectar ao cliente
+    if (data.customerId !== undefined) {
+      if (data.customerId === null) {
+        updateData.customer = { disconnect: true }
+      } else {
+        // Verificar se o cliente existe
+        const customerExists = await prisma.customer.findUnique({
+          where: { id: data.customerId },
+          select: { id: true }
+        })
+        
+        if (!customerExists) {
+          return NextResponse.json({ error: 'Cliente não encontrado' }, { status: 404 })
+        }
+        
+        updateData.customer = { connect: { id: data.customerId } }
+      }
+    }
+
     const customerName = sanitize(data.customerName)
     if (customerName !== undefined) updateData.customerName = customerName
 
@@ -234,7 +254,11 @@ export async function PATCH(
       } as any,
     })
 
-    if (data.syncCustomer && sale.customerId) {
+    // Sincronizar com o cadastro do cliente se solicitado
+    // Usar o customerId do updatedSale (pode ter sido atualizado) ou do sale original
+    const targetCustomerId = updatedSale.customerId ?? sale.customerId
+    
+    if (data.syncCustomer && targetCustomerId) {
       const customerUpdate: Prisma.CustomerUpdateInput = {}
 
       if (customerName !== undefined && customerName !== null) {
@@ -248,7 +272,7 @@ export async function PATCH(
 
       if (hasCustomerChanges) {
         await prisma.customer.update({
-          where: { id: sale.customerId },
+          where: { id: targetCustomerId },
           data: customerUpdate,
         })
       }

@@ -40,6 +40,8 @@ import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 import { useSales, type SaleRecord, type UpdateSalePayload } from "@/hooks/useSales"
 import { useCashSession } from "@/hooks/useCashSession"
+import { ImprovedCustomerSelector } from "@/components/customers/ImprovedCustomerSelector"
+import type { CustomerSummary } from "@/hooks/useCustomers"
 
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
@@ -759,10 +761,32 @@ function SaleEditorDialog({
 }) {
   const [syncCustomer, setSyncCustomer] = useState(true)
   const [formValues, setFormValues] = useState(() => mapSaleToForm(sale))
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerSummary | null>(null)
 
   useEffect(() => {
     setFormValues(mapSaleToForm(sale))
     setSyncCustomer(Boolean(sale?.customer))
+    
+    // Popular o customer selector se a venda já tem um cliente
+    if (sale?.customer) {
+      setSelectedCustomer({
+        id: sale.customer.id,
+        name: sale.customer.name,
+        phone: sale.customer.phone ?? null,
+        email: sale.customer.email ?? null,
+        address: sale.customer.address ?? null,
+        document: null, // O tipo SaleRecord não retorna document no customer
+        totalOrders: 0,
+        totalSpend: 0,
+        averageTicket: null,
+        lastPurchaseAt: null,
+        bonificationsCount: 0,
+        createdAt: '',
+        updatedAt: '',
+      })
+    } else {
+      setSelectedCustomer(null)
+    }
   }, [sale])
 
   if (!sale) {
@@ -784,17 +808,35 @@ function SaleEditorDialog({
     const payload: UpdateSalePayload = {
       status: formValues.status as UpdateSalePayload["status"],
       paymentMethod,
-      customerName: emptyToNull(formValues.customerName),
-      customerEmail: emptyToNull(formValues.customerEmail),
-      customerPhone: emptyToNull(formValues.customerPhone),
-      customerDocument: emptyToNull(formValues.customerDocument),
-      customerAddress: emptyToNull(formValues.customerAddress),
+      // Se um cliente está selecionado, enviamos apenas o ID
+      // Caso contrário, enviamos os campos individuais
+      customerId: selectedCustomer?.id,
+      customerName: selectedCustomer ? null : emptyToNull(formValues.customerName),
+      customerEmail: selectedCustomer ? null : emptyToNull(formValues.customerEmail),
+      customerPhone: selectedCustomer ? null : emptyToNull(formValues.customerPhone),
+      customerDocument: selectedCustomer ? null : emptyToNull(formValues.customerDocument),
+      customerAddress: selectedCustomer ? null : emptyToNull(formValues.customerAddress),
       channel: emptyToNull(formValues.channel),
       notes: emptyToNull(formValues.notes),
       syncCustomer
     }
 
     await onSubmit(payload)
+  }
+
+  const handleCustomerSelect = (customer: CustomerSummary | null) => {
+    setSelectedCustomer(customer)
+    // Limpar os campos manuais quando um cliente é selecionado
+    if (customer) {
+      setFormValues((prev) => ({
+        ...prev,
+        customerName: "",
+        customerEmail: "",
+        customerPhone: "",
+        customerDocument: "",
+        customerAddress: ""
+      }))
+    }
   }
 
   return (
@@ -880,69 +922,90 @@ function SaleEditorDialog({
 
           <Separator />
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="customer-name">Nome do cliente</Label>
-              <Input
-                id="customer-name"
-                value={formValues.customerName ?? ""}
-                onChange={(event) => handleChange("customerName", event.target.value)}
-                placeholder="Nome completo"
+              <Label>Cliente</Label>
+              <ImprovedCustomerSelector
+                value={selectedCustomer?.id}
+                onSelect={handleCustomerSelect}
+                allowCreate={true}
+                showRecent={true}
+                placeholder="Buscar cliente por nome, telefone ou documento"
               />
+              {!selectedCustomer && (
+                <p className="text-xs text-muted-foreground">
+                  Selecione um cliente existente ou preencha os campos abaixo manualmente
+                </p>
+              )}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="customer-phone">Telefone</Label>
-              <Input
-                id="customer-phone"
-                value={formValues.customerPhone ?? ""}
-                onChange={(event) => handleChange("customerPhone", event.target.value)}
-                placeholder="(11) 90000-0000"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customer-email">E-mail</Label>
-              <Input
-                id="customer-email"
-                type="email"
-                value={formValues.customerEmail ?? ""}
-                onChange={(event) => handleChange("customerEmail", event.target.value)}
-                placeholder="cliente@email.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customer-document">Documento</Label>
-              <Input
-                id="customer-document"
-                value={formValues.customerDocument ?? ""}
-                onChange={(event) => handleChange("customerDocument", event.target.value)}
-                placeholder="CPF ou CNPJ"
-              />
-            </div>
-            <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="customer-address">Endereço</Label>
-              <textarea
-                id="customer-address"
-                value={formValues.customerAddress ?? ""}
-                onChange={(event) => handleChange("customerAddress", event.target.value)}
-                placeholder="Rua, número, complemento"
-                className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
-              />
-            </div>
+
+            {/* Campos manuais - apenas visíveis quando não há cliente selecionado */}
+            {!selectedCustomer && (
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="customer-name">Nome do cliente</Label>
+                  <Input
+                    id="customer-name"
+                    value={formValues.customerName ?? ""}
+                    onChange={(event) => handleChange("customerName", event.target.value)}
+                    placeholder="Nome completo"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customer-phone">Telefone</Label>
+                  <Input
+                    id="customer-phone"
+                    value={formValues.customerPhone ?? ""}
+                    onChange={(event) => handleChange("customerPhone", event.target.value)}
+                    placeholder="(11) 90000-0000"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customer-email">E-mail</Label>
+                  <Input
+                    id="customer-email"
+                    type="email"
+                    value={formValues.customerEmail ?? ""}
+                    onChange={(event) => handleChange("customerEmail", event.target.value)}
+                    placeholder="cliente@email.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customer-document">Documento</Label>
+                  <Input
+                    id="customer-document"
+                    value={formValues.customerDocument ?? ""}
+                    onChange={(event) => handleChange("customerDocument", event.target.value)}
+                    placeholder="CPF ou CNPJ"
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="customer-address">Endereço</Label>
+                  <textarea
+                    id="customer-address"
+                    value={formValues.customerAddress ?? ""}
+                    onChange={(event) => handleChange("customerAddress", event.target.value)}
+                    placeholder="Rua, número, complemento"
+                    className="min-h-[70px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 focus-visible:ring-offset-2"
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-4">
-            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm font-semibold">Sincronizar com cadastro do cliente</p>
-                <p className="text-xs text-muted-foreground">
-                  {sale.customer
-                    ? "Atualize também o registro oficial deste cliente."
-                    : "Ative para criar ou atualizar automaticamente o cadastro ao salvar."}
-                </p>
+          {selectedCustomer && (
+            <div className="rounded-lg border border-dashed border-muted-foreground/40 bg-muted/20 p-4">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Sincronizar com cadastro do cliente</p>
+                  <p className="text-xs text-muted-foreground">
+                    Atualize também o registro oficial deste cliente.
+                  </p>
+                </div>
+                <Switch checked={syncCustomer} onCheckedChange={setSyncCustomer} />
               </div>
-              <Switch checked={syncCustomer} onCheckedChange={setSyncCustomer} />
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <p className="text-xs font-semibold uppercase text-muted-foreground">Resumo dos itens</p>
