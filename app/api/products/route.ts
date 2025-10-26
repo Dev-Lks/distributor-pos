@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-
-// Force dynamic rendering - critical for real-time updates
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
 import { getServerAuth, notAuthenticated, unauthorized } from '@/lib/serverAuth'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
@@ -14,6 +10,10 @@ import {
   deleteProductSchema,
 } from '@/lib/validations'
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 const prismaProductPoints = (prisma as unknown as {
   productPointOfSale: {
@@ -72,8 +72,10 @@ export async function GET() {1
     }))
 
     const response = NextResponse.json(productsWithPoints)
-    response.headers.set('Cache-Control', 'private, max-age=180, stale-while-revalidate=900')
-    response.headers.set('Vary', 'Cookie, Authorization, Origin')
+    // No cache - real-time updates critical for inventory
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
     return response
   } catch (error) {
     logger.error('Error fetching products', { error })
