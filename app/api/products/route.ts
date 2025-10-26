@@ -54,10 +54,16 @@ export async function GET() {1
         isActive: boolean
         createdAt: Date
         updatedAt: Date
+        deletedAt: Date | null
       }
     }
 
-    const pointsByProductId = (productPoints as ProductPointOfSaleWithRelation[]).reduce<
+    // Filter out deleted/inactive points of sale
+    const activeProductPoints = (productPoints as ProductPointOfSaleWithRelation[]).filter(
+      (pp) => pp.pointOfSale.deletedAt === null && pp.pointOfSale.isActive
+    )
+
+    const pointsByProductId = activeProductPoints.reduce<
       Map<string, ProductPointOfSaleWithRelation[]>
     >((acc, productPoint) => {
       const list = acc.get(productPoint.productId) ?? []
