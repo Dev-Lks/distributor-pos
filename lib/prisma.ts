@@ -19,8 +19,8 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.prisma = prisma
 }
 
-// Graceful shutdown handler - only register once
-if (!globalForPrisma.prisma) {
+// Register graceful shutdown handler only once
+if (!('prismaShutdownRegistered' in globalForPrisma)) {
   async function gracefulShutdown() {
     try {
       await prisma.$disconnect()
@@ -35,4 +35,7 @@ if (!globalForPrisma.prisma) {
   process.once('beforeExit', gracefulShutdown)
   process.once('SIGINT', gracefulShutdown)
   process.once('SIGTERM', gracefulShutdown)
+
+  // Mark as registered to prevent duplicate handlers
+  ;(globalForPrisma as any).prismaShutdownRegistered = true
 }
