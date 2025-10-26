@@ -2,10 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ZodError } from 'zod'
 import { logger } from '@/lib/logger'
 import { 
-
-// Force dynamic rendering - critical for real-time updates
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
   generateSaleReceipt, 
   generateCashTransactionReceipt,
   generateCashClosingReceipt,
@@ -13,6 +9,10 @@ export const revalidate = 0
 } from '@/lib/hardware/printerTemplates'
 import { prisma } from '@/lib/prisma'
 import { printerPrintSchema } from '@/lib/validations'
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export async function POST(request: NextRequest) {
   try {

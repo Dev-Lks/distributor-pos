@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import type {
-
-// Force dynamic rendering - critical for real-time updates
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
   InventoryImportError,
   InventoryImportResponse,
   InventoryImportSummary,
@@ -13,6 +9,10 @@ import { parseSpreadsheetRows } from '@/lib/inventory/importParser';
 import { validateRows } from '@/lib/inventory/importValidator';
 import { processInventoryUpdates } from '@/lib/inventory/importProcessor';
 import { logger } from '@/lib/logger';
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export const runtime = 'nodejs';
 

@@ -5,15 +5,15 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { z } from 'zod'
 import {
-
-// Force dynamic rendering - critical for real-time updates
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
   createPointOfSaleSchema,
   updatePointOfSaleSchema,
   deletePointOfSaleSchema,
 } from '@/lib/validations'
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import type { Prisma } from '@prisma/client'
 
 export async function GET() {
