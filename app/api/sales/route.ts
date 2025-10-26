@@ -559,7 +559,6 @@ export async function POST(request: NextRequest) {
         customerPhone: sanitizedCustomerPhone ?? null,
         customerDocument: sanitizedCustomerDocument ?? null,
         customerAddress: sanitizedCustomerAddress ?? null,
-        customerId: customerRecordId ?? null,
         channel: sanitizedChannel ?? null,
         subtotal,
         discountValue,
