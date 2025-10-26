@@ -33,7 +33,7 @@ export const createPointOfSaleSchema = z.object({
 })
 
 export const updatePointOfSaleSchema = z.object({
-  id: z.string().uuid('ID do ponto de venda inválido'),
+  id: z.string().cuid('ID do ponto de venda inválido'),
   
   name: z.string()
     .trim()
@@ -64,7 +64,7 @@ export const updatePointOfSaleSchema = z.object({
 })
 
 export const deletePointOfSaleSchema = z.object({
-  id: z.string().uuid('ID do ponto de venda inválido'),
+  id: z.string().cuid('ID do ponto de venda inválido'),
 })
 
 export type CreatePointOfSaleInput = z.infer<typeof createPointOfSaleSchema>
