@@ -799,31 +799,32 @@ function SaleEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl space-y-6">
-        <DialogHeader className="space-y-1 text-left">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="space-y-1 text-left flex-shrink-0">
           <DialogTitle className="text-2xl font-semibold">Editar venda</DialogTitle>
           <DialogDescription>
             Ajuste informações do cliente, canal e status. Alterações podem ser sincronizadas com o cadastro do cliente.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3 rounded-xl border border-border/50 bg-muted/20 p-4 text-sm md:grid-cols-3">
-          <div>
-            <p className="text-xs text-muted-foreground">Venda</p>
-            <p className="font-semibold">{dateFormatter.format(new Date(sale.date))}</p>
+        <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+          <div className="grid gap-3 rounded-xl border border-border/50 bg-muted/20 p-4 text-sm md:grid-cols-3">
+            <div>
+              <p className="text-xs text-muted-foreground">Venda</p>
+              <p className="font-semibold">{dateFormatter.format(new Date(sale.date))}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Valor total</p>
+              <p className="font-semibold">{currencyFormatter.format(sale.total ?? 0)}</p>
+            </div>
+            <div>
+              <p className="text-xs text-muted-foreground">Ponto de venda</p>
+              <p className="font-semibold">{sale.pointOfSale?.name ?? "Não informado"}</p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Valor total</p>
-            <p className="font-semibold">{currencyFormatter.format(sale.total ?? 0)}</p>
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">Ponto de venda</p>
-            <p className="font-semibold">{sale.pointOfSale?.name ?? "Não informado"}</p>
-          </div>
-        </div>
 
-        <form className="space-y-6" onSubmit={handleSubmit}>
-          <div className="grid gap-4 md:grid-cols-2">
+          <form id="sale-edit-form" className="space-y-6" onSubmit={handleSubmit}>
+            <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="sale-status">Status</Label>
               <Select value={formValues.status} onValueChange={(value) => handleChange("status", value)}>
@@ -955,29 +956,30 @@ function SaleEditorDialog({
               ))}
             </div>
           </div>
+          </form>
+        </div>
 
-          <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between">
-            <Button
-              type="button"
-              variant="destructive"
-              className="gap-2"
-              onClick={onCancelSale}
-              disabled={isCancelling}
-            >
-              {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
-              Cancelar venda
+        <DialogFooter className="flex-col gap-3 sm:flex-row sm:justify-between flex-shrink-0 border-t pt-4">
+          <Button
+            type="button"
+            variant="destructive"
+            className="gap-2"
+            onClick={onCancelSale}
+            disabled={isCancelling}
+          >
+            {isCancelling ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+            Cancelar venda
+          </Button>
+          <div className="flex w-full justify-end gap-2 sm:w-auto">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Fechar
             </Button>
-            <div className="flex w-full justify-end gap-2 sm:w-auto">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Fechar
-              </Button>
-              <Button type="submit" disabled={isSaving} className="gap-2">
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenSquare className="h-4 w-4" />}
-                Salvar alterações
-              </Button>
-            </div>
-          </DialogFooter>
-        </form>
+            <Button type="submit" disabled={isSaving} className="gap-2" form="sale-edit-form">
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <PenSquare className="h-4 w-4" />}
+              Salvar alterações
+            </Button>
+          </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -1003,16 +1005,22 @@ function mapSaleToForm(sale: SaleRecord | null) {
     ? sale.paymentMethod.toLowerCase()
     : "unset"
 
+  // Prioritize customer data from sale.customer object, fall back to direct sale fields
+  const customerName = sale.customer?.name ?? sale.customerName ?? ""
+  const customerEmail = sale.customer?.email ?? sale.customerEmail ?? ""
+  const customerPhone = sale.customer?.phone ?? sale.customerPhone ?? ""
+  const customerAddress = sale.customer?.address ?? sale.customerAddress ?? ""
+
   return {
     status: normalizedStatus,
     paymentMethod: normalizedPayment,
     channel: sale.channel ?? "",
     notes: sale.notes ?? "",
-    customerName: sale.customerName ?? "",
-    customerEmail: sale.customerEmail ?? "",
-    customerPhone: sale.customerPhone ?? "",
+    customerName,
+    customerEmail,
+    customerPhone,
     customerDocument: sale.customerDocument ?? "",
-    customerAddress: sale.customerAddress ?? ""
+    customerAddress
   }
 }
 
