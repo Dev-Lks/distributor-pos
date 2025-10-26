@@ -426,8 +426,8 @@ model Customer {
   id                     String     @id @default(cuid())
   name                   String
   type                   PersonType @default(INDIVIDUAL)
-  document               String?    @unique
-  phone                  String?    @unique
+  document               String?
+  phone                  String?
   secondaryPhone         String?
   email                  String?
   whatsapp               String?
