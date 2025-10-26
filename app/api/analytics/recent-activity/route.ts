@@ -4,6 +4,10 @@ import { prisma } from '@/lib/prisma'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)

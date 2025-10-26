@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // POST /api/inventory/audits/[id]/items - Adicionar item auditado
 export async function POST(
   request: NextRequest,

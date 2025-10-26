@@ -5,6 +5,10 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { logger } from '@/lib/logger'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 /**
  * POST /api/users/[id]/change-password
  * Permite que um usuário mude sua própria senha (obrigatório para admin no primeiro login)

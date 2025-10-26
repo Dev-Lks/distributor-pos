@@ -9,6 +9,10 @@ import { z } from 'zod'
 import { createUserSchema, searchUsersSchema } from '@/lib/validations'
 import { withoutDeleted } from '@/lib/soft-delete'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/users - Listar usuários com filtros
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions);

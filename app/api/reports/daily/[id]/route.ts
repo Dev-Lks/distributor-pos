@@ -5,6 +5,10 @@ import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 async function requireUser() {
   const session = await getServerSession(authOptions)
 

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 const prismaProductPoints = (prisma as unknown as {
   productPointOfSale: {
     findUnique(arg0: { where: { id: string } }): unknown

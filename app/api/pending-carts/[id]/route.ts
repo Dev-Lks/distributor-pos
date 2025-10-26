@@ -6,6 +6,10 @@ import { authOptions } from "@/lib/auth"
 import { cancelPendingCart, updatePendingCart } from "@/lib/pendingCarts"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const updateSchema = z.object({
   pointOfSaleId: z.string().optional(),
   customerId: z.string().optional(),

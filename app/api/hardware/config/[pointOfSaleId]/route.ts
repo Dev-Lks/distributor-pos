@@ -4,6 +4,10 @@ import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { hardwareConfigParamsSchema } from '@/lib/validations'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET - Buscar configuração de hardware por ponto de venda
 export async function GET(
   request: NextRequest,

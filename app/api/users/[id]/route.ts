@@ -7,6 +7,10 @@ import type { Prisma, PermissionKey } from "@prisma/client";
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 import { updateUserSchema } from '@/lib/validations'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/users/[id] - Buscar usuário por ID
 export async function GET(
   req: NextRequest,

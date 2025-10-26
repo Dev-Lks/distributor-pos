@@ -4,6 +4,10 @@ import { logger } from '@/lib/logger'
 import { prisma, type Prisma } from "@/lib/prisma"
 import { getServerAuth, notAuthenticated, unauthorized } from "@/lib/serverAuth"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const CUSTOMER_SELECT = {
   id: true,
   name: true,

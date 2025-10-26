@@ -3,6 +3,10 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { PermissionKey } from "@prisma/client";
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/permissions - Listar todas as permissões disponíveis
 export async function GET() {
   const session = await getServerSession(authOptions);

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const VALID_LOCATIONS = ['coldRoom', 'house', 'salePoint'] as const
 
 type InventoryLocation = (typeof VALID_LOCATIONS)[number]

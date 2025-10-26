@@ -5,6 +5,10 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { z } from 'zod'
 import {
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
   createPointOfSaleSchema,
   updatePointOfSaleSchema,
   deletePointOfSaleSchema,

@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { hash } from "bcryptjs";
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // POST /api/users/[id]/reset-password - Resetar senha de usuário
 export async function POST(
   req: NextRequest,

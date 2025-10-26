@@ -5,6 +5,10 @@ import type { Prisma } from '@prisma/client'
 import { z } from 'zod'
 import { softDelete } from '@/lib/soft-delete'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const updateSaleSchema = z.object({
   status: z.enum(['completed', 'pending', 'processing', 'flagged']).optional(),
   paymentMethod: z.enum(['cash', 'card', 'pix', 'other']).nullish(),

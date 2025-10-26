@@ -7,6 +7,10 @@ import { authOptions } from "@/lib/auth"
 import { generateDailyReport, listDailyReports } from "@/lib/dailyReports"
 import { DailyReportStatus } from "@prisma/client"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const listSchema = z.object({
   from: z.string().datetime({ offset: true }).optional(),
   to: z.string().datetime({ offset: true }).optional(),

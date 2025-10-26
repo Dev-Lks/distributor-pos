@@ -4,6 +4,10 @@ import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { hardwareConfigUpsertSchema } from '@/lib/validations'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // POST - Criar ou atualizar configuração de hardware
 export async function POST(request: NextRequest) {
   try {

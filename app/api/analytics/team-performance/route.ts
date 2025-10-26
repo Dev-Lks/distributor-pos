@@ -3,6 +3,10 @@ import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 import { subDays, startOfDay, subWeeks, startOfWeek, subMonths, startOfMonth } from 'date-fns'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 function getInitials(name: string): string {
   return name
     .split(' ')

@@ -5,6 +5,10 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Schema de validação
 const createDriverSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),

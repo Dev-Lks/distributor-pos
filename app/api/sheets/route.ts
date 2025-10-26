@@ -2,6 +2,10 @@ import { google } from 'googleapis';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const SPREADSHEET_ID = process.env.GOOGLE_SHEET_ID;
 const SHEET_NAME = process.env.GOOGLE_SHEET_NAME || 'Vendas';
 

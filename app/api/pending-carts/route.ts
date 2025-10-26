@@ -4,6 +4,10 @@ import { getServerSession } from "next-auth"
 import { z } from "zod"
 
 import { authOptions } from "@/lib/auth"
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { createPendingCart, listPendingCarts } from "@/lib/pendingCarts"
 
 const createSchema = z.object({

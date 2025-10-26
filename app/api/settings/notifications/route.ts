@@ -4,6 +4,10 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface NotificationSettings {
   enableDeliveryUpdates: boolean;
   enableStockAlerts: boolean;

@@ -4,6 +4,10 @@ import { logger } from '@/lib/logger'
 import { prisma } from "@/lib/prisma"
 import { generateDailyReport } from "@/lib/dailyReports"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export const runtime = "nodejs"
 
 export async function POST(request: NextRequest) {

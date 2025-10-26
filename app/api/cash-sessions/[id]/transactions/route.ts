@@ -8,6 +8,10 @@ import { createCashTransaction } from "@/lib/cashSessions"
 import { prisma } from "@/lib/prisma"
 import { CashTransactionType } from "@prisma/client"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const createTransactionSchema = z.object({
   type: z.nativeEnum(CashTransactionType).refine(
     (value) => value !== CashTransactionType.OPENING,

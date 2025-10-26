@@ -4,6 +4,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { softDelete, withoutDeleted } from '@/lib/soft-delete';
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // POST /api/inventory/bulk - Operações em massa
 export async function POST(request: NextRequest) {
   try {

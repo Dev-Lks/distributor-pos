@@ -103,7 +103,8 @@ export default withAuth(
       return applyCors(redirectToUnauthorized(req));
     }
 
-    return applyCors(NextResponse.next());
+    // Always apply no-cache headers for authenticated routes (especially API routes)
+    return applyCors(createNoCacheResponse(NextResponse.next()));
   },
   {
     callbacks: {

@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma"
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 import { logger } from '@/lib/logger'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions)
   if (!session) {

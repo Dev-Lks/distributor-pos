@@ -6,6 +6,10 @@ import { z } from "zod"
 import type { Prisma } from "@prisma/client"
 import { logger } from "@/lib/logger"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const statusEnum = [
   "PENDING",
   "PREPARING",

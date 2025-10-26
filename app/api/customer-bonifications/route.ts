@@ -3,6 +3,10 @@ import { BonificationCategory, RecipientType, Prisma } from "@prisma/client"
 
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const BONIFICATION_INCLUDE = {
   customer: {
     select: {

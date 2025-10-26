@@ -5,6 +5,10 @@ import type { Prisma } from '@prisma/client'
 import { getServerSession } from 'next-auth'
 
 import { authOptions } from '@/lib/auth'
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { CashSessionStatus, PaymentStatus, PendingCartStatus, PersonType } from '@prisma/client'
 import { detectPersonType, sanitizeDocument, validateCpfCnpj } from '@/lib/documents'
 import { markPendingCartConverted } from '@/lib/pendingCarts'
@@ -352,6 +356,14 @@ export async function POST(request: NextRequest) {
     }
 
     const prismaWithPoints = prisma as PrismaWithProductPoints
+
+    // Validate pointOfSaleId (avoid foreign key errors later)
+    if (pointOfSaleId) {
+      const pointExists = await prisma.pointOfSale.findUnique({ where: { id: pointOfSaleId }, select: { id: true } })
+      if (!pointExists) {
+        return NextResponse.json({ error: 'Ponto de venda não encontrado' }, { status: 404 })
+      }
+    }
 
     const [products, productPointStocks] = await Promise.all([
       prisma.product.findMany({
@@ -742,7 +754,7 @@ export async function POST(request: NextRequest) {
     })
 
     return NextResponse.json(sale, { status: 201 })
-  } catch (error) {
+  } catch (error: unknown) {
     if (error instanceof Error && error.message === 'INSUFFICIENT_STOCK') {
       return NextResponse.json(
         {
@@ -752,7 +764,15 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    logger.error('Failed to create sale', { error })
+    // Log more context to help debugging (include stack/message). In production we still avoid leaking stack to clients.
+    const errMessage = (error as any)?.message ?? String(error ?? 'Unknown error')
+    const errStack = (error as any)?.stack ?? undefined
+    logger.error('Failed to create sale', { message: errMessage, stack: errStack })
+
+    if (process.env.NODE_ENV !== 'production') {
+      return NextResponse.json({ error: 'Failed to create sale', details: errMessage }, { status: 500 })
+    }
+
     return NextResponse.json({ error: 'Failed to create sale' }, { status: 500 })
   }
 }

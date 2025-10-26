@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/inventory/history/[productId] - Histórico de movimentações
 export async function GET(
   request: NextRequest,

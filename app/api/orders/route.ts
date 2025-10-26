@@ -8,6 +8,10 @@ import type { OrderWhereInput } from "@/types"
 import { z } from "zod"
 import { withoutDeleted } from '@/lib/soft-delete'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Schema de validação para criar ordem
 const createOrderSchema = z.object({
   customerId: z.string().optional().nullable(),

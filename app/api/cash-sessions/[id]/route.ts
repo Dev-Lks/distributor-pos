@@ -7,6 +7,10 @@ import { authOptions } from "@/lib/auth"
 import { closeCashSession, buildSessionSnapshot } from "@/lib/cashSessions"
 import { prisma } from "@/lib/prisma"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const closeSchema = z.object({
   closingAmount: z.number(),
   notes: z.string().trim().optional(),

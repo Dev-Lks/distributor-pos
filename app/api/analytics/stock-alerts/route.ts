@@ -2,6 +2,10 @@ import { NextResponse } from 'next/server'
 import { logger } from '@/lib/logger'
 import { prisma } from '@/lib/prisma'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET() {
   try {
     // Buscar produtos com inventário baixo ou crítico

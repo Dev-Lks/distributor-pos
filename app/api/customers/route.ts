@@ -9,6 +9,10 @@ import {
   updateCustomerCurrentSchema,
   deleteCustomerCurrentSchema,
 } from '@/lib/validations'
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 
 const CUSTOMER_SELECT = {

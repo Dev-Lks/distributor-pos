@@ -6,6 +6,10 @@ import { z } from "zod"
 import { authOptions } from "@/lib/auth"
 import { resendDailyReport } from "@/lib/dailyReports"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const schema = z.object({
   recipients: z.array(z.string().email()).optional(),
 })

@@ -6,6 +6,10 @@ import type { Prisma } from "@prisma/client"
 import { z } from "zod"
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const updateOrderSchema = z.object({
   customerId: z.string().optional().nullable(),
   customerName: z.string().min(1).optional(),

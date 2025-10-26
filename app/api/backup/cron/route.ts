@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { backupDatabase, isBackupEnabled } from '@/lib/backup'
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   if (!isBackupEnabled()) {
     return NextResponse.json(

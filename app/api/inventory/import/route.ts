@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as XLSX from 'xlsx';
 import type {
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
   InventoryImportError,
   InventoryImportResponse,
   InventoryImportSummary,

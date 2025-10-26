@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma"
 import type { Prisma } from "@prisma/client"
 import { z } from "zod"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 const updateStatusSchema = z.object({
   status: z.enum(["PENDING", "CONFIRMED", "PREPARING", "READY", "DELIVERED", "CANCELLED"]),
   notes: z.string().optional(),

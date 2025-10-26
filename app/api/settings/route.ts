@@ -5,6 +5,10 @@ import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 import type { Prisma } from "@prisma/client";
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/settings - Buscar configurações do sistema
 export async function GET() {
   const session = await getServerSession(authOptions);

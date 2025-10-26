@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { getServerAuth, notAuthenticated, unauthorized } from '@/lib/serverAuth'
 import { logger } from '@/lib/logger'
 import { z } from 'zod'
@@ -17,7 +21,7 @@ const prismaProductPoints = (prisma as unknown as {
   }
 }).productPointOfSale
 
-export async function GET() {
+export async function GET() {1
   const { session, hasPermission } = await getServerAuth()
   
   if (!session) return notAuthenticated()

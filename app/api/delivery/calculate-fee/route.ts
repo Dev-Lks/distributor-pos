@@ -4,6 +4,10 @@ import { z } from "zod"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import {
+
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
   haversineDistanceKm,
   geocodeAddress,
   estimateDurationMinutes,

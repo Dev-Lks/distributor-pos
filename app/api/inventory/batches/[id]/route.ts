@@ -4,6 +4,10 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { softDelete, withoutDeleted } from '@/lib/soft-delete';
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // GET /api/inventory/batches/[id] - Buscar lote específico
 export async function GET(
   request: NextRequest,

@@ -5,6 +5,10 @@ import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { z } from "zod"
 
+// Force dynamic rendering - critical for real-time updates
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Schema de validação
 const createDeliverySchema = z.object({
   saleId: z.string().optional().nullable(),
