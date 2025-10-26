@@ -10,11 +10,11 @@ import {
   deletePointOfSaleSchema,
 } from '@/lib/validations'
 import { softDelete, withoutDeleted } from '@/lib/soft-delete'
+import type { Prisma } from '@prisma/client'
 
 // Force dynamic rendering - critical for real-time updates
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-import type { Prisma } from '@prisma/client'
 
 export async function GET() {
   try {
@@ -22,9 +22,12 @@ export async function GET() {
       where: withoutDeleted({}),
       orderBy: { createdAt: 'asc' }
     })
+    
     const response = NextResponse.json(points)
-    response.headers.set('Cache-Control', 'private, max-age=300, stale-while-revalidate=900')
-    response.headers.set('Vary', 'Cookie, Authorization, Origin')
+    // No cache - real-time updates critical for sales/inventory/products
+    response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+    response.headers.set('Pragma', 'no-cache')
+    response.headers.set('Expires', '0')
     return response
   } catch (error) {
     logger.error('Failed to fetch points of sale', { error })

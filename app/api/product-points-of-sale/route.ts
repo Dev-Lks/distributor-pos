@@ -61,23 +61,23 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Verificar se product e pointOfSale existem
+    // Verificar se product e pointOfSale existem (e não estão deletados/inativos)
     const [product, pointOfSale] = await Promise.all([
-      prisma.product.findUnique({ where: { id: productId } }),
-      prisma.pointOfSale.findUnique({ where: { id: pointOfSaleId } })
+      prisma.product.findFirst({ where: { id: productId, deletedAt: null } }),
+      prisma.pointOfSale.findFirst({ where: { id: pointOfSaleId, deletedAt: null, isActive: true } })
     ])
 
     if (!product) {
       return NextResponse.json({ 
-        error: 'Produto não encontrado',
-        details: [{ field: 'productId', message: 'Produto com este ID não existe' }]
+        error: 'Produto não encontrado ou inativo',
+        details: [{ field: 'productId', message: 'Produto com este ID não existe ou está inativo' }]
       }, { status: 404 })
     }
 
     if (!pointOfSale) {
       return NextResponse.json({ 
-        error: 'Ponto de venda não encontrado',
-        details: [{ field: 'pointOfSaleId', message: 'Ponto de venda com este ID não existe' }]
+        error: 'Ponto de venda não encontrado ou inativo',
+        details: [{ field: 'pointOfSaleId', message: 'Ponto de venda com este ID não existe ou está inativo' }]
       }, { status: 404 })
     }
 

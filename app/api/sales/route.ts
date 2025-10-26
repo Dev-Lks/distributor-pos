@@ -359,9 +359,18 @@ export async function POST(request: NextRequest) {
 
     // Validate pointOfSaleId (avoid foreign key errors later)
     if (pointOfSaleId) {
-      const pointExists = await prisma.pointOfSale.findUnique({ where: { id: pointOfSaleId }, select: { id: true } })
+      const pointExists = await prisma.pointOfSale.findFirst({ 
+        where: { 
+          id: pointOfSaleId,
+          deletedAt: null,
+          isActive: true 
+        }, 
+        select: { id: true } 
+      })
       if (!pointExists) {
-        return NextResponse.json({ error: 'Ponto de venda não encontrado' }, { status: 404 })
+        return NextResponse.json({ 
+          error: 'Ponto de venda não encontrado ou inativo' 
+        }, { status: 404 })
       }
     }
 

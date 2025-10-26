@@ -15,14 +15,18 @@ export async function POST(request: NextRequest) {
     const parsed = hardwareConfigUpsertSchema.parse(rawBody)
     const { pointOfSaleId, ...configPayload } = parsed
 
-    // Verifica se o ponto de venda existe
-    const pointOfSale = await prisma.pointOfSale.findUnique({
-      where: { id: pointOfSaleId },
+    // Verifica se o ponto de venda existe e está ativo
+    const pointOfSale = await prisma.pointOfSale.findFirst({
+      where: { 
+        id: pointOfSaleId,
+        deletedAt: null,
+        isActive: true 
+      },
     })
 
     if (!pointOfSale) {
       return NextResponse.json(
-        { error: 'Ponto de venda não encontrado' },
+        { error: 'Ponto de venda não encontrado ou inativo' },
         { status: 404 }
       )
     }
