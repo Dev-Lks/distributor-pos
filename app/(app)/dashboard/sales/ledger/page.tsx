@@ -167,8 +167,8 @@ export default function SalesLedgerPage() {
         break
       case "customer":
         result.sort((a, b) => {
-          const aName = (a.customerName ?? "").toLowerCase()
-          const bName = (b.customerName ?? "").toLowerCase()
+          const aName = (a.customer?.name ?? a.customerName ?? "").toLowerCase()
+          const bName = (b.customer?.name ?? b.customerName ?? "").toLowerCase()
           return aName.localeCompare(bName)
         })
         break
@@ -237,7 +237,7 @@ export default function SalesLedgerPage() {
       const csvData = sortedSales.map((sale) => ({
         ID: sale.id.slice(-8),
         Data: dateFormatter.format(new Date(sale.date)),
-        Cliente: sale.customerName || "Não informado",
+        Cliente: sale.customer?.name ?? sale.customerName ?? "Não informado",
         Telefone: sale.customerPhone || "",
         "Ponto de Venda": sale.pointOfSale?.name || "",
         Canal: sale.channel || "",
@@ -569,7 +569,7 @@ export default function SalesLedgerPage() {
                           </TableCell>
                           <TableCell>
                             <div className="space-y-1">
-                              <p className="text-sm font-medium">{sale.customerName ?? "Cliente não informado"}</p>
+                              <p className="text-sm font-medium">{sale.customer?.name ?? sale.customerName ?? "Cliente não informado"}</p>
                               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                                 {sale.customerPhone && (
                                   <span className="flex items-center gap-1">
@@ -1024,7 +1024,8 @@ function emptyToNull(value?: string | null) {
 
 function getSaleSearchContent(sale: SaleRecord): string {
   const pieces: string[] = [sale.id]
-  if (sale.customerName) pieces.push(sale.customerName)
+  const customerName = sale.customer?.name ?? sale.customerName
+  if (customerName) pieces.push(customerName)
   if (sale.customerPhone) pieces.push(sale.customerPhone)
   if (sale.customerEmail) pieces.push(sale.customerEmail)
   if (sale.channel) pieces.push(sale.channel)

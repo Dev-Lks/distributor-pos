@@ -145,7 +145,7 @@ export function SalesHistory({ sales, isLoading, onCancel }: SalesHistoryProps) 
                 {sales.map((sale) => (
                   <TableRow key={sale.id} className="text-xs md:text-sm">
                     <TableCell>{new Date(sale.date).toLocaleString("pt-BR")}</TableCell>
-                    <TableCell className="font-medium">{sale.customerName ?? "-"}</TableCell>
+                    <TableCell className="font-medium">{sale.customer?.name ?? sale.customerName ?? "-"}</TableCell>
                     <TableCell>
                       <PaymentBadge method={sale.paymentMethod ?? undefined} />
                     </TableCell>
@@ -203,7 +203,7 @@ export function SalesHistory({ sales, isLoading, onCancel }: SalesHistoryProps) 
                 <div className="grid grid-cols-2 gap-3 text-sm">
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Cliente</p>
-                    <p className="font-medium">{selectedSale.customerName ?? "Não informado"}</p>
+                    <p className="font-medium">{selectedSale.customer?.name ?? selectedSale.customerName ?? "Não informado"}</p>
                   </div>
                   <div className="space-y-1">
                     <p className="text-xs text-muted-foreground">Pagamento</p>
