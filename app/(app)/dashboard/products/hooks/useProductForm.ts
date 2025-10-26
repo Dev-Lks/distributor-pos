@@ -17,8 +17,8 @@ const parseInteger = (value: string): number | undefined => {
 }
 
 export const buildProductPayload = (form: ProductFormState) => {
-  const cost = parseNumber(form.cost) ?? 0
-  const salePrice = parseNumber(form.salePrice) ?? 0
+  const cost = parseNumber(form.cost)
+  const salePrice = parseNumber(form.salePrice)
   const bonifications = parseInteger(form.bonifications) ?? 0
   const abv = parseNumber(form.abv)
   const ibu = parseInteger(form.ibu)
@@ -32,7 +32,7 @@ export const buildProductPayload = (form: ProductFormState) => {
     name: form.name.trim(),
     size: form.size.trim(),
     cost,
-    salePrice,
+    price: salePrice,
     category: form.category.trim() || undefined,
     brand: form.brand.trim() || undefined,
     tags,
@@ -51,23 +51,24 @@ export const buildProductPayload = (form: ProductFormState) => {
 
 export const validateProductForm = (form: ProductFormState) => {
   const errors: Partial<Record<keyof ProductFormState, string>> = {}
+  const requiredFields: Array<keyof ProductFormState> = ["name", "size", "cost", "salePrice"]
   
   if (!form.name.trim()) {
-    errors.name = "Informe o nome do produto."
+    errors.name = "✗ Obrigatório: Nome do produto"
   }
   
   if (!form.size.trim()) {
-    errors.size = "Defina o volume ou tamanho."
+    errors.size = "✗ Obrigatório: Tamanho/Volume"
   }
   
   const cost = parseNumber(form.cost)
   if (cost === undefined || cost <= 0) {
-    errors.cost = "Informe um custo válido."
+    errors.cost = "✗ Obrigatório: Custo válido (maior que 0)"
   }
   
   const salePrice = parseNumber(form.salePrice)
   if (salePrice === undefined || salePrice <= 0) {
-    errors.salePrice = "Informe um preço de venda válido."
+    errors.salePrice = "✗ Obrigatório: Preço de venda válido (maior que 0)"
   }
   
   if (cost !== undefined && salePrice !== undefined && salePrice < cost) {
@@ -186,6 +187,15 @@ export function useProductForm({ initialData, onSuccess }: UseProductFormProps =
   const submitForm = useCallback(
     async (apiEndpoint: string, method: "POST" | "PATCH", productId?: string) => {
       if (!validateForm()) {
+        // Mostrar quais campos estão faltando
+        const missingFields = Object.entries(errors)
+          .filter(([_, msg]) => msg)
+          .map(([field, msg]) => msg)
+        
+        const missingText = missingFields.join("\n")
+        toast.error(`Campos obrigatórios faltando:\n${missingText}`, {
+          duration: 4000,
+        })
         return false
       }
 
@@ -201,23 +211,54 @@ export function useProductForm({ initialData, onSuccess }: UseProductFormProps =
         })
 
         if (!response.ok) {
-          const data = (await response.json().catch(() => ({}))) as { error?: string }
-          throw new Error(data?.error || "Não foi possível processar o produto.")
+          const data = (await response.json().catch(() => ({}))) as { 
+            error?: string
+            details?: Array<{ field: string; message: string }>
+          }
+          
+          // Se há detalhes de validação, mostrar os campos específicos
+          if (data.details && Array.isArray(data.details) && data.details.length > 0) {
+            const fieldMessages = data.details
+              .map(d => `✗ ${d.field}: ${d.message}`)
+              .join("\n")
+            
+            toast.error(`Erro na validação:\n${fieldMessages}`, {
+              duration: 5000,
+            })
+            
+            // Mapear erros para campos do formulário
+            const newErrors: Partial<Record<keyof ProductFormState, string>> = {}
+            data.details.forEach(detail => {
+              const fieldKey = detail.field as keyof ProductFormState
+              if (fieldKey in initialFormState) {
+                newErrors[fieldKey] = `✗ ${detail.message}`
+              }
+            })
+            setErrors(newErrors)
+          } else {
+            toast.error(data?.error || "Não foi possível processar o produto.", {
+              duration: 4000,
+            })
+          }
+          
+          return false
         }
 
-        const successMessage = method === "POST" ? "Produto cadastrado com sucesso!" : "Produto atualizado!"
+        const successMessage = method === "POST" ? "Produto cadastrado com sucesso! ✓" : "Produto atualizado! ✓"
         toast.success(successMessage)
         onSuccess?.()
         return true
       } catch (error) {
         console.error("Error submitting product:", error)
-        toast.error(error instanceof Error ? error.message : "Falha ao processar produto.")
+        toast.error(error instanceof Error ? error.message : "Falha ao processar produto.", {
+          duration: 4000,
+        })
         return false
       } finally {
         setIsSubmitting(false)
       }
     },
-    [formData, validateForm, onSuccess]
+    [formData, errors, validateForm, onSuccess]
   )
 
   return {

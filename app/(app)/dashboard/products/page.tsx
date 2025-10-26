@@ -354,14 +354,14 @@ export default function ProductsPage() {
               <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                 <div className="space-y-6">
                   <Tabs value={createForm.activeTab} onValueChange={(v) => createForm.setActiveTab(v as any)}>
-                    <TabsList className="grid w-full grid-cols-3">
-                      <TabsTrigger value="basic" className="text-xs sm:text-sm">
+                    <TabsList className="grid w-full grid-cols-3 gap-1 h-auto p-1 bg-muted rounded-lg">
+                      <TabsTrigger value="basic" className="text-xs sm:text-sm py-2 data-[state=active]:bg-background">
                         Fundamentos
                       </TabsTrigger>
-                      <TabsTrigger value="pricing" className="text-xs sm:text-sm">
+                      <TabsTrigger value="pricing" className="text-xs sm:text-sm py-2 data-[state=active]:bg-background">
                         Financeiro
                       </TabsTrigger>
-                      <TabsTrigger value="identity" className="text-xs sm:text-sm">
+                      <TabsTrigger value="identity" className="text-xs sm:text-sm py-2 data-[state=active]:bg-background">
                         Identidade
                       </TabsTrigger>
                     </TabsList>
@@ -563,43 +563,47 @@ export default function ProductsPage() {
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <DialogHeader>
               <DialogTitle>Editar produto</DialogTitle>
             </DialogHeader>
-            <Tabs value={editForm.activeTab} onValueChange={(v) => editForm.setActiveTab(v as any)}>
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="basic">Fundamentos</TabsTrigger>
-                <TabsTrigger value="pricing">Financeiro</TabsTrigger>
-                <TabsTrigger value="identity">Identidade</TabsTrigger>
-              </TabsList>
-              <TabsContent value="basic" className="mt-4">
-                <BasicTab
-                  formData={editForm.formData}
-                  onFieldChange={editForm.handleFieldChange}
-                  errors={editForm.errors}
-                  categorySuggestions={categories.slice(1)}
-                  brandSuggestions={brandSuggestions}
-                />
-              </TabsContent>
-              <TabsContent value="pricing" className="mt-4">
-                <PricingTab
-                  formData={editForm.formData}
-                  onFieldChange={editForm.handleFieldChange}
-                  errors={editForm.errors}
-                  marginPreview={editForm.marginPreview}
-                />
-              </TabsContent>
-              <TabsContent value="identity" className="mt-4">
-                <IdentityTab
-                  formData={editForm.formData}
-                  onFieldChange={editForm.handleFieldChange}
-                  packagingSuggestions={packagingSuggestions}
-                  errors={editForm.errors}
-                />
-              </TabsContent>
-            </Tabs>
-            <DialogFooter className="mt-6">
+            <div className="overflow-y-auto flex-1 px-0">
+              <Tabs value={editForm.activeTab} onValueChange={(v) => editForm.setActiveTab(v as any)} className="w-full">
+                <TabsList className="grid w-full grid-cols-3 gap-1 h-auto p-1 bg-muted rounded-none border-b">
+                  <TabsTrigger value="basic" className="rounded-none text-xs sm:text-sm py-2 data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary">Fundamentos</TabsTrigger>
+                  <TabsTrigger value="pricing" className="rounded-none text-xs sm:text-sm py-2 data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary">Financeiro</TabsTrigger>
+                  <TabsTrigger value="identity" className="rounded-none text-xs sm:text-sm py-2 data-[state=active]:bg-background data-[state=active]:border-b-2 data-[state=active]:border-primary">Identidade</TabsTrigger>
+                </TabsList>
+                <div className="px-6">
+                  <TabsContent value="basic" className="mt-4">
+                    <BasicTab
+                      formData={editForm.formData}
+                      onFieldChange={editForm.handleFieldChange}
+                      errors={editForm.errors}
+                      categorySuggestions={categories.slice(1)}
+                      brandSuggestions={brandSuggestions}
+                    />
+                  </TabsContent>
+                  <TabsContent value="pricing" className="mt-4">
+                    <PricingTab
+                      formData={editForm.formData}
+                      onFieldChange={editForm.handleFieldChange}
+                      errors={editForm.errors}
+                      marginPreview={editForm.marginPreview}
+                    />
+                  </TabsContent>
+                  <TabsContent value="identity" className="mt-4">
+                    <IdentityTab
+                      formData={editForm.formData}
+                      onFieldChange={editForm.handleFieldChange}
+                      packagingSuggestions={packagingSuggestions}
+                      errors={editForm.errors}
+                    />
+                  </TabsContent>
+                </div>
+              </Tabs>
+            </div>
+            <DialogFooter className="mt-6 border-t pt-4">
               <Button variant="ghost" onClick={() => setIsEditDialogOpen(false)}>
                 Cancelar
               </Button>

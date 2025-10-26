@@ -15,7 +15,7 @@ export const createProductSchemaBase = z.object({
   name: nameSchema,
   sku: skuSchema,
   barcode: barcodeSchema,
-  size: z.string().min(1, 'Tamanho obrigatório').max(100, 'Tamanho muito longo').optional(),
+  size: z.string().min(1, 'Tamanho/Volume é obrigatório').max(100, 'Tamanho muito longo').optional(),
   description: descriptionSchema,
   price: moneySchema,
   cost: moneySchema.optional(),

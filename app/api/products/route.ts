@@ -123,16 +123,43 @@ export async function POST(request: NextRequest) {
         isActive: validatedData.isActive,
       }
     } else {
-      // Validar com schema completo
-      const validated = createProductSchemaBase.parse(body)
+      // Validar com schema completo - mapear 'price' para 'salePrice' antes da validação
+      const mappedBody = {
+        ...body,
+        price: body.price !== undefined ? body.price : body.salePrice,
+      }
       
-      // Filtrar apenas campos permitidos e mapear 'price' para 'salePrice'
+      // Validar apenas campos obrigatórios antes de validar o schema completo
+      if (!mappedBody.name || !mappedBody.name.trim()) {
+        return NextResponse.json(
+          { 
+            error: 'Dados inválidos - verifique os campos obrigatórios',
+            details: [{ field: 'name', message: 'Campo obrigatório' }],
+          },
+          { status: 400 }
+        )
+      }
+      if (!mappedBody.price || Number.isNaN(Number(mappedBody.price))) {
+        return NextResponse.json(
+          { 
+            error: 'Dados inválidos - verifique os campos obrigatórios',
+            details: [{ field: 'price', message: 'Preço de venda é obrigatório e deve ser um número válido' }],
+          },
+          { status: 400 }
+        )
+      }
+      
+      const validated = createProductSchemaBase.parse(mappedBody)
+      
+      // Filtrar apenas campos permitidos
       productData = (Object.keys(validated) as Array<keyof typeof validated>)
         .filter(key => key !== 'price' && allowedFields.includes(key as string))
         .reduce((obj, key) => {
-          obj[key] = validated[key]
+          if (validated[key] !== undefined) {
+            obj[key] = validated[key]
+          }
           return obj
-        }, {} as Record<string, string | number | boolean | undefined>)
+        }, {} as Record<string, string | number | boolean>)
       
       // Adicionar salePrice mapeado de price
       productData.salePrice = validated.price
@@ -160,13 +187,34 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(product, { status: 201 })
   } catch (error) {
     if (error instanceof z.ZodError) {
+      // Melhorar mensagens de erro de validação
+      const details = error.errors.map(e => {
+        const fieldName = e.path.join('.')
+        let message = e.message
+        
+        // Melhorar mensagens genéricas
+        if (message.includes('Expected number') || message.includes('NaN')) {
+          message = 'Deve ser um número válido'
+        } else if (message.includes('Required')) {
+          message = 'Campo obrigatório'
+        }
+        
+        return {
+          field: fieldName,
+          message,
+          code: e.code,
+        }
+      })
+      
+      // Log dos erros de validação
+      logger.warn('Product validation failed', { 
+        errors: details,
+      })
+      
       return NextResponse.json(
         { 
-          error: 'Dados inválidos',
-          details: error.errors.map(e => ({
-            field: e.path.join('.'),
-            message: e.message
-          }))
+          error: 'Dados inválidos - verifique os campos obrigatórios',
+          details,
         },
         { status: 400 }
       )
@@ -181,7 +229,7 @@ export async function POST(request: NextRequest) {
     
     return NextResponse.json({ 
       error: 'Erro ao criar produto',
-      details: error instanceof Error ? error.message : 'Erro desconhecido'
+      details: [{ field: 'unknown', message: error instanceof Error ? error.message : 'Erro desconhecido' }]
     }, { status: 500 })
   }
 }
