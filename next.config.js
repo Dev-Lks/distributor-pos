@@ -66,8 +66,40 @@ const nextConfig = {
               "img-src 'self' data: https:",
               "font-src 'self' data:",
               "connect-src 'self' https:",
-              "frame-ancestors 'none'",
+              "frame-ancestors 'self'",
             ].join('; ')
+          },
+        ],
+      },
+      {
+        // Headers específicos para PDFs - permitir iframe
+        source: '/:path*.pdf',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self'"
+          },
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable'
+          },
+        ],
+      },
+      {
+        // Headers específicos para API do catálogo
+        source: '/api/catalogo',
+        headers: [
+          {
+            key: 'X-Frame-Options',
+            value: 'SAMEORIGIN'
+          },
+          {
+            key: 'Content-Security-Policy',
+            value: "frame-ancestors 'self'"
           },
         ],
       },

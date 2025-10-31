@@ -1,15 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { Download, ZoomIn, ZoomOut, Maximize2, Menu, X, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Download, ZoomIn, ZoomOut, Maximize2, Menu, X, FileText, ChevronLeft, ChevronRight, BookOpen } from 'lucide-react';
 
 export default function CatalogoPage() {
   const [scale, setScale] = useState(1);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+  const [viewMode, setViewMode] = useState<'single' | 'book'>('book');
 
   const handleDownload = () => {
     const link = document.createElement('a');
-    link.href = '/panamex-catalogo.pdf';
+    link.href = '/api/catalogo';
     link.download = 'Catalogo-Nitrobeer.pdf';
     link.click();
   };
@@ -30,6 +33,30 @@ export default function CatalogoPage() {
       document.exitFullscreen?.();
     }
   };
+
+  const toggleViewMode = () => {
+    setViewMode(prev => prev === 'single' ? 'book' : 'single');
+  };
+
+  // Detectar mudança de página no PDF
+  useEffect(() => {
+    const iframe = document.querySelector('iframe');
+    if (iframe) {
+      iframe.addEventListener('load', () => {
+        // Tentar obter o número total de páginas do PDF
+        // Nota: isso pode não funcionar devido a restrições de CORS/sandbox
+        try {
+          const pdfWindow = iframe.contentWindow;
+          if (pdfWindow) {
+            // Adicionar listener para mudanças de página se possível
+            console.log('PDF loaded successfully');
+          }
+        } catch (e) {
+          console.log('Cannot access iframe content due to CORS restrictions');
+        }
+      });
+    }
+  }, []);
 
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
@@ -54,6 +81,18 @@ export default function CatalogoPage() {
 
             {/* Desktop Controls */}
             <div className="hidden md:flex items-center space-x-2">
+              <button
+                onClick={toggleViewMode}
+                className={`p-2 rounded-lg transition-colors ${
+                  viewMode === 'book' 
+                    ? 'bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-400' 
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'
+                }`}
+                title={viewMode === 'book' ? 'Modo Livro (Ativo)' : 'Ativar Modo Livro'}
+              >
+                <BookOpen className="w-5 h-5" />
+              </button>
+              <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1" />
               <button
                 onClick={handleZoomOut}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -105,6 +144,17 @@ export default function CatalogoPage() {
           {menuOpen && (
             <div className="md:hidden pb-4 pt-2 border-t border-gray-200 dark:border-gray-700 mt-2">
               <div className="flex flex-col space-y-2">
+                <button
+                  onClick={toggleViewMode}
+                  className={`flex items-center justify-center space-x-2 px-4 py-2 rounded-lg font-medium ${
+                    viewMode === 'book'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-200 dark:bg-gray-700'
+                  }`}
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>{viewMode === 'book' ? 'Modo Livro (Ativo)' : 'Ativar Modo Livro'}</span>
+                </button>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Zoom:</span>
                   <div className="flex items-center space-x-2">
@@ -156,7 +206,7 @@ export default function CatalogoPage() {
             }}
           >
             <iframe
-              src="/panamex-catalogo.pdf#toolbar=1&navpanes=1&scrollbar=1"
+              src={`/api/catalogo#toolbar=1&navpanes=1&scrollbar=1&view=Fit${viewMode === 'book' ? '&pagemode=bookmarks&scrollbar=0' : ''}`}
               className="w-[90vw] sm:w-[85vw] md:w-[80vw] lg:w-[75vw] xl:w-[70vw] 2xl:w-[65vw]"
               style={{ 
                 height: 'calc(100vh - 180px)',
@@ -164,6 +214,7 @@ export default function CatalogoPage() {
                 border: 'none',
               }}
               title="Catálogo Nitrobeer"
+              allow="fullscreen"
             />
           </div>
         </div>
