@@ -11,7 +11,7 @@ const urlsToCache = [
   '/inventory',
   '/products',
   '/manifest.json',
-  '/MANUAL NITROBEER ID VISUAL.svg'
+  '/file.svg'
 ];
 
 // Install SW
@@ -55,8 +55,8 @@ self.addEventListener('message', (event) => {
     const { payload } = event.data;
     
     const options = {
-      icon: payload.icon || '/MANUAL NITROBEER ID VISUAL.svg',
-      badge: payload.badge || '/MANUAL NITROBEER ID VISUAL.svg',
+      icon: payload.icon || '/file.svg',
+      badge: payload.badge || '/file.svg',
       tag: payload.tag || 'default',
       vibrate: payload.vibrate || [200, 100, 200],
       requireInteraction: payload.requireInteraction ?? false,

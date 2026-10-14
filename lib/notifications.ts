@@ -87,8 +87,8 @@ export async function sendNotification(
       vibrate?: number[]
       actions?: NotificationAction[]
     } = {
-      icon: payload.icon || '/MANUAL NITROBEER ID VISUAL.svg',
-      badge: payload.badge || '/MANUAL NITROBEER ID VISUAL.svg',
+      icon: payload.icon || '/file.svg',
+      badge: payload.badge || '/file.svg',
       tag: payload.tag || 'default',
       vibrate: payload.vibrate || [200, 100, 200],
       requireInteraction: payload.requireInteraction ?? false,
@@ -159,8 +159,8 @@ export async function notifyDeliveryStatus(
     title: message.title,
     body: message.body,
     tag: `delivery-${deliveryId}`, // Agrupa notificações do mesmo delivery
-    icon: '/MANUAL NITROBEER ID VISUAL.svg',
-    badge: '/MANUAL NITROBEER ID VISUAL.svg',
+    icon: '/file.svg',
+    badge: '/file.svg',
     vibrate: [200, 100, 200],
     requireInteraction: status === 'completed' || status === 'failed',
     data: {
@@ -173,7 +173,7 @@ export async function notifyDeliveryStatus(
       {
         action: 'view',
         title: 'Ver Detalhes',
-        icon: '/MANUAL NITROBEER ID VISUAL.svg',
+        icon: '/file.svg',
       },
     ],
   });
@@ -191,8 +191,8 @@ export async function notifyStockAlert(
     title: '⚠️ Estoque Crítico',
     body: `${productName} em ${pointOfSaleName} (${currentStock} unidades)`,
     tag: `stock-${productName}`,
-    icon: '/MANUAL NITROBEER ID VISUAL.svg',
-    badge: '/MANUAL NITROBEER ID VISUAL.svg',
+    icon: '/file.svg',
+    badge: '/file.svg',
     vibrate: [300, 100, 300, 100, 300],
     requireInteraction: true,
     data: {
@@ -215,8 +215,8 @@ export async function notifySaleCompleted(
     title: '💰 Venda Realizada',
     body: `${customerName || 'Venda'} • R$ ${total.toFixed(2)}`,
     tag: `sale-${saleId}`,
-    icon: '/MANUAL NITROBEER ID VISUAL.svg',
-    badge: '/MANUAL NITROBEER ID VISUAL.svg',
+    icon: '/file.svg',
+    badge: '/file.svg',
     vibrate: [150, 100, 150],
     data: {
       type: 'sale',
@@ -233,8 +233,8 @@ export async function testNotification(): Promise<void> {
   await sendNotification({
     title: '✅ Notificações Ativas!',
     body: 'Sistema de notificações configurado com sucesso',
-    icon: '/MANUAL NITROBEER ID VISUAL.svg',
-    badge: '/MANUAL NITROBEER ID VISUAL.svg',
+    icon: '/file.svg',
+    badge: '/file.svg',
     vibrate: [200, 100, 200, 100, 200],
   });
 }
