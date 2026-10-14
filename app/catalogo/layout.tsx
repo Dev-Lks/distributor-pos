@@ -1,12 +1,12 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Catálogo Nitrobeer - Produtos e Soluções',
-  description: 'Navegue pelo catálogo completo de produtos e soluções Nitrobeer',
+  title: 'Catálogo - Produtos e Soluções',
+  description: 'Navegue pelo catálogo completo de produtos e soluções Distribuidora',
   keywords: ['catálogo', 'produtos', 'distribuidora', 'soluções'],
   openGraph: {
-    title: 'Catálogo Nitrobeer',
-    description: 'Navegue pelo catálogo completo de produtos e soluções Nitrobeer',
+    title: 'Catálogo',
+    description: 'Navegue pelo catálogo completo de produtos e soluções Distribuidora',
     type: 'website',
   },
 };

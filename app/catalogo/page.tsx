@@ -13,7 +13,7 @@ export default function CatalogoPage() {
   const handleDownload = () => {
     const link = document.createElement('a');
     link.href = '/api/catalogo';
-    link.download = 'Catalogo-Nitrobeer.pdf';
+    link.download = 'Catalogo.pdf';
     link.click();
   };
 
@@ -71,7 +71,7 @@ export default function CatalogoPage() {
               </div>
               <div>
                 <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                  Catálogo Nitrobeer
+                  Catálogo
                 </h1>
                 <p className="text-xs text-gray-500 dark:text-gray-400 hidden sm:block">
                   Produtos & Soluções
@@ -213,7 +213,7 @@ export default function CatalogoPage() {
                 minHeight: '500px',
                 border: 'none',
               }}
-              title="Catálogo Nitrobeer"
+              title="Catálogo"
               allow="fullscreen"
             />
           </div>
@@ -225,7 +225,7 @@ export default function CatalogoPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-2 sm:space-y-0">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              © {new Date().getFullYear()} Nitrobeer. Todos os direitos reservados.
+              © {new Date().getFullYear()} Distribuidora. Todos os direitos reservados.
             </p>
             <div className="flex items-center space-x-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
               <a href="mailto:contato@exemplo.com.br" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">

@@ -1,4 +1,4 @@
-# Configuração do Catálogo Nitrobeer
+# Configuração do Catálogo
 
 ## 📚 Sobre
 
@@ -26,7 +26,7 @@ Visualizador moderno do catálogo de produtos em PDF, acessível em `https://cat
 ### Passo 1: Adicionar o Domínio no Vercel
 
 1. Acesse o [Dashboard da Vercel](https://vercel.com/dashboard)
-2. Selecione seu projeto (Nitrobeer-POS)
+2. Selecione seu projeto (distributor-pos)
 3. Vá em **Settings** → **Domains**
 4. Clique em **Add Domain**
 5. Digite: `catalogo.exemplo.com.br`
