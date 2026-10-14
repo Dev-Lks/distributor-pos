@@ -302,7 +302,7 @@ export function SidebarLayout({ children }: SidebarLayoutProps) {
             </div>
             {!isCollapsed && (
               <div className="min-w-0">
-                <p className="text-sm font-semibold leading-tight">NitroBeer</p>
+                <p className="text-sm font-semibold leading-tight">Distribuidora</p>
                 <p className="truncate text-xs text-muted-foreground">POS</p>
               </div>
             )}

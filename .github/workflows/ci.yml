@@ -90,7 +90,7 @@ jobs:
       - name: Build application
         run: pnpm build
         env:
-          DATABASE_URL: postgresql://user:password@localhost:5432/claudiao
+          DATABASE_URL: postgresql://user:password@localhost:5432/distribuidora
           NEXTAUTH_URL: http://localhost:3000
           NEXTAUTH_SECRET: test-secret
 

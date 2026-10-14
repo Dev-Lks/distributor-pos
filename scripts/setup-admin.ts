@@ -8,7 +8,7 @@ async function setupAdmin() {
 
     // Buscar o admin
     const admin = await prisma.user.findUnique({
-      where: { email: "admin@nitrobeer.com" },
+      where: { email: "admin@exemplo.com" },
     });
 
     if (!admin) {

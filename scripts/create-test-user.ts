@@ -13,7 +13,7 @@ async function createTestUser() {
   try {
     console.log('👤 Criando usuário de teste...\n');
 
-    const email = 'vendedor@nitrobeer.com';
+    const email = 'vendedor@exemplo.com';
     const password = 'vendedor123';
     const fullName = 'João Vendedor';
 

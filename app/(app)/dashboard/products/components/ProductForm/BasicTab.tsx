@@ -36,7 +36,7 @@ export function BasicTab({
             id="product-name"
             value={formData.name}
             onChange={(event) => onFieldChange("name", event.target.value)}
-            placeholder="Ex: NitroBeer Lager 600ml"
+            placeholder="Ex: Distribuidora Lager 600ml"
           />
           <FieldError message={errors?.name} />
         </div>
@@ -46,7 +46,7 @@ export function BasicTab({
             id="product-brand"
             value={formData.brand}
             onChange={(event) => onFieldChange("brand", event.target.value)}
-            placeholder="Ex: NitroBeer"
+            placeholder="Ex: Distribuidora"
           />
         </div>
       </div>

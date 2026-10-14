@@ -21,7 +21,7 @@ export const authOptions: NextAuthOptions = {
     Credentials({
       name: "Credenciais",
       credentials: {
-        email: { label: "E-mail", type: "email", placeholder: "admin@nitrobeer.com" },
+        email: { label: "E-mail", type: "email", placeholder: "admin@exemplo.com" },
         password: { label: "Senha", type: "password" },
       },
       async authorize(credentials: Record<"email" | "password", string> | undefined) {

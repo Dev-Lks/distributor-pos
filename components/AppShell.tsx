@@ -28,7 +28,7 @@ export function AppShell({ children, currentView, onViewChange, onLogout, metric
         <div className="flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-4">
             <div>
-              <h1 className="text-xl font-bold text-foreground">NitroBeer POS</h1>
+              <h1 className="text-xl font-bold text-foreground">Distribuidora POS</h1>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Activity className="h-3 w-3" />
                 <span>Sistema de Vendas</span>

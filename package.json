@@ -1,7 +1,7 @@
 {
-  "name": "nitrobeer",
+  "name": "distributor-pos",
   "version": "1.0",
-  "private": true,
+  "private": false,
   "pnpm": {
     "overrides": {
       "react-is": "19.0.0-rc.1"

@@ -1,7 +1,7 @@
 {
-  "name": "NitroBeer POS",
-  "short_name": "NitroBeer",
-  "description": "Sistema de Ponto de Venda para NitroBeer",
+  "name": "Distribuidora POS",
+  "short_name": "Distribuidora",
+  "description": "Sistema de ponto de venda (PDV) para distribuidoras",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#1a1a2e",
@@ -10,7 +10,7 @@
   "scope": "/",
   "icons": [
     {
-      "src": "/MANUAL NITROBEER ID VISUAL.svg",
+      "src": "/file.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any maskable"
@@ -23,14 +23,14 @@
       "short_name": "Vender",
       "description": "Iniciar nova venda",
       "url": "/dashboard/sales",
-      "icons": [{ "src": "/icon-venda.svg", "sizes": "96x96" }]
-    },
-    {
-      "name": "Dashboard",
+      "icons": [{ "src": "/file.svg", "sizes": "96x96" }]
+          },
+          {
+            "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Ver métricas",
       "url": "/dashboard",
-      "icons": [{ "src": "/icon-dashboard.svg", "sizes": "96x96" }]
-    }
-  ]
-}
+      "icons": [{ "src": "/file.svg", "sizes": "96x96" }]
+          }
+        ]
+      }

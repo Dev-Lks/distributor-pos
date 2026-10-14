@@ -319,7 +319,7 @@ export default function SettingsPage() {
                     id="business-name"
                     value={businessName}
                     onChange={(e) => setBusinessName(e.target.value)}
-                    placeholder="Ex.: NitroBeer Tap House"
+                    placeholder="Ex.: Distribuidora Modelo"
                     disabled={!isAdmin}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -371,7 +371,7 @@ export default function SettingsPage() {
                 <Input
                   id="support-email"
                   type="email"
-                  placeholder="contato@nitrobeer.com"
+                  placeholder="contato@exemplo.com"
                   value={supportEmail}
                   onChange={(e) => setSupportEmail(e.target.value)}
                   disabled={!isAdmin}
@@ -712,7 +712,7 @@ export default function SettingsPage() {
             <CardHeader>
               <CardTitle>Aplicativo (PWA)</CardTitle>
               <CardDescription>
-                Instale o NitroBeer como app nativo
+                Instale o Distribuidora como app nativo
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -721,7 +721,7 @@ export default function SettingsPage() {
                   <CheckCircle2 className="h-4 w-4 text-green-600" />
                   <AlertTitle className="text-green-900 dark:text-green-100">App Instalado</AlertTitle>
                   <AlertDescription className="text-green-800 dark:text-green-200">
-                    O NitroBeer POS está instalado e funcionando como aplicativo nativo.
+                    O Distribuidora POS está instalado e funcionando como aplicativo nativo.
                   </AlertDescription>
                 </Alert>
               ) : (

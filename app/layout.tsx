@@ -12,13 +12,13 @@ import { Toaster } from "@/components/ui/sonner"
 import { authOptions } from "@/lib/auth"
 
 export const metadata: Metadata = {
-  title: "NitroBeer",
-  description: "Sistema de Ponto de Venda para NitroBeer",
+  title: "Distribuidora",
+  description: "Sistema de Ponto de Venda para Distribuidora",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "NitroBeer POS",
+    title: "Distribuidora POS",
   },
 }
 

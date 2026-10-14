@@ -91,7 +91,7 @@ export default function LoginPage() {
           </div>
           <div className="space-y-2">
             <CardTitle className="text-3xl font-bold bg-gradient-to-r from-amber-200 to-amber-500 bg-clip-text text-transparent">
-              NitroBeer POS
+              Distribuidora POS
             </CardTitle>
             <CardDescription className="text-base text-slate-400">
               Sistema de Gestão Inteligente
@@ -203,7 +203,7 @@ export default function LoginPage() {
       
       {/* Footer */}
       <div className="absolute bottom-4 text-center text-xs text-slate-600">
-        <p>© 2025 NitroBeer POS • Sistema Seguro de Gestão</p>
+        <p>© 2025 Distribuidora POS • Sistema Seguro de Gestão</p>
       </div>
     </div>
   )

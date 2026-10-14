@@ -110,7 +110,7 @@ export async function saveReportFile(input: SaveReportFileInput): Promise<SavedR
       throw error
     }
 
-    const fallbackDir = path.join(os.tmpdir(), "claudiao-reports")
+    const fallbackDir = path.join(os.tmpdir(), "distribuidora-reports")
     console.warn(
       `Falling back to temporary daily report storage at "${fallbackDir}" due to insufficient permissions in "${baseDir}": ${error instanceof Error ? error.message : String(error)}`
     )

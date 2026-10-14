@@ -238,9 +238,9 @@ async function seedProducts() {
 async function seedUsers() {
   console.log('🔐 Garantindo usuário administrador...')
 
-  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@nitrobeer.com'
+  const adminEmail = process.env.SEED_ADMIN_EMAIL ?? 'admin@exemplo.com'
   const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? 'admin123'
-  const adminName = process.env.SEED_ADMIN_NAME ?? 'Administrador NitroBeer'
+  const adminName = process.env.SEED_ADMIN_NAME ?? 'Administrador Distribuidora'
 
   const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } })
 

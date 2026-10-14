@@ -40,7 +40,7 @@ export function IdentityTab({
             id="product-sku"
             value={formData.sku}
             onChange={(event) => onFieldChange("sku", event.target.value)}
-            placeholder="Ex: NB-LAGER-600"
+            placeholder="Ex: EX-LAGER-600"
           />
         </div>
         <div className="space-y-2">

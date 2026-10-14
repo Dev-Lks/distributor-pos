@@ -2,7 +2,7 @@ import { prisma } from '../lib/prisma'
 
 async function checkAdmin() {
   const admin = await prisma.user.findUnique({
-    where: { email: 'nitrobeer.chopp@gmail.com' },
+    where: { email: 'distribuidora.chopp@gmail.com' },
     select: {
       id: true,
       email: true,

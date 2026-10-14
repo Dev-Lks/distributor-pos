@@ -228,11 +228,11 @@ export default function CatalogoPage() {
               © {new Date().getFullYear()} Nitrobeer. Todos os direitos reservados.
             </p>
             <div className="flex items-center space-x-4 text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-              <a href="mailto:contato@nitrobeer.com.br" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <a href="mailto:contato@exemplo.com.br" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                 Contato
               </a>
               <span>•</span>
-              <a href="https://nitrobeer.com.br" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              <a href="https://exemplo.com.br" target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
                 Site
               </a>
             </div>

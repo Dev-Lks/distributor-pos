@@ -1,5 +1,5 @@
 // public/sw.js
-const CACHE_NAME = 'nitrobeer-pos-v1';
+const CACHE_NAME = 'distribuidora-pos-v1';
 const urlsToCache = [
   '/',
   '/dashboard',

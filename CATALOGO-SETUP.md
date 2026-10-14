@@ -2,7 +2,7 @@
 
 ## 📚 Sobre
 
-Visualizador moderno do catálogo de produtos em PDF, acessível em `https://catalogo.nitrobeer.com.br`
+Visualizador moderno do catálogo de produtos em PDF, acessível em `https://catalogo.exemplo.com.br`
 
 ## ✨ Funcionalidades
 
@@ -18,8 +18,8 @@ Visualizador moderno do catálogo de produtos em PDF, acessível em `https://cat
 ## 🚀 Acesso
 
 ### URL Principal
-- **Subdomínio:** `https://catalogo.nitrobeer.com.br`
-- **Rota direta:** `https://nitrobeer.com.br/catalogo`
+- **Subdomínio:** `https://catalogo.exemplo.com.br`
+- **Rota direta:** `https://exemplo.com.br/catalogo`
 
 ## 🔧 Configuração do Subdomínio no Vercel
 
@@ -29,7 +29,7 @@ Visualizador moderno do catálogo de produtos em PDF, acessível em `https://cat
 2. Selecione seu projeto (Nitrobeer-POS)
 3. Vá em **Settings** → **Domains**
 4. Clique em **Add Domain**
-5. Digite: `catalogo.nitrobeer.com.br`
+5. Digite: `catalogo.exemplo.com.br`
 6. Clique em **Add**
 
 ### Passo 2: Configurar DNS
@@ -72,21 +72,21 @@ app/
 │   ├── page.tsx          # Componente principal do visualizador
 │   └── layout.tsx        # Layout e metadados
 public/
-└── panamex-catalogo.pdf  # Arquivo PDF do catálogo
+└── catalogo.pdf  # Arquivo PDF do catálogo
 ```
 
 ## 🎨 Personalização
 
 ### Alterar o PDF
 
-Substitua o arquivo `public/panamex-catalogo.pdf` pelo novo catálogo e faça o deploy:
+Substitua o arquivo `public/catalogo.pdf` pelo novo catálogo e faça o deploy:
 
 ```bash
 # Substituir o PDF
-# (copie seu novo PDF para public/panamex-catalogo.pdf)
+# (copie seu novo PDF para public/catalogo.pdf)
 
 # Deploy
-git add public/panamex-catalogo.pdf
+git add public/catalogo.pdf
 git commit -m "Atualizar catálogo"
 git push
 ```
@@ -132,7 +132,7 @@ vercel --prod
 ### Problema: PDF não carrega
 
 **Soluções:**
-1. Verifique se o arquivo existe em `public/panamex-catalogo.pdf`
+1. Verifique se o arquivo existe em `public/catalogo.pdf`
 2. Confirme que o arquivo não está corrompido
 3. Verifique o console do navegador para erros
 4. Limpe o cache e recarregue (Ctrl+F5)
@@ -165,7 +165,7 @@ Ative o Vercel Analytics para monitorar:
 
 Veja logs em tempo real:
 ```bash
-vercel logs https://catalogo.nitrobeer.com.br
+vercel logs https://catalogo.exemplo.com.br
 ```
 
 ## 🔐 Segurança

@@ -5,8 +5,8 @@ import { logger } from '@/lib/logger'
 import { Button } from '@/components/ui/button'
 import { Download, X } from 'lucide-react'
 
-const PWA_DISMISSED_KEY = 'nitrobeer-pwa-dismissed'
-const PWA_SHOW_AGAIN_KEY = 'nitrobeer-pwa-show-again'
+const PWA_DISMISSED_KEY = 'distribuidora-pwa-dismissed'
+const PWA_SHOW_AGAIN_KEY = 'distribuidora-pwa-show-again'
 
 export function PWAInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
@@ -71,7 +71,7 @@ export function PWAInstallPrompt() {
       <div className="flex items-center gap-3">
         <Download className="w-6 h-6 text-primary flex-shrink-0" />
         <div className="flex-1">
-          <h3 className="font-semibold text-sm">Instalar NitroBeer POS</h3>
+          <h3 className="font-semibold text-sm">Instalar Distribuidora POS</h3>
           <p className="text-xs text-muted-foreground">App funciona offline e é mais rápido!</p>
         </div>
         <div className="flex gap-2">

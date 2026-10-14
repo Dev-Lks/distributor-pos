@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react'
 import { logger } from '@/lib/logger'
 
-const PWA_DISMISSED_KEY = 'nitrobeer-pwa-dismissed'
-const PWA_SHOW_AGAIN_KEY = 'nitrobeer-pwa-show-again'
+const PWA_DISMISSED_KEY = 'distribuidora-pwa-dismissed'
+const PWA_SHOW_AGAIN_KEY = 'distribuidora-pwa-show-again'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>

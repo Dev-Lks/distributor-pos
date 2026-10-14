@@ -146,7 +146,7 @@ async function validate() {
     console.log('🚀 Próximos passos:');
     console.log('   1. Execute: pnpm dev');
     console.log('   2. Acesse: http://localhost:3000/login');
-    console.log('   3. Entre com: admin@nitrobeer.com / admin123');
+    console.log('   3. Entre com: admin@exemplo.com / admin123');
     console.log('   4. Teste: http://localhost:3000/admin/users\n');
   }
 

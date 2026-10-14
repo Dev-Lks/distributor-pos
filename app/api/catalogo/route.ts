@@ -4,13 +4,13 @@ import path from 'path';
 
 export async function GET(request: NextRequest) {
   try {
-    const pdfPath = path.join(process.cwd(), 'public', 'panamex-catalogo.pdf');
+    const pdfPath = path.join(process.cwd(), 'public', 'catalogo.pdf');
     const pdfBuffer = await readFile(pdfPath);
 
     const response = new NextResponse(pdfBuffer, {
       headers: {
         'Content-Type': 'application/pdf',
-        'Content-Disposition': 'inline; filename="catalogo-nitrobeer.pdf"',
+        'Content-Disposition': 'inline; filename="catalogo-distribuidora.pdf"',
         'Cache-Control': 'public, max-age=31536000, immutable',
       },
     });

@@ -98,8 +98,8 @@ export function ImportDialog({ open, onOpenChange, onImportComplete }: ImportDia
 
   const handleDownloadTemplate = () => {
     const template = `name,size,category,brand,cost,salePrice,supplier,bonifications,sku,packaging
-NitroBeer Lager,600ml,Cerveja,NitroBeer,5.50,12.00,Distribuidora XYZ,0,NB-LAGER-600,Long Neck
-NitroBeer IPA,350ml,Cerveja,NitroBeer,6.00,15.00,Distribuidora XYZ,0,NB-IPA-350,Lata`
+Distribuidora Lager,600ml,Cerveja,Distribuidora,5.50,12.00,Distribuidora XYZ,0,EX-LAGER-600,Long Neck
+Distribuidora IPA,350ml,Cerveja,Distribuidora,6.00,15.00,Distribuidora XYZ,0,EX-IPA-350,Lata`
 
     const blob = new Blob([template], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)

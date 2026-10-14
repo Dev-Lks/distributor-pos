@@ -100,7 +100,7 @@ export async function geocodeAddress(
         `https://nominatim.openstreetmap.org/search?${params.toString()}`,
         {
           headers: {
-            "User-Agent": "claudiao-delivery/1.0",
+            "User-Agent": "distribuidora-delivery/1.0",
           },
           next: { revalidate: 60 * 60 },
         }

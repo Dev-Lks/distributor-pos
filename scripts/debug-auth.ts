@@ -5,7 +5,7 @@ const prisma = new PrismaClient()
 async function checkAuth() {
   // Verificar vendedor
   const vendedor = await prisma.user.findUnique({
-    where: { email: 'vendedor@nitrobeer.com' },
+    where: { email: 'vendedor@exemplo.com' },
     include: {
       permissions: {
         where: { granted: true },

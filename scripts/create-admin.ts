@@ -13,7 +13,7 @@ async function createAdmin() {
   try {
     console.log('🔧 Criando usuário administrador...\n');
 
-    const email = process.env.ADMIN_EMAIL || 'nitrobeer.chopp@gmail.com';
+    const email = process.env.ADMIN_EMAIL || 'distribuidora.chopp@gmail.com';
     const password = process.env.ADMIN_PASSWORD || 'Teste123!';
     const fullName = process.env.ADMIN_NAME || 'Administrador Geral';
 

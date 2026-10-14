@@ -407,7 +407,7 @@ async function buildPdfBuffer(params: {
          .fillColor('#94a3b8')
          .font('Helvetica')
          .text(
-           `Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} · Sistema NitroBeer`, 
+           `Gerado em ${format(new Date(), "dd/MM/yyyy 'às' HH:mm")} · Sistema Distribuidora`, 
            50, 
            footerY, 
            { align: 'center', width: pageWidth - 100 }

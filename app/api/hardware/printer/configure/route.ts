@@ -12,7 +12,7 @@ export const revalidate = 0
  * que deve estar rodando em PRINT_SERVER_URL.
  * 
  * Para configurar o print-server:
- * 1. Configure a variável: PRINT_SERVER_URL=https://print.nitrobeer.com.br
+ * 1. Configure a variável: PRINT_SERVER_URL=https://print.exemplo.com.br
  * 2. Configure o token: PRINT_SERVER_AUTH_TOKEN=seu_token_secreto
  * 
  * Veja: /TUTORIAL_IMPRESSORA_TERMICA.md e /DEPLOY_IMPRESSORA_PRODUCAO.md

@@ -171,7 +171,7 @@ export function CreateUserDialog({ open, onOpenChange }: CreateUserDialogProps) 
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="joao@nitrobeer.com"
+                  placeholder="joao@exemplo.com"
                   required
                 />
               </div>

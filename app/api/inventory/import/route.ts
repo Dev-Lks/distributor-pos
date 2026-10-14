@@ -47,7 +47,7 @@ export async function GET() {
       'Em trânsito',
       'Estoque de segurança'
     ],
-    ['NB-LAGER-600', 'Nitro Lager', 120, 36, 48, 60, 18, 24, 8, 2, 12, 30]
+    ['EX-LAGER-600', 'Nitro Lager', 120, 36, 48, 60, 18, 24, 8, 2, 12, 30]
   ]
   const worksheet = XLSX.utils.aoa_to_sheet(data)
   XLSX.utils.book_append_sheet(workbook, worksheet, 'Inventário')

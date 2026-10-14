@@ -25,8 +25,8 @@ export async function GET() {
     if (!settings) {
       settings = await prisma.systemSettings.create({
         data: {
-          businessName: "NitroBeer Tap House",
-          receiptFooterMessage: "Obrigado por escolher a NitroBeer! Aproveite 10% off no próximo growler.",
+          businessName: "Distribuidora Modelo",
+          receiptFooterMessage: "Obrigado pela preferência!",
         }
       });
     }
